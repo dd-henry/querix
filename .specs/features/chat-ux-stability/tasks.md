@@ -349,6 +349,8 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 ### T8: Documenting the UX regression test strategy
 
+**Status**: Done
+
 **What**: Update the test strategy document with the conversation repository, translator-context, and Streamlit interaction regression coverage and commands.
 **Where**: `docs/testes.md`
 **Depends on**: None
@@ -362,15 +364,23 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 **Done when**:
 
-- [ ] The document lists focused test files and the non-integration command.
-- [ ] The described tests cover ownership, expiry/favorites, context bounds, reruns, failures, and preserved roles/features.
-- [ ] Documentation-only task; no automated tests apply.
-- [ ] Gate check passes: Build gate command.
+- [x] The document lists focused test files and the non-integration command.
+- [x] The described tests cover ownership, expiry/favorites, context bounds, reruns, failures, and preserved roles/features.
+- [x] Documentation-only task; no automated tests apply.
+- [x] Gate check passes: `venv/bin/python -m compileall -q app.py components.py core database test_*.py && venv/bin/python -m pytest -m "not integration" -q` (84 passed, 1 deselected).
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `docs(testing): describe chat UX regression coverage`
+
+**Post-gate evidence**:
+
+| Criterion | Documentation evidence | Expected behavior | Result |
+| --- | --- | --- | --- |
+| List focused test files and non-integration command | `docs/testes.md:27` - focused conversation, history, translator, component, app, and PostgreSQL test command; `:67` - non-integration command | Developers can run the targeted UX regression files or the non-integration suite. | Covered |
+| Describe ownership, expiry/favorites, context, reruns, failures, and preserved features | `docs/testes.md:17` - repository scope, expiry, favorites, and context; `:19` - translator context and errors; `:20` - one render, reruns, results, failures; `:21` - app sessions, failures, retry, roles, and sidebar features; `:22` - read-only retry database behavior | The guide accurately represents the coverage protecting the session and chat UX requirements. | Covered |
+| Documentation-only verification | Manual consistency review; build gate passed with 84 tests and 1 deselected | No documentation test suite is configured; build and existing non-integration tests remain green. | Covered |
 
 ---
 

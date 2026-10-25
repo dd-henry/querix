@@ -10,6 +10,23 @@ O projeto adota uma abordagem mista de testes, dividindo as baterias entre **Tes
 
 Estes testes validam lógicas internas sem envolver dependências externas, como bancos de dados em execução ou servidores locais de IA.
 
+#### Regressões de conversas e UX
+
+Os fluxos de conversa usam serviços externos simulados para que os testes validem estado e comportamento sem conectar a um PostgreSQL ou Ollama real:
+
+- **`test_conversations.py`:** verifica escopo por proprietário, gravação idempotente e ordenada, falhas de persistência, favoritos, expiração, exclusão e o limite de seis turnos, incluindo a exclusão do turno em retry do contexto.
+- **`test_query_history.py`:** verifica o vínculo anulável da conversa, exclusão em cascata, deduplicação dentro de cada sessão e compatibilidade com registros legados sem sessão.
+- **`test_translator.py`:** verifica contexto em ordem, limite de seis turnos, comportamento com contexto ausente ou vazio e erros do Ollama.
+- **`test_chat_ui.py`:** verifica uma única renderização por mensagem, estabilidade em reruns, SQL e erro associados, revisão separada da transcrição e preservação de tabela, gráfico e download CSV.
+- **`test_app.py`:** verifica login, propriedade e retomada de sessões, grupos por recência, persistência única, ausência de resultados restaurados, favoritos, expiração, exclusão confirmada, estados de falha e retry explícito. Também protege os papéis e as ferramentas existentes da barra lateral.
+- **`test_postgres.py`:** verifica o uso de transações somente de leitura no retry e o retorno da contagem de linhas dos comandos.
+
+Para executar os testes focados nesses fluxos:
+
+```bash
+python -m pytest test_conversations.py test_query_history.py test_translator.py test_chat_ui.py test_app.py test_postgres.py -q
+```
+
 #### Testes do Prompter (`test_prompter.py`)
 Foca em garantir que o montador de prompts está anexando de forma correta as regras e informações dinâmicas do ambiente. 
 - **Estratégias:** É utilizada a fixture nativa `tmp_path` do pytest para gerar árvores de pastas temporárias em memória, simulando diretórios de DDLs e de Regras de Negócio, avaliando se a injeção do texto desses arquivos de texto no corpo do "System Prompt" ocorre de modo seguro e completo. 
@@ -47,9 +64,16 @@ Este não é um teste mockado, ele realmente inicia a conexão com a API local d
 
 Para executar a suíte de testes, utilizamos o framework `pytest` a partir da raiz do projeto. Graças às configurações no arquivo `pytest.ini`, podemos separar a execução entre testes rápidos e lentos:
 
-- **Rodar todos os testes:** `pytest -v`
-- **Rodar apenas testes unitários (Rápidos):** `pytest -m "not integration" -v`
-- **Rodar apenas testes de integração (Lentos, usa LLM):** `pytest -m "integration" -v`
+- **Regressão recomendada (fora de integração):** `python -m pytest -m "not integration" -q`
+- **Rodar todos os testes, incluindo integrações:** `python -m pytest -q`
+- **Rodar apenas testes de integração com Ollama:** `python -m pytest -m integration -q`
+
+O gate completo de regressão também verifica a sintaxe Python antes dos testes:
+
+```bash
+python -m compileall -q app.py components.py core database test_*.py
+python -m pytest -m "not integration" -q
+```
 
 ## Debugando os Testes
 
