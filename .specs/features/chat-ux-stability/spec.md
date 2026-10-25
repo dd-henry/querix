@@ -100,7 +100,7 @@ The Streamlit chat can briefly render the same user action in more than one plac
 2. WHEN an unauthenticated user opens the application THEN the system SHALL present the login and account-request flows with clear success, progress, and error feedback.
 3. WHEN an approved user with an administrative role opens the application THEN the system SHALL keep existing administrative actions available only to authorized roles.
 4. The system SHALL preserve access to query history, shared queries and favorites, SQL review, result tables, charts, and CSV downloads.
-5. The system SHALL use a professional light visual style with readable hierarchy and spacing across the authentication and chat views.
+5. WHEN the authentication or chat view is shown THEN the system SHALL use Streamlit's `light` theme; on the authenticated chat view, the main area SHALL show the `Ask SQL` title and `Converse com seus dados` subheading before the transcript and chat input.
 
 **Independent Test**: Use authenticated and unauthenticated sessions with different roles to verify the agreed layout, feedback, role-gated tools, and existing query/result features.
 
@@ -139,11 +139,11 @@ The Streamlit chat can briefly render the same user action in more than one plac
 | CHAT-16 | P1: Private resumable conversation sessions (T1, T2, T5, T6, T10) | Execute | Implemented |
 | CHAT-17 | P1: Private resumable conversation sessions (T1, T2, T5, T7, T8) | Execute | Implemented |
 | CHAT-18 | P1: Private resumable conversation sessions (T1, T5, T8, T10) | Execute | Implemented |
-| CHAT-19 | P1: Clear workspace and preserved capabilities (T5, T7) | Execute | Implemented |
-| CHAT-20 | P1: Clear workspace and preserved capabilities (T5, T8) | Execute | Implemented |
+| CHAT-19 | P1: Clear workspace and preserved capabilities (T5, T7, T11) | Execute | Implemented |
+| CHAT-20 | P1: Clear workspace and preserved capabilities (T5, T8, T11) | Execute | Implemented |
 | CHAT-21 | P1: Clear workspace and preserved capabilities (T5, T8) | Execute | Implemented |
 | CHAT-22 | P1: Clear workspace and preserved capabilities (T5) | Execute | Implemented |
-| CHAT-23 | P1: Clear workspace and preserved capabilities (T5) | Execute | Implemented |
+| CHAT-23 | P1: Clear workspace and preserved capabilities (T5, T11) | Execute | Implemented |
 
 **Coverage:** 23 total, 23 mapped to tasks, 0 unmapped.
 

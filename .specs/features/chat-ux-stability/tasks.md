@@ -474,7 +474,7 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 ### T11: Defining and verifying light-theme UI behavior
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Define measurable visual acceptance, explicitly default Streamlit to its light theme, and test account-request feedback plus main/sidebar placement.
 **Where**: `.streamlit/config.toml`, `test_app.py`, `.specs/features/chat-ux-stability/spec.md`
@@ -489,16 +489,33 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 **Done when**:
 
-- [ ] Account-request success, progress, and failure outcomes are asserted.
-- [ ] Tests assert the chat input and transcript are in the main area and supporting tools are in the sidebar.
-- [ ] The app config explicitly sets `theme.base = "light"` and a focused test verifies the effective setting.
-- [ ] CHAT-23 states measurable theme and heading outcomes without pixel-specific thresholds.
-- [ ] Build gate command passes.
+- [x] Account-request success, progress, and failure outcomes are asserted.
+- [x] Tests assert the chat input and transcript are in the main area and supporting tools are in the sidebar.
+- [x] The app config explicitly sets `theme.base = "light"` and a focused test verifies the effective setting.
+- [x] CHAT-23 states measurable theme and heading outcomes without pixel-specific thresholds.
+- [x] Build gate passes: `venv/bin/python -m compileall -q app.py components.py core database test_*.py && venv/bin/python -m pytest -m "not integration" -q` (94 passed, 1 deselected).
 
 **Tests**: unit
 **Gate**: build
 
 **Commit**: `feat(ui): set the default Streamlit theme to light`
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Expected outcome | Result |
+| --- | --- | --- | --- |
+| Account-request success, progress, and failure are visible | `test_app.py:985` - progress label; `:986` - success feedback; `:1003` - failure progress label; `:1005` - actionable error; `:1008` - no success message on failure | Users see progress during the request, a confirmation on success, and an error rather than success when it fails. | Covered |
+| Chat and supporting tools occupy their intended areas | `app.py:1112` - chat input is declared at the app level, outside the sidebar; `test_app.py:1051` and `:1054` - session/query tools are in `app.sidebar`; `:1065` and `:1066` - main title and subheading; `:1067` - two transcript messages in main; `:1069` and `:1070` - chat input exists and is absent from sidebar | Chat transcript and input remain outside the sidebar in the main application view; supporting tools are in the sidebar. | Covered |
+| Streamlit explicitly uses the light theme | `.streamlit/config.toml:2` - `base = "light"`; `test_app.py:1074` - `assert st.get_option("theme.base") == "light"` | The app's effective Streamlit theme setting is light. | Covered |
+| CHAT-23 defines measurable visual outcomes | `test_app.py:1065` and `:1066` - exact main title and subheading; `.streamlit/config.toml:2` and `test_app.py:1074` - effective light theme | Authentication/chat views use the configured light theme, and the chat view exposes the specified heading hierarchy without pixel-specific thresholds. | Covered |
+
+**Test adequacy review**:
+
+- **Check A - Sufficient**: Every T11 criterion has direct test or configuration evidence; CHAT-20 feedback and CHAT-23 theme/heading outcomes match the revised acceptance criteria.
+- **Check B - Non-shallow**: Tests assert exact progress, success/error text, error-state absence of success, exact headings, transcript count, sidebar placement, and effective theme value.
+- **Check C - Necessary**: All changed tests map to CHAT-19/CHAT-20/CHAT-23 and their corresponding T11 criteria.
+- **Check D - Guidelines**: Tests follow existing pytest/AppTest patterns from `README.md`, `docs/testes.md`, and `pytest.ini`.
+- **Verdict**: All T11 outcomes are measurable and verified without pixel-specific thresholds.
 
 ---
 

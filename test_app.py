@@ -966,6 +966,48 @@ def test_successful_login_opens_the_approved_chat(chat_app):
     assert not app.error
 
 
+def test_account_request_success_shows_progress_and_confirmation(chat_app):
+    app, services = chat_app
+    services.auth.sign_up.side_effect = None
+    services.auth.sign_up.return_value = (
+        SimpleNamespace(id=USER_ID, email="novo@example.com"),
+        "Nova pessoa",
+    )
+    app.session_state["auth_user"] = None
+    app.run()
+    app.text_input[2].set_value("Nova pessoa")
+    app.text_input[3].set_value("novo@example.com")
+    app.text_input[4].set_value("senha-segura")
+    app.text_input[5].set_value("senha-segura")
+
+    _click(app, "Solicitar acesso")
+
+    assert "Enviando solicitação de acesso..." in services.progress_labels
+    assert any("Cadastro recebido." in item.value for item in app.success)
+    services.users.create_pending_profile.assert_called_once_with(
+        USER_ID, "novo@example.com", "Nova pessoa"
+    )
+
+
+def test_account_request_failure_shows_progress_and_error(chat_app):
+    app, services = chat_app
+    app.session_state["auth_user"] = None
+    app.run()
+    app.text_input[2].set_value("Nova pessoa")
+    app.text_input[3].set_value("novo@example.com")
+    app.text_input[4].set_value("senha-segura")
+    app.text_input[5].set_value("senha-segura")
+
+    _click(app, "Solicitar acesso")
+
+    assert "Enviando solicitação de acesso..." in services.progress_labels
+    assert any(
+        "Não foi possível criar a conta: Cadastro indisponível." in item.value
+        for item in app.error
+    )
+    assert not app.success
+
+
 def test_user_and_admin_keep_their_role_gated_tools(chat_app):
     app, services = chat_app
     assert "Administrar usuários" not in [
@@ -1007,8 +1049,29 @@ def test_existing_query_tools_remain_grouped_in_the_sidebar(chat_app):
     app, _services = chat_app
 
     assert {"Histórico de consultas", "Consultas compartilhadas"} <= {
-        item.label for item in app.expander
+        item.label for item in app.sidebar.expander
     }
+    assert "Conversas" in [item.value for item in app.sidebar.subheader]
+
+
+def test_chat_transcript_and_input_are_in_the_main_area(chat_app):
+    app, _services = chat_app
+    app.session_state["messages"] = [
+        {"role": "user", "content": "Quantos clientes existem?"},
+        {"role": "assistant", "content": "Encontrei 12 clientes."},
+    ]
+    app.run()
+
+    assert [item.value for item in app.main.title] == ["Ask SQL"]
+    assert [item.value for item in app.main.subheader] == ["Converse com seus dados"]
+    assert len(app.main.chat_message) == 2
+    assert not app.sidebar.chat_message
+    assert len(app.chat_input) == 1
+    assert not app.sidebar.chat_input
+
+
+def test_streamlit_theme_defaults_to_light():
+    assert st.get_option("theme.base") == "light"
 
 
 def test_opening_history_reports_expired_session_cleanup(chat_app):
