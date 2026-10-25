@@ -108,6 +108,8 @@ The three documentation updates are independent.
 
 ### T2: Linking query history to conversations
 
+**Status**: Done
+
 **What**: Add nullable session linkage to query-history records, preserve legacy null-linked rows, scope de-duplication by session, and cascade linked records when a session is deleted.
 **Where**: `database/query_history.py`
 **Depends on**: T1
@@ -121,16 +123,28 @@ The three documentation updates are independent.
 
 **Done when**:
 
-- [ ] Initialization adds the nullable foreign key without assigning old rows to a new session.
-- [ ] Session-linked records do not replace another session's matching query record.
-- [ ] Existing calls without a session ID preserve legacy behavior.
-- [ ] At least 4 focused tests cover linked writes, session-scoped de-duplication, null-linked legacy behavior, and migration/query parameters; all existing `test_query_history.py` tests still pass.
-- [ ] Gate check passes: `python3 -m pytest test_query_history.py -q`.
+- [x] Initialization adds the nullable foreign key without assigning old rows to a new session.
+- [x] Session-linked records do not replace another session's matching query record.
+- [x] Existing calls without a session ID preserve legacy behavior.
+- [x] 4 focused tests cover linked writes, session-scoped de-duplication, null-linked legacy behavior, and migration/query parameters; all existing `test_query_history.py` tests still pass (10 total).
+- [x] Gate check passes: `venv/bin/python -m pytest -m 'not integration' -q` (39 passed, 1 deselected).
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(history): link query history to conversations`
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Expected outcome | Result |
+| --- | --- | --- | --- |
+| Nullable FK and cascade; legacy rows remain null | `test_query_history.py:61` - `assert "NOT NULL" not in session_column`; `assert "DEFAULT" not in session_column`; `assert "REFERENCES ask_sql_conversation_sessions(id) ON DELETE CASCADE" in session_column` | Existing rows are not assigned a session; deleting a session cascades linked rows only. | Covered |
+| Duplicate cleanup is scoped per session | `test_query_history.py:61` - `assert "PARTITION BY user_id, session_id, sql, parameters" in deduplication` | The same query in separate sessions is not merged during initialization. | Covered |
+| Legacy calls use null-session scope | `test_query_history.py:8` - `assert params == {..., "session_id": None}`; `assert "session_id IS NOT DISTINCT FROM CAST(:session_id AS uuid)" in ...` | Calls without a session keep legacy rows in the null-session group. | Covered |
+| New writes carry session linkage and keep repeated queries session-scoped | `test_query_history.py:73` - `assert params["session_id"] == "session-id"`; `test_query_history.py:85` - asserts both session IDs and null-safe session predicate | A query history row belongs to its own conversation and is not reused across sessions. | Covered |
+| Listed rows expose their session relationship | `test_query_history.py:99` - `assert QueryHistoryRepository(db).list("user-id") == [{"id": 1, "session_id": "session-id"}]` | Callers can distinguish session-linked from legacy history. | Covered |
+
+Every T2 test maps to CHAT-15/16 or the task's compatibility criteria. Existing project conventions from `docs/testes.md` and `pytest.ini` are followed. No database service is configured, so PostgreSQL DDL behavior is verified through generated SQL assertions rather than a live migration.
 
 ### T3: Supplying bounded conversation context to translation
 

@@ -21,8 +21,16 @@ class QueryHistoryRepository:
                 is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
                 source TEXT NOT NULL DEFAULT 'chat'
                     CHECK (source IN ('chat', 'predefined')),
+                session_id UUID REFERENCES ask_sql_conversation_sessions(id) ON DELETE CASCADE,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
+            """
+        )
+        self.db.execute_command(
+            """
+            ALTER TABLE ask_sql_query_history
+            ADD COLUMN IF NOT EXISTS session_id UUID
+                REFERENCES ask_sql_conversation_sessions(id) ON DELETE CASCADE
             """
         )
         self.db.execute_command(
@@ -42,7 +50,7 @@ class QueryHistoryRepository:
             WITH ranked AS (
                 SELECT id,
                        ROW_NUMBER() OVER (
-                           PARTITION BY user_id, sql, parameters
+                          PARTITION BY user_id, session_id, sql, parameters
                            ORDER BY is_pinned DESC, created_at DESC, id DESC
                        ) AS position
                 FROM ask_sql_query_history
@@ -57,8 +65,15 @@ class QueryHistoryRepository:
             ON ask_sql_query_history (user_id, created_at DESC)
             """
         )
+        self.db.execute_command(
+            """
+            CREATE INDEX IF NOT EXISTS ask_sql_query_history_session_idx
+            ON ask_sql_query_history (session_id)
+            WHERE session_id IS NOT NULL
+            """
+        )
 
-    def record(self, user_id, prompt, sql, source="chat", parameters=None):
+    def record(self, user_id, prompt, sql, source="chat", parameters=None, session_id=None):
         if source not in {"chat", "predefined"}:
             raise ValueError("Origem de histórico inválida.")
         normalized_sql = sql.strip().rstrip(";").strip()
@@ -71,6 +86,7 @@ class QueryHistoryRepository:
                         SELECT id
                         FROM ask_sql_query_history
                         WHERE user_id = CAST(:user_id AS uuid)
+                          AND session_id IS NOT DISTINCT FROM CAST(:session_id AS uuid)
                           AND sql = :sql
                           AND parameters = CAST(:parameters AS jsonb)
                         ORDER BY created_at DESC, id DESC
@@ -78,9 +94,10 @@ class QueryHistoryRepository:
                     )
                     RETURNING id
                 )
-                INSERT INTO ask_sql_query_history (user_id, prompt, sql, parameters, source)
+                INSERT INTO ask_sql_query_history
+                    (user_id, prompt, sql, parameters, source, session_id)
                 SELECT CAST(:user_id AS uuid), :prompt, :sql,
-                       CAST(:parameters AS jsonb), :source
+                       CAST(:parameters AS jsonb), :source, CAST(:session_id AS uuid)
                 WHERE NOT EXISTS (SELECT 1 FROM updated)
             """,
             {
@@ -89,13 +106,14 @@ class QueryHistoryRepository:
                 "sql": normalized_sql,
                 "parameters": json.dumps(parameters or {}),
                 "source": source,
+                "session_id": str(session_id) if session_id is not None else None,
             },
         )
 
     def list(self, user_id, limit=20):
         result = self.db.execute_query(
             """
-            SELECT id, prompt, sql, parameters, source, is_pinned, created_at
+            SELECT id, prompt, sql, parameters, source, session_id, is_pinned, created_at
             FROM ask_sql_query_history
             WHERE user_id = CAST(:user_id AS uuid)
             ORDER BY is_pinned DESC, created_at DESC, id DESC
