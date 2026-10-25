@@ -80,6 +80,12 @@ T9    T10    T11
 
 The three focused verification tasks are independent.
 
+### Phase 6: Independent-verifier gap
+
+```text
+T12
+```
+
 ---
 
 ## Task Breakdown
@@ -517,6 +523,47 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 - **Check D - Guidelines**: Tests follow existing pytest/AppTest patterns from `README.md`, `docs/testes.md`, and `pytest.ini`.
 - **Verdict**: All T11 outcomes are measurable and verified without pixel-specific thresholds.
 
+### T12: Verifying first-prompt session persistence
+
+**Status**: Done
+
+**What**: Strengthen the application test double and first-prompt test so a new session must be created exactly once before any conversation message is appended.
+**Where**: `test_app.py`
+**Depends on**: None
+**Reuses**: Existing AppTest fixture and first-prompt persistence test.
+**Requirement**: CHAT-10
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when**:
+
+- [x] The first prompt asserts one non-null session ID, one owned session-creation call, and the prompt persisted in that session.
+- [x] The fake repository rejects appending to a missing or foreign session, so skipping session creation fails the test.
+- [x] Gate check passes: `venv/bin/python -m pytest -m "not integration" -q` (94 passed, 1 deselected).
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(chat): assert first-prompt session creation`
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Expected outcome | Result |
+| --- | --- | --- | --- |
+| First prompt creates one non-null owned session and persists the prompt there exactly once | `test_app.py:383` - `assert session_id is not None`; `:384` - asserts one creation call; `:388` through `:391` - asserts owner, session ID, request ID, and exact prompt; `:394` - user and assistant records occur once; `:395` and `:396` - exact prompt and creation request ID are persisted | New conversation creation produces one valid session and persists the submitted prompt once before translation continues. | Covered |
+| An append cannot create an implicit missing or foreign session | `test_app.py:76` through `:82` - `append_message` rejects a missing/foreign owner-scoped session before adding any message; `:397` through `:402` - only the assistant message is appended after session creation | If the first-session creation branch is skipped, append fails and the first-prompt test fails rather than manufacturing an implicit session. | Covered |
+
+**Test adequacy review**:
+
+- **Check A - Sufficient**: Both verifier gaps have direct evidence; assertions match CHAT-10's first-prompt session creation and once-only persistence outcome.
+- **Check B - Non-shallow**: The test asserts non-null state, creation count, owner/session/request/prompt payload, persisted transcript, and append semantics.
+- **Check C - Necessary**: All assertions map to CHAT-10 and the independent verifier's surviving MUT-1.
+- **Check D - Guidelines**: The test follows the existing pytest/AppTest fixture and assertion conventions in `README.md`, `docs/testes.md`, and `pytest.ini`.
+- **Verdict**: The verifier's surviving first-session mutation is now discriminated by both the test assertion and a strict owner-scoped repository fake.
+
 ---
 
 ## Diagram-Definition Cross-Check
@@ -534,6 +581,7 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 | T9 | None | No incoming edge | Match |
 | T10 | None | No incoming edge | Match |
 | T11 | None | No incoming edge | Match |
+| T12 | None | No incoming edge | Match |
 
 ## Test Co-location Validation
 
@@ -550,3 +598,4 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 | T9: Asserting chat failure recovery and once-only actions | Streamlit application | unit | unit | Match |
 | T10: Asserting resumed session and deletion outcomes | Repository / application | unit | unit | Match |
 | T11: Defining and verifying light-theme UI behavior | Streamlit application | unit | unit | Match |
+| T12: Verifying first-prompt session persistence | Streamlit application | unit | unit | Match |

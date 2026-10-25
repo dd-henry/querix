@@ -27,6 +27,8 @@ class FakeConversationRepository:
     def __init__(self):
         self.sessions = []
         self.messages = {}
+        self.create_calls = []
+        self.append_calls = []
         self.listed_users = []
         self.expired_count = 0
         self.context = []
@@ -48,6 +50,7 @@ class FakeConversationRepository:
     def create_with_user_message(self, user_id, session_id, request_id, prompt):
         if self.create_error:
             raise self.create_error
+        self.create_calls.append((user_id, session_id, request_id, prompt))
         self.sessions.append(
             {
                 "id": session_id,
@@ -72,6 +75,12 @@ class FakeConversationRepository:
         self, user_id, session_id, request_id, role, content, sql=None,
         error=None, metadata=None
     ):
+        if not any(
+            session["id"] == session_id and session["user_id"] == user_id
+            for session in self.sessions
+        ):
+            raise RuntimeError("Cannot append to a missing or foreign session.")
+        self.append_calls.append((user_id, session_id, request_id, role, content))
         records = self.messages.setdefault(session_id, [])
         if not any(
             str(row["request_id"]) == str(request_id) and row["role"] == role
@@ -371,10 +380,25 @@ def test_new_prompt_is_saved_once_and_sql_review_is_default(chat_app):
     _submit_prompt(app, "Quantos clientes?")
 
     session_id = app.session_state["active_conversation_id"]
+    assert session_id is not None
+    assert len(services.conversations.create_calls) == 1
+    user_id, created_session_id, request_id, prompt = (
+        services.conversations.create_calls[0]
+    )
+    assert user_id == USER_ID
+    assert created_session_id == session_id
+    assert request_id
+    assert prompt == "Quantos clientes?"
     records = services.conversations.messages[session_id]
     assert [record["role"] for record in records] == ["user", "assistant"]
     assert records[0]["content"] == "Quantos clientes?"
+    assert records[0]["request_id"] == request_id
     assert records[1]["sql"] == "SELECT 1"
+    assert [
+        (user_id, appended_session_id, role)
+        for user_id, appended_session_id, _request_id, role, _content
+        in services.conversations.append_calls
+    ] == [(USER_ID, session_id, "assistant")]
     assert [item.value for item in app.code] == ["SELECT 1"]
     assert services.db.execute_query.call_count == 0
     assert len(app.chat_message) == 2
