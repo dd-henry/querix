@@ -33,6 +33,8 @@ class FakeConversationRepository:
         self.context_calls = []
         self.create_error = None
         self.load_error = None
+        self.update_error = None
+        self.favorite_error = None
 
     def initialize(self):
         return None
@@ -90,6 +92,8 @@ class FakeConversationRepository:
         self, user_id, session_id, request_id, content, sql=None,
         error=None, metadata=None
     ):
+        if self.update_error:
+            raise self.update_error
         for row in self.messages.get(session_id, []):
             if (
                 str(row["request_id"]) == str(request_id)
@@ -127,6 +131,8 @@ class FakeConversationRepository:
         return list(self.context[-limit * 2 :]) if limit else []
 
     def set_favorite(self, user_id, session_id, favorite):
+        if self.favorite_error:
+            raise self.favorite_error
         for session in self.sessions:
             if session["id"] == session_id and session["user_id"] == user_id:
                 session["is_favorite"] = favorite
@@ -556,16 +562,27 @@ def test_saved_sessions_are_grouped_by_recency(chat_app):
 
     app.run()
 
-    labels = {item.label for item in app.expander}
-    assert {"Hoje", "Ontem", "Últimos 7 dias", "Últimos 30 dias", "Mais antigas"} <= labels
+    session_buttons_by_group = {
+        expander.label: {
+            button.key
+            for button in expander.button
+            if button.key and button.key.startswith("open_session_")
+        }
+        for expander in app.sidebar.expander
+    }
+    assert session_buttons_by_group["Hoje"] == {"open_session_today"}
+    assert session_buttons_by_group["Ontem"] == {"open_session_yesterday"}
+    assert session_buttons_by_group["Últimos 7 dias"] == {"open_session_week"}
+    assert session_buttons_by_group["Últimos 30 dias"] == {"open_session_month"}
+    assert session_buttons_by_group["Mais antigas"] == {"open_session_older"}
 
 
-def test_resuming_session_restores_sql_without_fetching_result_rows(chat_app):
+def test_resuming_session_restores_ordered_payload_without_result_rows(chat_app):
     app, services = chat_app
     _seed_session(services, "session-saved")
     services.conversations.messages["session-saved"] = [
         {
-            "request_id": "turn-saved",
+            "request_id": "turn-old",
             "role": "user",
             "content": "Mostre o total.",
             "sql": None,
@@ -573,9 +590,25 @@ def test_resuming_session_restores_sql_without_fetching_result_rows(chat_app):
             "metadata": {},
         },
         {
+            "request_id": "turn-old",
+            "role": "assistant",
+            "content": "A consulta anterior falhou.",
+            "sql": "SELECT 41",
+            "error": "Consulta indisponível.",
+            "metadata": {},
+        },
+        {
+            "request_id": "turn-saved",
+            "role": "user",
+            "content": "E agora?",
+            "sql": None,
+            "error": None,
+            "metadata": {},
+        },
+        {
             "request_id": "turn-saved",
             "role": "assistant",
-            "content": "Resultado salvo como SQL.",
+            "content": "SQL pronto.",
             "sql": "SELECT 42",
             "error": None,
             "metadata": {},
@@ -586,8 +619,16 @@ def test_resuming_session_restores_sql_without_fetching_result_rows(chat_app):
     _click(app, "Conversa", key="open_session_session-saved")
 
     assert app.session_state["active_conversation_id"] == "session-saved"
-    assert app.session_state["messages"][1]["sql"] == "SELECT 42"
-    assert "df" not in app.session_state["messages"][1]
+    assert [(message["role"], message["content"]) for message in app.session_state["messages"]] == [
+        ("user", "Mostre o total."),
+        ("assistant", "A consulta anterior falhou."),
+        ("user", "E agora?"),
+        ("assistant", "SQL pronto."),
+    ]
+    assert app.session_state["messages"][1]["sql"] == "SELECT 41"
+    assert app.session_state["messages"][1]["error"] == "Consulta indisponível."
+    assert app.session_state["messages"][3]["sql"] == "SELECT 42"
+    assert not any("df" in message for message in app.session_state["messages"])
     services.db.execute_query.assert_not_called()
 
 
@@ -617,6 +658,72 @@ def test_conversation_load_failure_is_reported_without_switching(chat_app):
 
     assert app.session_state["active_conversation_id"] is None
     assert any("Não foi possível carregar a conversa" in item.value for item in app.error)
+
+
+def test_favorite_update_failure_is_reported_without_success_state(chat_app):
+    app, services = chat_app
+    _seed_session(services, "session-favorite-error")
+    services.conversations.favorite_error = RuntimeError("Banco indisponível.")
+    app.run()
+
+    _click(app, "☆", key="favorite_session_session-favorite-error")
+
+    assert services.conversations.sessions[0]["is_favorite"] is False
+    assert any(
+        "Não foi possível favoritar: Banco indisponível."
+        in item.value
+        for item in app.sidebar.error
+    )
+
+
+def test_assistant_update_failure_is_reported_as_unsaved(chat_app):
+    app, services = chat_app
+    _seed_session(services, "session-update-error")
+    services.conversations.messages["session-update-error"] = [
+        {
+            "request_id": "turn-update",
+            "role": "user",
+            "content": "Consulte novamente.",
+            "sql": None,
+            "error": None,
+            "metadata": {},
+        },
+        {
+            "request_id": "turn-update",
+            "role": "assistant",
+            "content": "Falha anterior.",
+            "sql": "SELECT 1",
+            "error": "Ollama indisponível.",
+            "metadata": {"retryable": True, "retry_kind": "translate"},
+        },
+    ]
+    app.session_state["active_conversation_id"] = "session-update-error"
+    app.session_state["messages"] = [
+        {
+            "request_id": "turn-update",
+            "role": "user",
+            "content": "Consulte novamente.",
+        },
+        {
+            "request_id": "turn-update",
+            "role": "assistant",
+            "content": "Falha anterior.",
+            "sql": "SELECT 1",
+            "error": "Ollama indisponível.",
+            "retryable": True,
+            "retry_kind": "translate",
+        },
+    ]
+    services.conversations.update_error = RuntimeError("Banco indisponível.")
+    services.translator.responses = [{"sql": "SELECT 2", "grafico": None}]
+    app.run()
+
+    _click(app, "Tentar novamente", key="retry_turn-update")
+
+    assert app.session_state["messages"][1]["not_saved"] is True
+    assert "A resposta não foi salva" in app.session_state["storage_notice"]
+    assert services.conversations.messages["session-update-error"][1]["sql"] == "SELECT 1"
+    assert services.conversations.messages["session-update-error"][1]["error"] == "Ollama indisponível."
 
 
 def test_foreign_sessions_are_not_rendered_or_opened(chat_app):

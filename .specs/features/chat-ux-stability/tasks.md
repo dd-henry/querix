@@ -429,7 +429,7 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 ### T10: Asserting resumed session and deletion outcomes
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Strengthen tests for restored transcript payloads, exact recency-group assignment, saved-session update failures, and the session/history deletion contract.
 **Where**: `test_app.py`, `test_conversations.py`, `test_query_history.py`
@@ -444,16 +444,33 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 **Done when**:
 
-- [ ] Resuming a saved session asserts ordered user prompts, assistant content, SQL, errors, and absence of result rows.
-- [ ] Each seeded session ID is asserted in its specified recency group.
-- [ ] A failure while updating/favoriting an existing session produces actionable feedback and no success-shaped state.
-- [ ] Deletion assertions cover the owner-scoped parent delete, nullable cascading linkage, and preservation of unlinked legacy history.
-- [ ] Gate check passes: Quick gate command.
+- [x] Resuming a saved session asserts ordered user prompts, assistant content, SQL, errors, and absence of result rows.
+- [x] Each seeded session ID is asserted in its specified recency group.
+- [x] A failure while updating/favoriting an existing session produces actionable feedback and no success-shaped state.
+- [x] Deletion assertions cover the owner-scoped parent delete, nullable cascading linkage, and preservation of unlinked legacy history.
+- [x] Gate check passes: `venv/bin/python -m pytest -m "not integration" -q` (90 passed, 1 deselected).
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `test(chat): verify resumed session boundaries`
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Expected outcome | Result |
+| --- | --- | --- | --- |
+| Resume restores ordered prompts and assistant payloads, including SQL and errors, without query rows | `test_app.py:622` - asserts the exact ordered role/content transcript; `:628` and `:629` - asserts prior SQL and error; `:630` - asserts later SQL; `:631` - `assert not any("df" in message for message in app.session_state["messages"])`; `:632` - `services.db.execute_query.assert_not_called()` | Saved messages and SQL return in order, but result rows are not persisted or fetched by resume. | Covered |
+| Every session appears in its specified recency group | `test_app.py:573` through `:577` - exact button-key sets for Hoje, Ontem, Últimos 7 dias, Últimos 30 dias, and Mais antigas | Each seeded session ID is exposed only in its expected group. | Covered |
+| Session update failures give actionable feedback without success-shaped state | `test_app.py:671` and `:672` through `:676` - favorite remains false and the sidebar shows the storage error; `:723` and `:724` - failed assistant update is marked unsaved with a notice; `:725` and `:726` - previously saved SQL and error remain unchanged | Failed updates are visible and do not appear saved or successful. | Covered |
+| Session deletion is owner-scoped, cascades linked history, and preserves unlinked legacy history | `test_conversations.py:231` - deletes the session table; `:232` - asserts no direct query-history delete; `:233` and `:234` - assert session and owner predicates; `test_query_history.py:89` - asserts nullable linkage; `:90` - asserts `ON DELETE CASCADE`; `:91` through `:93` - assert the owner-scoped session delete with no direct query-history delete | Deleting a session removes linked rows through the nullable FK cascade while rows with no session relationship remain untouched. This is a SQL contract test; no live PostgreSQL integration was run. | Covered |
+
+**Test adequacy review**:
+
+- **Check A - Sufficient**: Each T10 criterion has direct assertion evidence above; expected outcomes match CHAT-09, CHAT-11, CHAT-16, and CHAT-18.
+- **Check B - Non-shallow**: Assertions inspect restored transcript values, exact group membership, saved/unsaved state and user-visible feedback, and generated SQL constraints.
+- **Check C - Necessary**: Changed assertions map to CHAT-09 session grouping, CHAT-11 resume behavior, CHAT-16 deletion behavior, or CHAT-18 persistence failure feedback.
+- **Check D - Guidelines**: Tests follow the existing pytest/AppTest patterns documented in `README.md`, `docs/testes.md`, and `pytest.ini`.
+- **Verdict**: All T10 criteria are covered by requirement-backed assertions; the deletion guarantee is verified through the repository/schema SQL contract rather than a live database.
 
 ### T11: Defining and verifying light-theme UI behavior
 

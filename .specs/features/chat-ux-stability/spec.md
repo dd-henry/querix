@@ -129,16 +129,16 @@ The Streamlit chat can briefly render the same user action in more than one plac
 | CHAT-06 | P1: Stable chat and query feedback (T5, T9) | Execute | Implemented |
 | CHAT-07 | P1: Stable chat and query feedback (T4, T5) | Execute | Implemented |
 | CHAT-08 | P1: Stable chat and query feedback (T5) | Execute | Implemented |
-| CHAT-09 | P1: Private resumable conversation sessions (T5, T6) | Execute | Implemented |
+| CHAT-09 | P1: Private resumable conversation sessions (T5, T6, T10) | Execute | Implemented |
 | CHAT-10 | P1: Private resumable conversation sessions (T1, T5, T7) | Execute | Implemented |
-| CHAT-11 | P1: Private resumable conversation sessions (T1, T5, T7) | Execute | Implemented |
+| CHAT-11 | P1: Private resumable conversation sessions (T1, T5, T7, T10) | Execute | Implemented |
 | CHAT-12 | P1: Private resumable conversation sessions (T5, T6) | Execute | Implemented |
 | CHAT-13 | P1: Private resumable conversation sessions (T3, T5, T7, T8) | Execute | Implemented |
 | CHAT-14 | P1: Private resumable conversation sessions (T1, T5, T6) | Execute | Implemented |
 | CHAT-15 | P1: Private resumable conversation sessions (T1, T2, T5, T6) | Execute | Implemented |
-| CHAT-16 | P1: Private resumable conversation sessions (T1, T2, T5, T6) | Execute | Implemented |
+| CHAT-16 | P1: Private resumable conversation sessions (T1, T2, T5, T6, T10) | Execute | Implemented |
 | CHAT-17 | P1: Private resumable conversation sessions (T1, T2, T5, T7, T8) | Execute | Implemented |
-| CHAT-18 | P1: Private resumable conversation sessions (T1, T5, T8) | Execute | Implemented |
+| CHAT-18 | P1: Private resumable conversation sessions (T1, T5, T8, T10) | Execute | Implemented |
 | CHAT-19 | P1: Clear workspace and preserved capabilities (T5, T7) | Execute | Implemented |
 | CHAT-20 | P1: Clear workspace and preserved capabilities (T5, T8) | Execute | Implemented |
 | CHAT-21 | P1: Clear workspace and preserved capabilities (T5, T8) | Execute | Implemented |

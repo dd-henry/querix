@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 from unittest.mock import MagicMock
 
+from database.conversations import ConversationRepository
 from database.query_history import QueryHistoryRepository
 
 
@@ -72,6 +73,24 @@ def test_initialize_adds_nullable_session_foreign_key_with_cascade():
     assert "session_id UUID REFERENCES ask_sql_conversation_sessions(id) ON DELETE CASCADE" in create_table
     deduplication = next(sql for sql in statements if "WITH ranked AS" in sql)
     assert "PARTITION BY user_id, session_id, sql, parameters" in deduplication
+
+
+def test_session_delete_uses_nullable_history_cascade_for_linked_records():
+    db = MagicMock()
+    QueryHistoryRepository(db).initialize()
+    ConversationRepository(db).delete("user-id", "session-id")
+
+    statements = [call.args[0] for call in db.execute_command.call_args_list]
+    session_column = next(
+        sql for sql in statements if "ADD COLUMN IF NOT EXISTS session_id" in sql
+    )
+    session_delete = statements[-1]
+
+    assert "NOT NULL" not in session_column
+    assert "REFERENCES ask_sql_conversation_sessions(id) ON DELETE CASCADE" in session_column
+    assert "DELETE FROM ask_sql_conversation_sessions" in session_delete
+    assert "ask_sql_query_history" not in session_delete
+    assert "user_id = CAST(:user_id AS uuid)" in session_delete
 
 
 def test_record_links_query_to_session_without_changing_legacy_records():

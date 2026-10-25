@@ -229,6 +229,7 @@ def test_delete_removes_only_owned_session(db):
 
     sql, parameters = db.execute_command.call_args.args
     assert "DELETE FROM ask_sql_conversation_sessions" in sql
+    assert "ask_sql_query_history" not in sql
     assert "WHERE id = CAST(:session_id AS uuid)" in sql
     assert "AND user_id = CAST(:user_id AS uuid)" in sql
     assert parameters == {"user_id": "user-id", "session_id": "session-id"}
