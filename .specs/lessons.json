@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 13,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::assert active state blocking on the actual submit and execution controls not only retry controls",
+      "text": "Assert active-state blocking on the actual submit and execution controls, not only retry controls.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-02"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-002",
+      "key": "ac_gap::failure path tests should assert retained transcript payload and the absence of stale transient state",
+      "text": "Failure-path tests should assert retained transcript payload and the absence of stale transient state.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-04"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::test recovery by submitting a new action after failure and asserting the failed action is not replayed",
+      "text": "Test recovery by submitting a new action after failure and asserting the failed action is not replayed.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-06"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-004",
+      "key": "ac_gap::assert each record s expected recency bucket not only that bucket labels render",
+      "text": "Assert each record's expected recency bucket, not only that bucket labels render.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-09"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-005",
+      "key": "ac_gap::at resume boundaries assert every persisted payload field promised by the specification",
+      "text": "At resume boundaries, assert every persisted payload field promised by the specification.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-11"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-006",
+      "key": "ac_gap::exercise user visible failure handling for mutations of existing persisted records not only initial saves",
+      "text": "Exercise user-visible failure handling for mutations of existing persisted records, not only initial saves.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-18"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-007",
+      "key": "ac_gap::test success progress and failure separately for each authentication entry flow",
+      "text": "Test success, progress, and failure separately for each authentication entry flow.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-20"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-008",
+      "key": "spec_precision_gap::define visual acceptance criteria as measurable rendered properties before claiming style coverage",
+      "text": "Define visual acceptance criteria as measurable rendered properties before claiming style coverage.",
+      "signal": "spec_precision_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-23"
+      ],
+      "created": "2026-10-25T05:00:11Z",
+      "last_seen": "2026-10-25T05:00:11Z"
+    },
+    {
+      "id": "L-009",
+      "key": "ac_gap::verify deletion behavior with both linked rows and null linked legacy rows in the same outcome test",
+      "text": "Verify deletion behavior with both linked rows and null-linked legacy rows in the same outcome test.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-16"
+      ],
+      "created": "2026-10-25T05:00:41Z",
+      "last_seen": "2026-10-25T05:00:41Z"
+    },
+    {
+      "id": "L-010",
+      "key": "ac_gap::for layout requirements assert widget placement and primary area hierarchy not only widget presence",
+      "text": "For layout requirements, assert widget placement and primary-area hierarchy, not only widget presence.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CHAT-19"
+      ],
+      "created": "2026-10-25T05:00:41Z",
+      "last_seen": "2026-10-25T05:00:41Z"
+    },
+    {
+      "id": "L-011",
+      "key": "ac_gap::after a successful action rerun assert both the rendered result and persisted side effects remain singular",
+      "text": "After a successful action rerun, assert both the rendered result and persisted side effects remain singular.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "Edge case 3"
+      ],
+      "created": "2026-10-25T05:00:41Z",
+      "last_seen": "2026-10-25T05:00:41Z"
+    },
+    {
+      "id": "L-012",
+      "key": "surviving_mutant::assert that first prompt persistence creates a non null owned session before appending any conversation messages",
+      "text": "Assert that first-prompt persistence creates a non-null owned session before appending any conversation messages",
+      "signal": "surviving_mutant",
+      "scope": "chat",
+      "status": "candidate",
+      "features": [
+        "chat-ux-stability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "MUT-1 (validation.md) (chat)"
+      ],
+      "created": "2026-10-25T05:15:56Z",
+      "last_seen": "2026-10-25T05:15:56Z"
+    }
+  ]
+}
