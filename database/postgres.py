@@ -41,16 +41,28 @@ class PostgresAdapter(DatabaseAdapter):
                 
             self.engine = create_engine(connection_url)
 
-    def execute_query(self, sql: str) -> pd.DataFrame:
+    def execute_query(self, sql: str, params=None) -> pd.DataFrame:
         """Executa uma query no PostgreSQL e retorna um DataFrame com os resultados."""
         self.connect()
         try:
             # No Pandas 2+, recomenda-se passar uma conexão do SQLAlchemy explicitamente
             with self.engine.connect() as connection:
-                df = pd.read_sql(text(sql), connection)
+                if params is None:
+                    df = pd.read_sql(text(sql), connection)
+                else:
+                    df = pd.read_sql(text(sql), connection, params=params)
             return df
         except Exception as e:
             raise RuntimeError(f"Erro ao executar a query no PostgreSQL: {e}")
+
+    def execute_command(self, sql: str, params=None):
+        """Executa um comando transacional sem retornar um DataFrame."""
+        self.connect()
+        try:
+            with self.engine.begin() as connection:
+                connection.execute(text(sql), params or {})
+        except Exception as e:
+            raise RuntimeError(f"Erro ao executar comando no PostgreSQL: {e}")
 
     def test_connection(self) -> bool:
         """Testa se a comunicação com o PostgreSQL está operante."""

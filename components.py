@@ -62,7 +62,7 @@ def render_chat_message(i: int, msg: dict):
                 key=f"download_{i}"
             )
 
-def render_pending_sql(db_adapter: DatabaseAdapter):
+def render_pending_sql(db_adapter: DatabaseAdapter, query_history=None, user_id=None):
     """Renderiza e gerencia a execução de queries em estado de revisão."""
     if st.session_state.pending_sql:
         with st.chat_message("assistant"):
@@ -72,13 +72,17 @@ def render_pending_sql(db_adapter: DatabaseAdapter):
             if st.button("Executar Query", type="primary"):
                 sql_to_run = st.session_state.pending_sql
                 grafico_to_run = st.session_state.pending_grafico
+                prompt_to_save = st.session_state.pending_prompt
 
                 st.session_state.pending_sql = None
                 st.session_state.pending_grafico = None
+                st.session_state.pending_prompt = None
                 
                 with st.spinner("Executando consulta no banco..."):
                     try:
                         df = db_adapter.execute_query(sql_to_run)
+                        if query_history:
+                            query_history.record(user_id, prompt_to_save, sql_to_run)
                         st.session_state.messages.append({"role": "assistant", "content": "Aqui estão os resultados da consulta:", "sql": sql_to_run, "df": df, "grafico": grafico_to_run, "show_chart": False})
                         st.rerun()
                     except Exception as db_err:

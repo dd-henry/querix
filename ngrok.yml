@@ -1,0 +1,13 @@
+version: "2"
+tunnels:
+  ask-sql:
+    proto: http
+    addr: 8501
+    traffic_policy:
+      on_http_request:
+        - actions:
+            - type: basic-auth
+              config:
+                credentials:
+                  - username: user1
+                    password: password123
