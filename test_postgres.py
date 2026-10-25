@@ -41,6 +41,41 @@ def test_execute_query_retorna_dataframe(mock_env):
             assert len(df_resultado) == 2
             assert df_resultado.iloc[0]["nome"] == "João"
 
+
+def test_execute_read_only_query_sets_transaction_read_only(mock_env):
+    adapter = PostgresAdapter()
+    adapter.engine = MagicMock()
+    connection = adapter.engine.connect.return_value.__enter__.return_value
+    result = pd.DataFrame({"total": [2]})
+
+    with patch("database.postgres.pd.read_sql", return_value=result) as read_sql:
+        actual = adapter.execute_read_only_query(
+            "SELECT total FROM metrics WHERE owner = :owner", {"owner": "user-1"}
+        )
+
+    assert actual.equals(result)
+    connection.execute.assert_called_once()
+    assert str(connection.execute.call_args.args[0]) == "SET TRANSACTION READ ONLY"
+    read_sql.assert_called_once()
+    assert str(read_sql.call_args.args[0]) == (
+        "SELECT total FROM metrics WHERE owner = :owner"
+    )
+    assert read_sql.call_args.kwargs["params"] == {"owner": "user-1"}
+
+
+def test_execute_command_returns_committed_row_count(mock_env):
+    adapter = PostgresAdapter()
+    adapter.engine = MagicMock()
+    connection = adapter.engine.begin.return_value.__enter__.return_value
+    connection.execute.return_value.rowcount = 4
+
+    affected = adapter.execute_command(
+        "DELETE FROM sessions WHERE expired = TRUE"
+    )
+
+    assert affected == 4
+
+
 def test_test_connection_falha_graciosamente():
     """Garante que a função test_connection() captura erros e retorna False, em vez de estourar a aplicação."""
     adapter = PostgresAdapter()

@@ -132,7 +132,11 @@ class ConversationRepository:
         )
 
     def list_sessions(self, user_id):
-        self.db.execute_command(
+        sessions, _expired_count = self.list_sessions_with_expired_count(user_id)
+        return sessions
+
+    def list_sessions_with_expired_count(self, user_id):
+        expired_count = self.db.execute_command(
             """
             DELETE FROM ask_sql_conversation_sessions
             WHERE user_id = CAST(:user_id AS uuid)
@@ -150,7 +154,54 @@ class ConversationRepository:
             """,
             {"user_id": str(user_id)},
         )
-        return result.to_dict("records")
+        return result.to_dict("records"), max(expired_count, 0)
+
+    def update_assistant_message(
+        self,
+        user_id,
+        session_id,
+        request_id,
+        content,
+        sql=None,
+        error=None,
+        metadata=None,
+        role="assistant",
+    ):
+        if role != "assistant":
+            raise ValueError("Only assistant messages can be replaced.")
+
+        self.db.execute_command(
+            """
+            WITH updated AS (
+                UPDATE ask_sql_conversation_messages m
+                SET content = :content,
+                    sql = :sql,
+                    error = :error,
+                    metadata = CAST(:metadata AS jsonb)
+                FROM ask_sql_conversation_sessions s
+                WHERE m.session_id = s.id
+                  AND m.session_id = CAST(:session_id AS uuid)
+                  AND m.request_id = CAST(:request_id AS uuid)
+                  AND m.role = 'assistant'
+                  AND s.user_id = CAST(:user_id AS uuid)
+                RETURNING m.session_id
+            )
+            UPDATE ask_sql_conversation_sessions s
+            SET last_activity = GREATEST(s.last_activity, NOW())
+            WHERE s.id = CAST(:session_id AS uuid)
+              AND s.user_id = CAST(:user_id AS uuid)
+              AND EXISTS (SELECT 1 FROM updated)
+            """,
+            {
+                "user_id": str(user_id),
+                "session_id": str(session_id),
+                "request_id": str(request_id),
+                "content": content or "",
+                "sql": sql,
+                "error": error,
+                "metadata": json.dumps(metadata or {}, ensure_ascii=False),
+            },
+        )
 
     def get_messages(self, user_id, session_id):
         result = self.db.execute_query(
@@ -167,7 +218,7 @@ class ConversationRepository:
         )
         return result.to_dict("records")
 
-    def get_context(self, user_id, session_id, limit=6):
+    def get_context(self, user_id, session_id, limit=6, exclude_request_id=None):
         if not isinstance(limit, int) or limit < 0 or limit > self._context_limit:
             raise ValueError("Conversation context limit must be between zero and six.")
         if limit == 0:
@@ -186,6 +237,7 @@ class ConversationRepository:
             WHERE s.id = CAST(:session_id AS uuid)
               AND s.user_id = CAST(:user_id AS uuid)
               AND u.role = 'user'
+              AND u.request_id IS DISTINCT FROM CAST(:exclude_request_id AS uuid)
             ORDER BY u.id DESC
             LIMIT :limit
             """,
@@ -193,6 +245,9 @@ class ConversationRepository:
                 "user_id": str(user_id),
                 "session_id": str(session_id),
                 "limit": limit,
+                "exclude_request_id": (
+                    str(exclude_request_id) if exclude_request_id is not None else None
+                ),
             },
         )
 

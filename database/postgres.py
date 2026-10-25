@@ -55,12 +55,24 @@ class PostgresAdapter(DatabaseAdapter):
         except Exception as e:
             raise RuntimeError(f"Erro ao executar a query no PostgreSQL: {e}")
 
+    def execute_read_only_query(self, sql: str, params=None) -> pd.DataFrame:
+        """Executa uma consulta dentro de uma transação PostgreSQL somente leitura."""
+        self.connect()
+        try:
+            with self.engine.connect() as connection:
+                with connection.begin():
+                    connection.execute(text("SET TRANSACTION READ ONLY"))
+                    return pd.read_sql(text(sql), connection, params=params or {})
+        except Exception as e:
+            raise RuntimeError(f"Erro ao executar a query no PostgreSQL: {e}")
+
     def execute_command(self, sql: str, params=None):
         """Executa um comando transacional sem retornar um DataFrame."""
         self.connect()
         try:
             with self.engine.begin() as connection:
-                connection.execute(text(sql), params or {})
+                result = connection.execute(text(sql), params or {})
+                return result.rowcount
         except Exception as e:
             raise RuntimeError(f"Erro ao executar comando no PostgreSQL: {e}")
 

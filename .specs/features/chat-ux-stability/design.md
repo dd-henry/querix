@@ -62,14 +62,23 @@ On session-history reads, the repository first removes non-favorite sessions own
 - **Interfaces**:
   - `initialize()` - create session/message tables and indexes.
   - `list_sessions(user_id)` - purge that user's expired non-favorites, then return their sessions ordered by favorite and activity.
+  - `list_sessions_with_expired_count(user_id)` - perform the same cleanup and return the number of committed deletions for user feedback.
   - `create_with_user_message(user_id, session_id, request_id, prompt)` - atomically create a session and its first user message.
   - `append_message(user_id, session_id, request_id, role, content, sql=None, error=None, metadata=None)` - owner-scoped, idempotent message insert and activity update.
+  - `update_assistant_message(...)` - replace an existing owner-scoped assistant turn after an explicit retry.
   - `get_messages(user_id, session_id)` - load one owner's ordered transcript.
-  - `get_context(user_id, session_id, limit=6)` - return the latest completed prompt/assistant/SQL turns.
+  - `get_context(user_id, session_id, limit=6, exclude_request_id=None)` - return the latest completed prompt/assistant/SQL turns, optionally excluding the turn being retried.
   - `set_favorite(user_id, session_id, favorite)` - update only an owned session.
   - `delete(user_id, session_id)` - delete only an owned session; database cascades its messages and linked query-history rows.
 - **Dependencies**: `PostgresAdapter`, UUID request/session IDs, JSON serialization for message metadata.
 - **Reuses**: Existing parameterized SQL and transaction handling in `PostgresAdapter`.
+
+### Read-only retry execution
+
+- **Purpose**: Ensure user-triggered retries cannot execute mutating SQL.
+- **Location**: `database/postgres.py`
+- **Interface**: `execute_read_only_query(sql, params=None)` starts a transaction marked `READ ONLY` before fetching rows.
+- **Use**: The app permits retries only for one validated `SELECT` or `WITH` statement and executes it through this adapter method. Other execution paths retain their existing behavior.
 
 ### QueryHistoryRepository integration
 

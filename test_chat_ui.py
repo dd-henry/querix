@@ -52,6 +52,40 @@ def test_render_chat_messages_is_stable_across_full_rerenders(streamlit):
     streamlit.rerun.assert_not_called()
 
 
+def test_retryable_message_invokes_the_retry_action_once(streamlit):
+    streamlit.button.return_value = True
+    on_retry = MagicMock()
+    message = {
+        "role": "assistant",
+        "content": "A consulta falhou.",
+        "request_id": "turn-1",
+        "retryable": True,
+        "retry_kind": "translate",
+    }
+
+    components.render_chat_message(0, message, on_retry=on_retry)
+
+    on_retry.assert_called_once_with(message)
+    assert streamlit.button.call_args.kwargs["key"] == "retry_turn-1"
+
+
+def test_retry_button_is_disabled_while_an_action_is_active(streamlit):
+    on_retry = MagicMock()
+    message = {
+        "role": "assistant",
+        "content": "A consulta falhou.",
+        "request_id": "turn-1",
+        "retryable": True,
+    }
+
+    components.render_chat_message(
+        0, message, on_retry=on_retry, action_pending=True
+    )
+
+    assert streamlit.button.call_args.kwargs["disabled"] is True
+    on_retry.assert_not_called()
+
+
 def test_render_chat_message_keeps_sql_table_and_csv_download(streamlit):
     result = pd.DataFrame({"cliente": ["Ana"], "total": [3]})
     message = {

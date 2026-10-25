@@ -6,13 +6,15 @@ from database.base import DatabaseAdapter
 logger = logging.getLogger(__name__)
 
 
-def render_chat_messages(messages):
+def render_chat_messages(messages, on_retry=None, action_pending=False):
     """Renderiza o histórico inteiro a partir de uma única fonte."""
     for i, msg in enumerate(messages):
-        render_chat_message(i, msg)
+        render_chat_message(
+            i, msg, on_retry=on_retry, action_pending=action_pending
+        )
 
 
-def render_chat_message(i: int, msg: dict):
+def render_chat_message(i: int, msg: dict, on_retry=None, action_pending=False):
     """Renderiza uma única mensagem do histórico do chat no Streamlit."""
     with st.chat_message(msg["role"]):
         if msg["content"].startswith("AVISO:"):
@@ -25,6 +27,14 @@ def render_chat_message(i: int, msg: dict):
         
         if "error" in msg and msg["error"]:
             st.error(msg["error"])
+
+        if msg.get("retryable") and on_retry:
+            if st.button(
+                "Tentar novamente",
+                key=f"retry_{msg['request_id']}",
+                disabled=action_pending,
+            ):
+                on_retry(msg)
 
         if "df" in msg and msg["df"] is not None:
             df: pd.DataFrame = msg["df"]

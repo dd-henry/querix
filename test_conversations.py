@@ -9,7 +9,9 @@ from database.conversations import ConversationRepository
 
 @pytest.fixture
 def db():
-    return MagicMock()
+    fake = MagicMock()
+    fake.execute_command.return_value = 0
+    return fake
 
 
 def test_initialize_creates_owned_session_and_message_tables(db):
@@ -77,6 +79,43 @@ def test_append_message_rejects_invalid_role(db):
     db.execute_command.assert_not_called()
 
 
+def test_update_assistant_message_replaces_same_owned_turn(db):
+    repository = ConversationRepository(db)
+
+    repository.update_assistant_message(
+        "user-id",
+        "session-id",
+        "request-id",
+        "Resultado pronto",
+        sql="SELECT 1",
+        metadata={"retryable": False},
+    )
+
+    sql, parameters = db.execute_command.call_args.args
+    assert "UPDATE ask_sql_conversation_messages m" in sql
+    assert "m.request_id = CAST(:request_id AS uuid)" in sql
+    assert "m.role = 'assistant'" in sql
+    assert "s.user_id = CAST(:user_id AS uuid)" in sql
+    assert parameters == {
+        "user_id": "user-id",
+        "session_id": "session-id",
+        "request_id": "request-id",
+        "content": "Resultado pronto",
+        "sql": "SELECT 1",
+        "error": None,
+        "metadata": json.dumps({"retryable": False}, ensure_ascii=False),
+    }
+
+
+def test_update_assistant_message_rejects_user_role(db):
+    with pytest.raises(ValueError, match="assistant"):
+        ConversationRepository(db).update_assistant_message(
+            "user-id", "session-id", "request-id", "message", role="user"
+        )
+
+    db.execute_command.assert_not_called()
+
+
 def test_list_sessions_expires_only_owned_non_favorites_then_lists(db):
     db.execute_query.return_value = pd.DataFrame([{"id": "session-id"}])
     repository = ConversationRepository(db)
@@ -91,6 +130,21 @@ def test_list_sessions_expires_only_owned_non_favorites_then_lists(db):
     assert "WHERE user_id = CAST(:user_id AS uuid)" in list_sql
     assert "ORDER BY is_favorite DESC, last_activity DESC" in list_sql
     assert list_parameters == {"user_id": "user-id"}
+
+
+def test_list_sessions_with_expired_count_reports_removed_sessions(db):
+    db.execute_command.return_value = 2
+    db.execute_query.return_value = pd.DataFrame([{"id": "active-1"}])
+    repository = ConversationRepository(db)
+
+    sessions, expired_count = repository.list_sessions_with_expired_count("user-id")
+
+    assert sessions == [{"id": "active-1"}]
+    assert expired_count == 2
+    expiry_sql, expiry_parameters = db.execute_command.call_args.args
+    assert "DELETE FROM ask_sql_conversation_sessions" in expiry_sql
+    assert "RETURNING" not in expiry_sql
+    assert expiry_parameters == {"user_id": "user-id"}
 
 
 def test_get_messages_returns_ordered_owner_scoped_records(db):
@@ -130,7 +184,12 @@ def test_get_context_returns_recent_turns_in_chronological_order(db):
     sql, parameters = db.execute_query.call_args.args
     assert "LIMIT :limit" in sql
     assert "s.user_id = CAST(:user_id AS uuid)" in sql
-    assert parameters == {"user_id": "user-id", "session_id": "session-id", "limit": 6}
+    assert parameters == {
+        "user_id": "user-id",
+        "session_id": "session-id",
+        "limit": 6,
+        "exclude_request_id": None,
+    }
 
 
 def test_get_context_rejects_limit_above_six(db):
@@ -138,6 +197,18 @@ def test_get_context_rejects_limit_above_six(db):
         ConversationRepository(db).get_context("user-id", "session-id", limit=7)
 
     db.execute_query.assert_not_called()
+
+
+def test_get_context_can_exclude_the_turn_being_retried(db):
+    db.execute_query.return_value = pd.DataFrame()
+
+    ConversationRepository(db).get_context(
+        "user-id", "session-id", exclude_request_id="retry-id"
+    )
+
+    sql, parameters = db.execute_query.call_args.args
+    assert "u.request_id IS DISTINCT FROM CAST(:exclude_request_id AS uuid)" in sql
+    assert parameters["exclude_request_id"] == "retry-id"
 
 
 def test_set_favorite_updates_only_owned_session(db):

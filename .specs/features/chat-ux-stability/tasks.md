@@ -229,8 +229,8 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 ### T5: Integrating resumable sessions and stable chat flow
 
-**What**: Connect authenticated Streamlit state to the conversation repository and translator; implement new drafts, session persistence/resume, bounded context, query linkage, retry/progress state, and organized sidebar navigation while preserving role-gated features.
-**Where**: `app.py`
+**What**: Connect authenticated Streamlit state to the conversation repository and translator; implement new drafts, session persistence/resume, bounded context, query linkage, retry/progress state, expiry feedback, and organized sidebar navigation while preserving role-gated features. Retries replace the same assistant turn instead of creating duplicate messages.
+**Where**: `.specs/features/chat-ux-stability/design.md`, `app.py`, `components.py`, `database/conversations.py`, `database/postgres.py`, `test_app.py`, `test_chat_ui.py`, `test_conversations.py`, `test_postgres.py`
 **Depends on**: T1, T2, T3, T4
 **Reuses**: Existing auth/profile gates, shared-query/history/admin repositories, and chat components.
 **Requirement**: CHAT-02, CHAT-05, CHAT-06, CHAT-08, CHAT-09, CHAT-10, CHAT-11, CHAT-12, CHAT-13, CHAT-14, CHAT-16, CHAT-17, CHAT-18, CHAT-19, CHAT-20, CHAT-21, CHAT-22, CHAT-23
@@ -242,15 +242,32 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 **Done when**:
 
-- [ ] An approved user starts in a blank draft and can create, list, switch, and resume only their own sessions.
-- [ ] Each submitted turn persists exactly once; reruns do not duplicate the prompt, result, query-history entry, or assistant error.
-- [ ] A reopened query displays its SQL but fetches result rows only after explicit execution.
-- [ ] The translator receives at most six completed prior turns from the active session.
-- [ ] Favorites, confirmed deletion, expiry feedback, and linked query-history deletion are wired to the repository.
-- [ ] Login, translation, execution, and persistence show explicit progress/failure states; unsafe mutations are never automatically retried.
-- [ ] The chat is primary; session history, query history, shared queries, and admin/account tools remain organized and role-gated.
-- [ ] At least 10 focused application tests cover new/old sessions, ownership, grouping, retries, exactly-once rendering/persistence, login feedback, and role-gated existing features.
-- [ ] Gate check passes: `python3 -m pytest test_chat_ui.py -q`.
+- [x] An approved user starts in a blank draft and can create, list, switch, and resume only their own sessions.
+- [x] Each submitted turn persists exactly once; reruns do not duplicate the prompt, result, query-history entry, or assistant error.
+- [x] A reopened query displays its SQL but fetches result rows only after explicit execution.
+- [x] The translator receives at most six completed prior turns from the active session.
+- [x] Favorites, confirmed deletion, expiry feedback, and linked query-history deletion are wired to the repository.
+- [x] A user-triggered retry updates the existing assistant turn, excludes that turn from prior-context retrieval, and runs SQL in a PostgreSQL read-only transaction.
+- [x] Login, translation, execution, and persistence show explicit progress/failure states; unsafe mutations are never automatically retried.
+- [x] The chat is primary; session history, query history, shared queries, and admin/account tools remain organized and role-gated.
+- [x] 25 focused application tests cover new/old sessions, ownership, grouping, retries, exactly-once rendering/persistence, login feedback, expiry feedback, and role-gated existing features.
+- [x] Gate check passes: `venv/bin/python -m pytest test_app.py test_chat_ui.py test_conversations.py test_postgres.py -q` (55 passed).
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Spec-defined outcome | Result |
+| --- | --- | --- | --- |
+| Blank draft, recency groups, own-session navigation and resume | `test_app.py:330` - `assert app.session_state["active_conversation_id"] is None`; `test_app.py:422` - asserts all five group labels; `test_app.py:450` - asserts the selected session ID; `test_app.py:491` - asserts another user's title is absent | Start blank; list only owned sessions; switch/resume grouped history. | Covered |
+| Exactly-once persistence and stable reruns | `test_app.py:369` - asserts roles exactly `["user", "assistant"]`; `test_app.py:381` - asserts two records after rerun; `test_app.py:382` - asserts one translation; `test_app.py:552` - asserts one query execution; `test_app.py:553` - asserts one history record | One persisted turn, result, and history record per submitted action. | Covered |
+| Reopened SQL does not restore result rows or execute automatically | `test_app.py:451` - asserts SQL is `SELECT 42`; `test_app.py:452` - asserts `"df" not in app.session_state["messages"][1]`; `test_app.py:453` - asserts `services.db.execute_query.assert_not_called()` | Restore prompt and SQL only; fetch current rows only after explicit execution. | Covered |
+| Context is bounded to six prior turns | `test_app.py:400` - asserts `len(context) == 12`; `test_app.py:401` - asserts the repository limit is six; `test_conversations.py:176` - asserts the repository returns 12 messages for six turns | Supply no more than six completed user/assistant turns. | Covered |
+| Favorite, confirmed delete, expiry report, and linked-query cascade | `test_app.py:521` - asserts favorite state is true; `test_app.py:535` - session remains before confirmation; `test_app.py:538` - session is removed after confirmation; `test_app.py:766` - asserts the expiry toast; `test_query_history.py:71` - asserts `ON DELETE CASCADE` | Favorites persist; confirmed deletion cascades; expiry cleanup is reported. | Covered |
+| Retries replace one assistant turn, exclude it from context, and use read-only SQL execution | `test_app.py:596` - asserts two records after retry; `test_app.py:597` - asserts updated SQL; `test_app.py:599` - asserts the retried request is excluded from context; `test_conversations.py:95` - asserts assistant-only update; `test_conversations.py:98` - asserts owner scoping; `test_postgres.py:58` - asserts `SET TRANSACTION READ ONLY`; `test_app.py:659` - asserts mutating SQL has no retry action | Retries are explicit, do not duplicate assistant messages, and cannot run mutating SQL. | Covered |
+| Progress and failures are explicit | `test_app.py:375` - asserts save/translation progress labels; `test_app.py:359` - asserts persistence failure is shown; `test_app.py:591` - asserts translation failure is shown; `test_app.py:614` - asserts query failure is shown; `test_app.py:693` - asserts login progress | Login, persistence, translation, and execution show progress or actionable failure feedback. | Covered |
+| Existing layout, roles, and direct-execution option remain available | `test_app.py:572` - asserts direct execution occurs when review is disabled; `test_app.py:730` - asserts admin tools appear for admins; `test_app.py:748` - asserts catalog administration appears for developers but user administration does not; `test_app.py:755` - asserts query-history and shared-query groups; `test_chat_ui.py:103` - asserts the result DataFrame; `test_chat_ui.py:104` - asserts CSV data | Chat remains primary; existing tools and permissions remain available. | Covered |
+| Application coverage meets the minimum | `test_app.py` contains 25 focused `test_` cases; T5 gate reports 55 passing tests | At least 10 focused application tests; no gate failures. | Covered |
+
+**Test adequacy**: All 25 app tests and the component/repository/database assertions above map to T5 acceptance criteria or specification edge cases; no test was skipped or removed.
 
 **Tests**: unit
 **Gate**: full
