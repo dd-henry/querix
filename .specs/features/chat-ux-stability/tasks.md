@@ -276,6 +276,8 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 ### T6: Documenting conversation behavior for users
 
+**Status**: Done
+
 **What**: Update the README with the new conversation-session workflow, data persistence boundaries, favorites, expiry, and deletion behavior.
 **Where**: `README.md`
 **Depends on**: None
@@ -289,16 +291,25 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 **Done when**:
 
-- [ ] Usage explains creating a new conversation, reopening one, and the separate query-history feature.
-- [ ] Documentation states that result rows are not saved and older SQL must be explicitly executed.
-- [ ] Favorite, expiry, and manual deletion semantics match the specification.
-- [ ] Documentation-only task; no automated tests apply.
-- [ ] Gate check passes: Build gate command.
+- [x] Usage explains creating a new conversation, reopening one, and the separate query-history feature.
+- [x] Documentation states that result rows are not saved and older SQL must be explicitly executed.
+- [x] Favorite, expiry, and manual deletion semantics match the specification.
+- [x] Documentation-only task; no automated tests apply.
+- [x] Gate check passes: `venv/bin/python -m compileall -q app.py components.py core database test_*.py && venv/bin/python -m pytest -m "not integration" -q` (84 passed, 1 deselected).
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `docs(readme): document conversation sessions`
+
+**Post-gate evidence**:
+
+| Criterion | Documentation evidence | Expected behavior | Result |
+| --- | --- | --- | --- |
+| Create and reopen a session; distinguish query history | `README.md:94` - new conversation, first prompt, owner account, and restored messages; `README.md:98` - separate query history and actions | Users can start a blank chat, resume their own sessions, and use query history separately. | Covered |
+| State that query rows are not persisted and SQL requires explicit execution | `README.md:96` - explicitly says result rows are not saved and reopened SQL does not run automatically | Results are not restored; older SQL runs only after an explicit action. | Covered |
+| Document favorites, expiry, and confirmed deletion | `README.md:98` - linked history deletion and preservation of unlinked records; `README.md:100` - favorites, one-year inactivity expiry, and confirmation | Favorite sessions are retained; inactive non-favorites expire when history opens; manual deletion is confirmed and removes linked records. | Covered |
+| Documentation-only verification | Manual consistency review; build gate passed with 84 tests and 1 deselected | No documentation test suite is configured; build and existing non-integration tests remain green. | Covered |
 
 ### T7: Updating architecture documentation
 

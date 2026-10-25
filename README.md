@@ -9,7 +9,8 @@ O **Ask-SQL** é uma ferramenta interativa que traduz perguntas em linguagem nat
 *   **Tradução de Linguagem Natural para SQL:** Faça perguntas como "quantos usuários se cadastraram no último mês?" e obtenha a consulta SQL correspondente.
 *   **Execução Direta no Banco de Dados:** Conecta-se ao seu banco de dados PostgreSQL para executar as consultas geradas.
 *   **Consultas Compartilhadas:** Desenvolvedores e DBAs podem cadastrar, editar e excluir consultas somente de leitura para toda a equipe, com tags, parâmetros e favoritos por usuário.
-*   **Histórico personalizado:** Cada usuário possui um histórico das consultas executadas, com opção de reexecutar consultas anteriores sem misturar dados entre contas.
+*   **Histórico personalizado de consultas:** Cada usuário pode consultar, fixar, excluir e executar novamente consultas anteriores sem misturar dados entre contas.
+*   **Conversas privadas e retomáveis:** Cada usuário aprovado pode iniciar conversas separadas, retomar sessões anteriores e favoritar as mais importantes.
 *   **Arquitetura Modular:** Código organizado em componentes com responsabilidades claras, facilitando a manutenção e extensão.
 *   **Engenharia de Prompt Avançada:** Utiliza o esquema do banco de dados e regras de negócio customizadas para gerar prompts mais precisos.
 *   **Suíte de Testes Abrangente:** Inclui testes unitários e de integração para garantir a qualidade e a confiabilidade do código.
@@ -88,6 +89,16 @@ Para executar a aplicação principal, use o `app.py`. A interface será aberta 
 streamlit run app.py
 ```
 
+### Conversas e histórico de consultas
+
+Use **＋ Nova conversa** na barra lateral para começar um chat em branco. A conversa é salva quando você envia a primeira mensagem e recebe um título baseado nesse prompt. As conversas pertencem à sua conta; ao selecionar uma conversa salva, o chat restaura as mensagens, o SQL e os erros anteriores.
+
+Os resultados das consultas, incluindo as linhas retornadas, não são salvos na conversa. O SQL de uma conversa reaberta é exibido, mas não é executado automaticamente. Use a ação de execução apresentada com o SQL para buscar resultados atuais.
+
+O **Histórico de consultas** é separado das conversas: reúne consultas executadas e permite fixar, excluir ou executá-las novamente. Ao excluir uma conversa após confirmar, as mensagens e os registros do histórico vinculados a ela também são excluídos; registros antigos sem vínculo com uma conversa são preservados.
+
+Você pode favoritar conversas para mantê-las. Conversas não favoritas sem atividade por um ano são removidas quando o histórico de conversas é aberto. A exclusão manual também exige confirmação.
+
 Você também pode executar uma pergunta diretamente pela linha de comando para testes rápidos:
 
 ```bash
@@ -141,4 +152,3 @@ Para promover o primeiro admin, crie uma conta pela tela de cadastro, confirme o
 ```bash
 ./venv/bin/python bootstrap_admin.py email@empresa.com
 ```
-
