@@ -313,6 +313,8 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 ### T7: Updating architecture documentation
 
+**Status**: Done
+
 **What**: Update the architecture document with conversation persistence, ownership, translation context, and the rerun/render flow.
 **Where**: `docs/arquitetura_e_funcionamento.md`
 **Depends on**: None
@@ -326,15 +328,24 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 
 **Done when**:
 
-- [ ] The architecture describes session/message tables, query-history linkage, and owner scoping accurately.
-- [ ] The documented translation and result flow matches the implemented six-turn context and non-persisted results.
-- [ ] Documentation-only task; no automated tests apply.
-- [ ] Gate check passes: Build gate command.
+- [x] The architecture describes session/message tables, query-history linkage, and owner scoping accurately.
+- [x] The documented translation and result flow matches the implemented six-turn context and non-persisted results.
+- [x] Documentation-only task; no automated tests apply.
+- [x] Gate check passes: `venv/bin/python -m compileall -q app.py components.py core database test_*.py && venv/bin/python -m pytest -m "not integration" -q` (84 passed, 1 deselected).
 
 **Tests**: none
 **Gate**: build
 
 **Commit**: `docs(architecture): describe resumable chat sessions`
+
+**Post-gate evidence**:
+
+| Criterion | Documentation evidence | Expected behavior | Result |
+| --- | --- | --- | --- |
+| Describe conversation, message, history linkage, and owner scope | `docs/arquitetura_e_funcionamento.md:44` - repository tables; `:46` - owner and authenticated-user scope; `:47` - message fields, uniqueness, and cascade; `:48` - nullable history linkage and legacy rows | Sessions and messages belong to the owner; linked query history cascades while unlinked legacy rows remain separate. | Covered |
+| Describe bounded context and non-persisted result rows | `docs/arquitetura_e_funcionamento.md:23` - up to six completed turns including SQL/errors; `:49` - DataFrame not stored and SQL requires explicit execution; `:56` - six-turn translation context | Translation uses at most six prior turns; reopening restores no result rows and requires explicit execution. | Covered |
+| Describe stable rerun/render and workspace flow | `docs/arquitetura_e_funcionamento.md:17` - single transcript and distinct review card; `:55` - request idempotency; `:58` - one-time pending action and result/error persistence; `:59` - one render per message; `:60` - resume and retry; `:61` - chat primary with role-based sidebar tools | Reruns do not duplicate turns; retry updates the assistant message; chat remains primary and supporting tools stay organized. | Covered |
+| Documentation-only verification | Manual consistency review; build gate passed with 84 tests and 1 deselected | No documentation test suite is configured; build and existing non-integration tests remain green. | Covered |
 
 ### T8: Documenting the UX regression test strategy
 

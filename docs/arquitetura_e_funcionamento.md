@@ -13,13 +13,14 @@ A aplicação foi construída em Python utilizando o framework **Streamlit** par
 O código é modular e segue o princípio de separação de responsabilidades.
 
 ### 1. Ponto de Entrada e Interface: `app.py` e `components.py`
-- **`app.py`:** É o arquivo principal. Ele configura a página Streamlit, instancia os serviços (com cache para performance) e gerencia o estado da sessão (histórico de chat, requisições de gráficos e queries em estado de revisão). Todo o fluxo principal de entrada de texto e chamadas aos módulos secundários ocorre aqui.
-- **`components.py`:** Isola as funções de renderização do Streamlit. Contém a lógica de desenhar o chat, renderizar DataFrames, disponibilizar os botões para download em CSV e instanciar dinamicamente gráficos recomendados pelo LLM. Também lida com a exibição da consulta pendente ("SQL gerado aguardando revisão").
+- **`app.py`:** Configura a página, instancia serviços com cache, verifica o usuário autenticado e coordena conversas, estado transitório, tradução, execução e histórico. Uma conversa em branco só é persistida quando recebe o primeiro prompt.
+- **`components.py`:** Renderiza a lista de mensagens do chat como uma única transcrição. SQL e erros pertencem à mensagem do assistente; tabelas, gráficos e downloads usam os resultados mantidos no estado da sessão do Streamlit. A revisão de SQL aparece em um cartão de ação separado, não como uma segunda mensagem.
 
 ### 2. Motor de Tradução (LLM): `core/translator.py`
 O **`Translator`** é responsável pela comunicação com o modelo de inteligência artificial via biblioteca `ollama`. 
 Ele não interage diretamente com o banco de dados. 
 - Ele recebe a instrução do usuário em linguagem natural.
+- Para uma conversa retomada, recebe também até seis turnos concluídos anteriores, com mensagens do usuário e do assistente, incluindo SQL e erros.
 - Envia isso junto ao contexto (System Prompt) ao LLM local (o modelo definido no projeto é o `qwen2.5-coder:7b`).
 - Ele possui uma funcionalidade essencial de extração e limpeza: limpa as "tagarelices" comuns de respostas do LLM, extraindo apenas o JSON válido que deve conter a chave `sql` e, opcionalmente, as instruções do `grafico`.
 
@@ -36,12 +37,25 @@ A comunicação com o banco de dados ocorre através do padrão *Adapter*.
   - Utiliza o `load_dotenv` para buscar as credenciais com segurança.
   - Usa o `SQLAlchemy` e o driver `psycopg2` para gerir conexões.
   - Possui o método `get_schema_info` que faz uma consulta especial no dicionário de dados interno do PostgreSQL (`information_schema` e `pg_catalog`) para extrair não apenas nomes, mas também os comentários (metadados) das tabelas e colunas para entregar à IA.
+  - Também fornece a execução em transação somente de leitura usada pelos retries de consulta.
+
+### 5. Persistência de Conversas e Histórico
+
+`ConversationRepository` cria e consulta as tabelas `ask_sql_conversation_sessions` e `ask_sql_conversation_messages`:
+
+- Cada sessão tem um UUID, o `user_id` proprietário, título, estado de favorito e horários de criação e atividade. O proprietário referencia `auth.users`; as operações de listar, carregar, adicionar mensagem, favoritar e excluir filtram pelo usuário autenticado.
+- Cada mensagem tem um ID ordenável, `request_id`, papel (`user` ou `assistant`), conteúdo, SQL, erro e metadados. A chave única `(session_id, request_id, role)` impede que um rerun grave novamente o mesmo lado do turno. Mensagens são excluídas em cascata com a sessão.
+- O histórico `ask_sql_query_history` permanece separado e tem um `session_id` anulável com exclusão em cascata. Assim, consultas executadas podem ser acessadas pelo histórico próprio, enquanto registros legados sem sessão continuam sem vínculo.
+- Linhas retornadas pelo banco não são gravadas nessas tabelas. O DataFrame existe apenas no estado transitório do Streamlit após a execução; ao reabrir uma conversa, o SQL aparece sem resultados e precisa ser executado explicitamente para buscar dados atuais.
+- A listagem remove sessões não favoritas sem atividade há pelo menos um ano antes de apresentar as conversas do proprietário. Sessões favoritas não entram nessa limpeza.
 
 ## Fluxo Completo de Operação
 
-1. **Setup e Caching:** Ao iniciar, o `app.py` coleta o esquema do banco, o consolida via `Prompter` e o entrega para instanciar o `Translator`. Esses serviços rodam no cache do Streamlit (`@st.cache_resource`).
-2. **Entrada do Usuário:** O usuário envia uma pergunta pelo chat do Streamlit.
-3. **Tradução:** O `Translator` envia a pergunta ao Ollama. A LLM avalia a pergunta frente às tabelas existentes no sistema. Se for viável, ela devolve o SQL e uma formatação de gráfico encapsulados em JSON. 
-4. **Revisão:** Com a opção de "Revisar" ativa (via toggle), a query SQL gerada entra na área de stand-by (`render_pending_sql`), esperando o usuário aprovar e clicar em "Executar Query".
-5. **Execução:** O aplicativo usa o `PostgresAdapter` para executar o SQL cru gerado pela máquina diretamente no banco de dados e retorna o resultado formatado em um Pandas DataFrame.
-6. **Resposta e Exibição:** O `app.py` alimenta o histórico (`session_state.messages`) e o Streamlit renderiza a resposta no chat (via `components.py`), mostrando a tabela e oferecendo o botão interativo do gráfico quando ele é sinalizado pela IA. Se houver erro, a exceção é tratada e exposta na tela de forma contida.
+1. **Setup e autenticação:** O `app.py` coleta o esquema, monta o prompt e inicializa o tradutor em recursos cacheados do Streamlit. Após autenticação, apresenta um rascunho vazio e as conversas do usuário na barra lateral.
+2. **Persistência do prompt:** Ao enviar a primeira pergunta, o app cria uma sessão titulada pelo prompt e salva a mensagem do usuário. Em sessões existentes, adiciona a mensagem à sessão ativa. A chave única por sessão, requisição e papel protege gravações contra duplicidade.
+3. **Contexto e tradução:** O `ConversationRepository` busca até seis turnos concluídos da sessão ativa, em ordem cronológica. O tradutor envia esses pares anteriores e o novo prompt ao Ollama.
+4. **Revisão de SQL:** A revisão começa ativada. Nesse modo, o SQL é persistido na mensagem do assistente e exibido com uma ação de execução separada. Se a revisão estiver desativada, o app encaminha o SQL para execução direta.
+5. **Execução e histórico:** O app consome a ação pendente uma vez, mostra o progresso e executa a consulta pelo `PostgresAdapter`. Em caso de sucesso, associa a consulta ao histórico e mantém o DataFrame no estado do Streamlit; não salva as linhas retornadas na conversa. Falhas persistem o SQL e o erro na mensagem do assistente.
+6. **Renderização:** `render_chat_messages` percorre a transcrição persistida e renderiza cada mensagem uma vez. Resultados disponíveis na sessão recebem tabela, gráfico e download CSV; erros e SQL permanecem associados à mensagem correspondente.
+7. **Retomada e retry:** Ao reabrir uma sessão, o repositório carrega as mensagens do proprietário em ordem e não restaura DataFrames. A execução de SQL anterior exige uma ação explícita. Um retry atualiza a mesma mensagem do assistente e, para SQL, usa uma transação somente de leitura.
+8. **Organização do workspace:** A conversa ocupa a área principal. A barra lateral reúne sessões, histórico de consultas, consultas compartilhadas e controles administrativos conforme o papel do usuário.
