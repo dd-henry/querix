@@ -72,6 +72,14 @@ T6    T7    T8
 
 The three documentation updates are independent.
 
+### Phase 5: Verifier follow-ups
+
+```text
+T9    T10    T11
+```
+
+The three focused verification tasks are independent.
+
 ---
 
 ## Task Breakdown
@@ -382,6 +390,99 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 | Describe ownership, expiry/favorites, context, reruns, failures, and preserved features | `docs/testes.md:17` - repository scope, expiry, favorites, and context; `:19` - translator context and errors; `:20` - one render, reruns, results, failures; `:21` - app sessions, failures, retry, roles, and sidebar features; `:22` - read-only retry database behavior | The guide accurately represents the coverage protecting the session and chat UX requirements. | Covered |
 | Documentation-only verification | Manual consistency review; build gate passed with 84 tests and 1 deselected | No documentation test suite is configured; build and existing non-integration tests remain green. | Covered |
 
+### T9: Asserting chat failure recovery and once-only actions
+
+**Status**: Done
+
+**What**: Strengthen application and component tests for retained transcripts, stale pending SQL, new prompts after failure, active-action blocking, and successful query reruns.
+**Where**: `test_app.py`, `test_chat_ui.py`
+**Depends on**: None
+**Reuses**: Existing AppTest fixtures, fake repositories, and transcript rendering tests.
+**Requirement**: CHAT-02, CHAT-03, CHAT-04, CHAT-06
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when**:
+
+- [x] Translation and query failures retain prior transcript entries, associate the failure with the correct turn, and leave no stale pending-review SQL.
+- [x] A new prompt after a failure is accepted once without replaying the failed action.
+- [x] Rerunning after successful query execution leaves one assistant result, one history entry, and one database execution.
+- [x] Tests verify an in-flight or retry action cannot be activated twice.
+- [x] Gate check passes: `venv/bin/python -m pytest -m "not integration" -q` (87 passed, 1 deselected).
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(chat): cover failure and rerun recovery`
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Expected outcome | Result |
+| --- | --- | --- | --- |
+| Failures retain earlier transcript and clear stale pending SQL | `test_app.py:431` - asserts prior messages remain; `:439` - `assert messages[3].get("sql") is None`; `:440` - `assert app.session_state["pending_review"] is None`; query failure repeats transcript assertion at `:512` and pending review assertion at `:520` | Prior turns remain, the error belongs to the new prompt, and failed translation leaves no stale SQL action. | Covered |
+| Accept a new prompt after failure without replay | `test_app.py:452` - prior error remains; `:457` - roles assert the four prompt/assistant entries; `:463` - the old error remains; `:464` - the new prompt is recorded; `:465` - the new SQL is saved; `:466` and `:471` - translator count remains two after rerun | The next user prompt is processed once and does not replay the failed action. | Covered |
+| Successful query rerun remains singular | `test_app.py:705` - exact transcript roles after rerun; `:709` - one database execution; `:710` - one history record | One assistant result, one history record, and one query execution persist after rerun. | Covered |
+| Active retry cannot be triggered again | `test_chat_ui.py:85` - `assert streamlit.button.call_args.kwargs["disabled"] is True`; `:87` - `on_retry.assert_not_called()` | The retry control is disabled while an action is active. | Covered |
+
+### T10: Asserting resumed session and deletion outcomes
+
+**Status**: Pending
+
+**What**: Strengthen tests for restored transcript payloads, exact recency-group assignment, saved-session update failures, and the session/history deletion contract.
+**Where**: `test_app.py`, `test_conversations.py`, `test_query_history.py`
+**Depends on**: None
+**Reuses**: Existing fake repositories and generated-SQL assertions.
+**Requirement**: CHAT-09, CHAT-11, CHAT-16, CHAT-18
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when**:
+
+- [ ] Resuming a saved session asserts ordered user prompts, assistant content, SQL, errors, and absence of result rows.
+- [ ] Each seeded session ID is asserted in its specified recency group.
+- [ ] A failure while updating/favoriting an existing session produces actionable feedback and no success-shaped state.
+- [ ] Deletion assertions cover the owner-scoped parent delete, nullable cascading linkage, and preservation of unlinked legacy history.
+- [ ] Gate check passes: Quick gate command.
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(chat): verify resumed session boundaries`
+
+### T11: Defining and verifying light-theme UI behavior
+
+**Status**: Pending
+
+**What**: Define measurable visual acceptance, explicitly default Streamlit to its light theme, and test account-request feedback plus main/sidebar placement.
+**Where**: `.streamlit/config.toml`, `test_app.py`, `.specs/features/chat-ux-stability/spec.md`
+**Depends on**: None
+**Reuses**: Existing authentication AppTest patterns and Streamlit sidebar layout.
+**Requirement**: CHAT-19, CHAT-20, CHAT-23
+
+**Tools**:
+
+- MCP: NONE
+- Skill: `tlc-spec-driven`
+
+**Done when**:
+
+- [ ] Account-request success, progress, and failure outcomes are asserted.
+- [ ] Tests assert the chat input and transcript are in the main area and supporting tools are in the sidebar.
+- [ ] The app config explicitly sets `theme.base = "light"` and a focused test verifies the effective setting.
+- [ ] CHAT-23 states measurable theme and heading outcomes without pixel-specific thresholds.
+- [ ] Build gate command passes.
+
+**Tests**: unit
+**Gate**: build
+
+**Commit**: `feat(ui): set the default Streamlit theme to light`
+
 ---
 
 ## Diagram-Definition Cross-Check
@@ -396,6 +497,9 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 | T6 | None | No incoming edge | Match |
 | T7 | None | No incoming edge | Match |
 | T8 | None | No incoming edge | Match |
+| T9 | None | No incoming edge | Match |
+| T10 | None | No incoming edge | Match |
+| T11 | None | No incoming edge | Match |
 
 ## Test Co-location Validation
 
@@ -409,3 +513,6 @@ Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display c
 | T6: Documenting conversation behavior | Documentation | none | none | Match |
 | T7: Updating architecture documentation | Documentation | none | none | Match |
 | T8: Documenting the UX regression test strategy | Documentation | none | none | Match |
+| T9: Asserting chat failure recovery and once-only actions | Streamlit application | unit | unit | Match |
+| T10: Asserting resumed session and deletion outcomes | Repository / application | unit | unit | Match |
+| T11: Defining and verifying light-theme UI behavior | Streamlit application | unit | unit | Match |

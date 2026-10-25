@@ -122,11 +122,11 @@ The Streamlit chat can briefly render the same user action in more than one plac
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
 | CHAT-01 | P1: Stable chat and query feedback (T4, T8) | Execute | Implemented |
-| CHAT-02 | P1: Stable chat and query feedback (T5) | Execute | Implemented |
-| CHAT-03 | P1: Stable chat and query feedback (T4, T5) | Execute | Implemented |
-| CHAT-04 | P1: Stable chat and query feedback (T4, T5) | Execute | Implemented |
+| CHAT-02 | P1: Stable chat and query feedback (T5, T9) | Execute | Implemented |
+| CHAT-03 | P1: Stable chat and query feedback (T4, T5, T9) | Execute | Implemented |
+| CHAT-04 | P1: Stable chat and query feedback (T4, T5, T9) | Execute | Implemented |
 | CHAT-05 | P1: Stable chat and query feedback (T5) | Execute | Implemented |
-| CHAT-06 | P1: Stable chat and query feedback (T5) | Execute | Implemented |
+| CHAT-06 | P1: Stable chat and query feedback (T5, T9) | Execute | Implemented |
 | CHAT-07 | P1: Stable chat and query feedback (T4, T5) | Execute | Implemented |
 | CHAT-08 | P1: Stable chat and query feedback (T5) | Execute | Implemented |
 | CHAT-09 | P1: Private resumable conversation sessions (T5, T6) | Execute | Implemented |

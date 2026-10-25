@@ -382,6 +382,144 @@ def test_new_prompt_is_saved_once_and_sql_review_is_default(chat_app):
     assert len(services.translator.calls) == 1
 
 
+def test_translation_failure_preserves_history_and_clears_stale_review(chat_app):
+    app, services = chat_app
+    _seed_session(services, "session-with-history")
+    services.conversations.messages["session-with-history"] = [
+        {
+            "request_id": "turn-old",
+            "role": "user",
+            "content": "Pergunta anterior.",
+            "sql": None,
+            "error": None,
+            "metadata": {},
+        },
+        {
+            "request_id": "turn-old",
+            "role": "assistant",
+            "content": "Falha anterior.",
+            "sql": "SELECT 9",
+            "error": "Erro anterior.",
+            "metadata": {},
+        },
+    ]
+    app.session_state["active_conversation_id"] = "session-with-history"
+    app.session_state["messages"] = [
+        {
+            "request_id": "turn-old",
+            "role": "user",
+            "content": "Pergunta anterior.",
+        },
+        {
+            "request_id": "turn-old",
+            "role": "assistant",
+            "content": "Falha anterior.",
+            "sql": "SELECT 9",
+            "error": "Erro anterior.",
+        },
+    ]
+    app.session_state["pending_review"] = {
+        "sql": "SELECT stale",
+        "turn": {"request_id": "turn-old"},
+    }
+    services.translator.responses = [RuntimeError("Ollama indisponível.")]
+    app.run()
+
+    _submit_prompt(app, "Pergunta nova.")
+
+    messages = app.session_state["messages"]
+    assert [message["content"] for message in messages[:2]] == [
+        "Pergunta anterior.",
+        "Falha anterior.",
+    ]
+    assert messages[1]["sql"] == "SELECT 9"
+    assert messages[1]["error"] == "Erro anterior."
+    assert messages[2]["content"] == "Pergunta nova."
+    assert messages[3]["error"] == "Ollama indisponível."
+    assert messages[3].get("sql") is None
+    assert app.session_state["pending_review"] is None
+
+
+def test_new_prompt_after_failure_is_accepted_once_without_replaying_failure(chat_app):
+    app, services = chat_app
+    services.translator.responses = [
+        RuntimeError("Ollama indisponível."),
+        {"sql": "SELECT 2", "grafico": None},
+    ]
+
+    _submit_prompt(app, "Primeira pergunta.")
+    session_id = app.session_state["active_conversation_id"]
+    assert app.session_state["messages"][1]["error"] == "Ollama indisponível."
+
+    _submit_prompt(app, "Nova pergunta.")
+
+    records = services.conversations.messages[session_id]
+    assert [record["role"] for record in records] == [
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+    ]
+    assert records[1]["error"] == "Ollama indisponível."
+    assert records[2]["content"] == "Nova pergunta."
+    assert records[3]["sql"] == "SELECT 2"
+    assert len(services.translator.calls) == 2
+
+    app.run()
+
+    assert len(services.conversations.messages[session_id]) == 4
+    assert len(services.translator.calls) == 2
+
+
+def test_query_failure_keeps_prior_transcript_and_clears_pending_review(chat_app):
+    app, services = chat_app
+    _seed_session(services, "session-query-error")
+    services.conversations.messages["session-query-error"] = [
+        {
+            "request_id": "turn-old",
+            "role": "user",
+            "content": "Pergunta anterior.",
+            "sql": None,
+            "error": None,
+            "metadata": {},
+        },
+        {
+            "request_id": "turn-old",
+            "role": "assistant",
+            "content": "Resposta anterior.",
+            "sql": "SELECT 9",
+            "error": None,
+            "metadata": {},
+        },
+    ]
+    app.session_state["active_conversation_id"] = "session-query-error"
+    app.session_state["messages"] = [
+        {"request_id": "turn-old", "role": "user", "content": "Pergunta anterior."},
+        {
+            "request_id": "turn-old",
+            "role": "assistant",
+            "content": "Resposta anterior.",
+            "sql": "SELECT 9",
+        },
+    ]
+    services.db.execute_query.side_effect = RuntimeError("Falha na consulta.")
+    app.run()
+
+    _submit_prompt(app, "Pergunta com erro.")
+    _click(app, "Executar SQL revisado")
+
+    messages = app.session_state["messages"]
+    assert [message["content"] for message in messages[:2]] == [
+        "Pergunta anterior.",
+        "Resposta anterior.",
+    ]
+    assert messages[1]["sql"] == "SELECT 9"
+    assert messages[2]["content"] == "Pergunta com erro."
+    assert messages[3]["sql"] == "SELECT 1"
+    assert messages[3]["error"] == "Falha na consulta."
+    assert app.session_state["pending_review"] is None
+
+
 def test_resumed_prompt_uses_no_more_than_six_completed_turns(chat_app):
     app, services = chat_app
     _seed_session(services, "session-old")
@@ -561,6 +699,15 @@ def test_reviewed_query_runs_once_and_is_linked_to_active_session(chat_app):
         for message in services.conversations.messages[session_id]
     )
     assert "Executando consulta no banco..." in services.progress_labels
+
+    app.run()
+
+    assert [message["role"] for message in app.session_state["messages"]] == [
+        "user",
+        "assistant",
+    ]
+    assert services.db.execute_query.call_count == 1
+    assert len(services.history.records) == 1
 
 
 def test_direct_execution_remains_available_when_review_is_disabled(chat_app):
