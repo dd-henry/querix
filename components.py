@@ -5,6 +5,13 @@ from database.base import DatabaseAdapter
 
 logger = logging.getLogger(__name__)
 
+
+def render_chat_messages(messages):
+    """Renderiza o histórico inteiro a partir de uma única fonte."""
+    for i, msg in enumerate(messages):
+        render_chat_message(i, msg)
+
+
 def render_chat_message(i: int, msg: dict):
     """Renderiza uma única mensagem do histórico do chat no Streamlit."""
     with st.chat_message(msg["role"]):
@@ -29,7 +36,6 @@ def render_chat_message(i: int, msg: dict):
                     # Botão para renderizar sob demanda
                     if st.button("📊 Gerar Gráfico", key=f"btn_chart_{i}"):
                         msg["show_chart"] = True
-                        st.rerun()
                 
                 if msg.get("show_chart", False):
                     cfg = msg["grafico"]
@@ -65,8 +71,8 @@ def render_chat_message(i: int, msg: dict):
 def render_pending_sql(db_adapter: DatabaseAdapter, query_history=None, user_id=None):
     """Renderiza e gerencia a execução de queries em estado de revisão."""
     if st.session_state.pending_sql:
-        with st.chat_message("assistant"):
-            st.write("SQL gerado (Aguardando revisão):")
+        with st.container(border=True):
+            st.markdown("#### SQL aguardando revisão")
             st.code(st.session_state.pending_sql, language="sql")
             
             if st.button("Executar Query", type="primary"):
@@ -87,5 +93,10 @@ def render_pending_sql(db_adapter: DatabaseAdapter, query_history=None, user_id=
                         st.rerun()
                     except Exception as db_err:
                         logger.error(f"Erro na execução da query: {db_err}")
-                        st.error(f"Erro na execução da query: {db_err}")
-                        st.session_state.messages.append({"role": "assistant", "content": "Houve um problema ao executar a consulta.", "sql": sql_to_run, "error": str(db_err)})
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": "Houve um problema ao executar a consulta.",
+                            "sql": sql_to_run,
+                            "error": str(db_err),
+                        })
+                        st.rerun()

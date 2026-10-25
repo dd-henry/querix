@@ -186,6 +186,8 @@ Every T3 test maps to CHAT-13 or the task's compatibility criteria. Existing pyt
 
 ### T4: Rendering chat messages and pending query actions once
 
+**Status**: Done
+
 **What**: Refactor the chat rendering component so the transcript is the only source for displayed messages and review/error/result controls do not add transient duplicate content.
 **Where**: `components.py`
 **Depends on**: None
@@ -199,17 +201,31 @@ Every T3 test maps to CHAT-13 or the task's compatibility criteria. Existing pyt
 
 **Done when**:
 
-- [ ] Rendering a stored user or assistant message creates one chat block for that message.
-- [ ] Successful results retain SQL, DataFrame, chart, and CSV controls.
-- [ ] Failures retain associated prompt/SQL and display one inline error.
-- [ ] Review controls expose an explicit action rather than rendering a second transcript entry.
-- [ ] At least 5 focused tests verify message count, result controls, errors, review display, and rerun-stable output.
-- [ ] Gate check passes: `python3 -m pytest test_chat_ui.py -q`.
+- [x] Rendering a stored user or assistant message creates one chat block for that message.
+- [x] Successful results retain SQL, DataFrame, chart, and CSV controls.
+- [x] Failures retain associated prompt/SQL and display one inline error.
+- [x] Review controls expose an explicit action rather than rendering a second transcript entry.
+- [x] 7 focused tests verify message count, result controls, errors, review display, rerun-stable output, and failure persistence.
+- [x] Gate check passes: `venv/bin/python -m pytest -m 'not integration' -q` (51 passed, 1 deselected).
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `fix(chat): render each message once`
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Expected outcome | Result |
+| --- | --- | --- | --- |
+| Each stored user/assistant message is rendered once | `test_chat_ui.py:32` - asserts chat roles exactly `["user", "assistant"]`; `test_chat_ui.py:36` - asserts each message content is written once | One chat block per transcript entry. | Covered |
+| Full rerenders do not add explicit rerun/duplicate output | `test_chat_ui.py:50` - `assert streamlit.chat_message.call_count == 1`; `test_chat_ui.py:51` - asserts role remains user; `test_chat_ui.py:52` - `streamlit.rerun.assert_not_called()` | A rerender shows one copy and chart state does not trigger a second forced rerun. | Covered |
+| Successful results preserve SQL/table/CSV | `test_chat_ui.py:67` - asserts SQL language; `test_chat_ui.py:68` - asserts SQL text; `test_chat_ui.py:69` - asserts DataFrame; `test_chat_ui.py:70` - asserts CSV bytes | Result controls use the query result and expected SQL. | Covered |
+| Chart controls render suggested data without a second forced rerun | `test_chat_ui.py:104` - `assert message["show_chart"] is True`; `test_chat_ui.py:105` - `assert streamlit.bar_chart.call_args.kwargs == {"x": "mes", "y": "total"}`; `test_chat_ui.py:106` - `streamlit.rerun.assert_not_called()` | The generated chart uses the selected columns and renders once. | Covered |
+| Errors remain associated with prompt/query and appear inline once | `test_chat_ui.py:85` - one chat block; `test_chat_ui.py:87` - asserts SQL; `test_chat_ui.py:88` - asserts exact error text; `test_chat_ui.py:89` - one error call | One assistant message contains the error and associated SQL. | Covered |
+| Review UI is distinct from transcript | `test_chat_ui.py:115` - `streamlit.container.assert_called_once_with(border=True)`; `test_chat_ui.py:116` - `streamlit.chat_message.assert_not_called()` | Pending review is an action card, not another transcript message. | Covered |
+| Failed execution adds one transcript item rather than a transient global error | `test_chat_ui.py:130` - asserts one assistant message with SQL/error; `test_chat_ui.py:138` - `assert streamlit.error.call_count == 0`; `test_chat_ui.py:139` - asserts one rerun | Error appears once from the canonical transcript after rerun. | Covered |
+
+Every T4 test maps to CHAT-01, CHAT-03, CHAT-04, CHAT-07 or the task's display criteria. Tests follow pytest conventions in `docs/testes.md`.
 
 ### T5: Integrating resumable sessions and stable chat flow
 
