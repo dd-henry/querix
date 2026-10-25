@@ -285,6 +285,8 @@ def grouped_sessions(rows, today=None):
             activity = datetime.fromisoformat(activity)
         if isinstance(activity, date) and not isinstance(activity, datetime):
             activity = datetime.combine(activity, datetime.min.time())
+        if isinstance(activity, datetime):
+            activity = datetime.fromisoformat(activity.isoformat())
         if activity is None:
             age_days = 31
         else:

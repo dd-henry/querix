@@ -580,8 +580,11 @@ def test_saved_sessions_are_grouped_by_recency(chat_app):
         ("older", 50),
     ):
         _seed_session(services, session_id, title=session_id)
-        services.conversations.sessions[-1]["last_activity"] = now - timedelta(
-            days=age_days
+        last_activity = now - timedelta(days=age_days)
+        if age_days == 50:
+            last_activity = last_activity.replace(tzinfo=None)
+        services.conversations.sessions[-1]["last_activity"] = pd.Timestamp(
+            last_activity
         )
 
     app.run()
