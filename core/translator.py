@@ -1,6 +1,9 @@
 import re
 import json
+from typing import Dict, Optional, Sequence
+
 import ollama
+
 
 class Translator:
     """
@@ -40,19 +43,26 @@ class Translator:
         else:
             raise ValueError("Não foi possível encontrar um objeto JSON válido na resposta do modelo.")
 
-    def translate_to_sql(self, user_question: str) -> dict:
+    def translate_to_sql(
+        self,
+        user_question: str,
+        conversation_context: Optional[Sequence[Dict[str, str]]] = None,
+    ) -> dict:
         """
         Envia a pergunta do usuário e o prompt de sistema para o modelo via Ollama,
-        e retorna o dicionário com SQL e configuração de gráfico.
+        incluindo até seis turnos anteriores, e retorna SQL e configuração de gráfico.
         
         Args:
             user_question (str): A pergunta em linguagem natural do usuário.
+            conversation_context: Mensagens anteriores em formato compatível com Ollama.
             
         Returns:
             dict: Objeto contendo chaves "sql" e "grafico".
         """
+        context_messages = list(conversation_context or ())[-12:]
         messages = [
             {"role": "system", "content": self.system_prompt},
+            *context_messages,
             {"role": "user", "content": user_question}
         ]
         

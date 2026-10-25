@@ -133,7 +133,7 @@ The Streamlit chat can briefly render the same user action in more than one plac
 | CHAT-10 | P1: Private resumable conversation sessions (T1, T5) | Execute | Implementing |
 | CHAT-11 | P1: Private resumable conversation sessions (T1, T5) | Execute | Implementing |
 | CHAT-12 | P1: Private resumable conversation sessions (T5) | Tasks | In Tasks |
-| CHAT-13 | P1: Private resumable conversation sessions (T3, T5) | Tasks | In Tasks |
+| CHAT-13 | P1: Private resumable conversation sessions (T3, T5) | Execute | Implementing |
 | CHAT-14 | P1: Private resumable conversation sessions (T1, T5) | Execute | Implementing |
 | CHAT-15 | P1: Private resumable conversation sessions (T1, T2, T5) | Execute | Implementing |
 | CHAT-16 | P1: Private resumable conversation sessions (T1, T2, T5) | Execute | Implementing |

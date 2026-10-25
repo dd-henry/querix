@@ -148,6 +148,8 @@ Every T2 test maps to CHAT-15/16 or the task's compatibility criteria. Existing 
 
 ### T3: Supplying bounded conversation context to translation
 
+**Status**: Done
+
 **What**: Extend SQL translation to accept ordered prior user/assistant messages while preserving existing behavior when no context is supplied.
 **Where**: `core/translator.py`
 **Depends on**: None
@@ -161,15 +163,26 @@ Every T2 test maps to CHAT-15/16 or the task's compatibility criteria. Existing 
 
 **Done when**:
 
-- [ ] The translator passes supplied context in order between the system prompt and current prompt.
-- [ ] A missing/empty context produces the current two-message request.
-- [ ] At least 4 additional tests verify ordering, SQL context, empty-context compatibility, and propagated Ollama errors; all existing translator tests still pass.
-- [ ] Gate check passes: `python3 -m pytest test_translator.py -q`.
+- [x] The translator passes supplied context in order between the system prompt and current prompt.
+- [x] A missing/empty context produces the current two-message request.
+- [x] 5 additional tests verify ordering, SQL context, empty-context compatibility, six-turn bounds, and propagated Ollama errors; all existing translator tests still pass (8 total).
+- [x] Gate check passes: `venv/bin/python -m pytest -m 'not integration' -q` (44 passed, 1 deselected).
 
 **Tests**: unit
 **Gate**: quick
 
 **Commit**: `feat(ai): add bounded conversation context`
+
+**Post-gate evidence**:
+
+| Criterion | Test evidence | Expected outcome | Result |
+| --- | --- | --- | --- |
+| Prior context precedes current question and includes SQL | `test_translator.py:60` - `assert chat.call_args.kwargs["messages"] == [{"role": "system", ...}, *context, {"role": "user", ...}]` | Prior user/assistant turns remain in order between system and current prompt. | Covered |
+| Missing and empty context preserve existing request | `test_translator.py:74` - exact two-message list; `test_translator.py:87` - `assert len(chat.call_args.kwargs["messages"]) == 2` | Both calls send only system and current user messages. | Covered |
+| Context is bounded to six turns and contains the latest SQL | `test_translator.py:108` - `assert messages[1] == {"role": "user", "content": "Question 2"}`; `test_translator.py:109` - asserts latest assistant SQL | Seven supplied turns reduce to the latest six while preserving turn order and SQL. | Covered |
+| Ollama failure remains visible to caller | `test_translator.py:118` - `with pytest.raises(RuntimeError, match="Ollama unavailable")` | Translation failures raise the existing explicit runtime error. | Covered |
+
+Every T3 test maps to CHAT-13 or the task's compatibility criteria. Existing pytest and mock conventions from `docs/testes.md` are followed.
 
 ### T4: Rendering chat messages and pending query actions once
 
