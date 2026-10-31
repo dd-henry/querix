@@ -141,10 +141,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] `create_app()` returns a testable FastAPI instance without opening external connections at import time.
-- [ ] Validation, auth, forbidden, not-found, conflict, and unexpected errors use the documented envelope.
-- [ ] Disallowed mutating origins receive 403; allowed origins receive credentials-compatible CORS headers.
-- [ ] TestClient tests prove passwords, cookies, SQL, and result rows do not enter request logs.
+- [x] `create_app()` returns a testable FastAPI instance without opening external connections at import time.
+- [x] Validation, auth, forbidden, not-found, conflict, and unexpected errors use the documented envelope.
+- [x] Disallowed mutating origins receive 403; allowed origins receive credentials-compatible CORS headers.
+- [x] TestClient tests prove passwords, cookies, SQL, and result rows do not enter request logs.
+- [x] Gate passes with 7 API tests: `venv/bin/pytest -q api/tests`.
 
 **Tests**: integration
 **Gate**: API

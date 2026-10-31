@@ -209,7 +209,7 @@ The Streamlit interface re-executes the whole script on every interaction. Login
 | WEB-05 | P1: Stable authentication | Tasks | Pending |
 | WEB-06 | P1: Stable authentication | Tasks | Pending |
 | WEB-07 | P1: Stable authentication | Tasks | In Progress |
-| WEB-08 | P1: Stable authentication | Tasks | Pending |
+| WEB-08 | P1: Stable authentication | Tasks | In Progress |
 | WEB-09 | P1: Stable authentication | Tasks | Pending |
 | WEB-10 | P1: Stable chat | Tasks | Pending |
 | WEB-11 | P1: Stable chat | Tasks | Pending |
@@ -248,8 +248,8 @@ The Streamlit interface re-executes the whole script on every interaction. Login
 | WEB-44 | P2: Layout | Tasks | Pending |
 | WEB-45 | P2: Layout | Tasks | Pending |
 | WEB-46 | P1: Cutover | Tasks | Pending |
-| WEB-47 | P1: Cutover | Tasks | Pending |
-| WEB-48 | P1: Cutover | Tasks | Pending |
+| WEB-47 | P1: Cutover | Tasks | In Progress |
+| WEB-48 | P1: Cutover | Tasks | In Progress |
 | WEB-49 | P1: Cutover | Tasks | In Progress |
 
 **Coverage:** 49 total, 49 mapped to tasks, 0 unmapped
