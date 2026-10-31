@@ -214,6 +214,8 @@ accessible collapsed details element without duplicating the timeline.
 
 ### T8: Update end-to-end chat contracts
 
+**Status**: Done
+
 **What**: Update E2E fixtures and scenarios for automatic execution while
 retaining explicit review and warning/retry coverage.
 **Where**: `web/e2e/chat.spec.ts`

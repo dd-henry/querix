@@ -57,13 +57,26 @@ test("keeps one user and assistant message during a double-clicked send", async 
     releaseTranslation = resolve;
   });
   let translateCalls = 0;
+  let requestBody: Record<string, unknown> | undefined;
   await page.route("**/api/chat/translate", async (route) => {
     translateCalls += 1;
+    requestBody = route.request().postDataJSON() as Record<string, unknown>;
     await translation;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(reviewResponse),
+      body: JSON.stringify({
+        ...reviewResponse,
+        status: "executed",
+        content: "Aqui estão os resultados da consulta:",
+        summary: "O faturamento retornado foi R$ 12,00.",
+        result: {
+          columns: ["label", "total"],
+          rows: [{ label: "Janeiro", total: 12 }],
+          row_count: 1,
+          truncated: false,
+        },
+      }),
     });
   });
 
@@ -78,7 +91,13 @@ test("keeps one user and assistant message during a double-clicked send", async 
   expect(translateCalls).toBe(1);
 
   releaseTranslation();
-  await expect(page.getByText("SQL gerado para revisão.")).toBeVisible();
+  await expect(
+    page.getByText("O faturamento retornado foi R$ 12,00."),
+  ).toBeVisible();
+  expect(requestBody?.review_mode).toBe(false);
+  await expect(
+    page.getByRole("button", { name: "Executar SQL revisado" }),
+  ).toHaveCount(0);
 });
 
 test("executes reviewed SQL once, keeps controls stable, and exposes chart and CSV", async ({
@@ -107,6 +126,7 @@ test("executes reviewed SQL once, keeps controls stable, and exposes chart and C
         ...reviewResponse,
         status: "executed",
         content: "Aqui estão os resultados da consulta:",
+        summary: "O faturamento retornado foi R$ 12,00.",
         result: {
           columns: ["label", "total"],
           rows: [{ label: "Janeiro", total: 12 }],
@@ -131,6 +151,11 @@ test("executes reviewed SQL once, keeps controls stable, and exposes chart and C
   await expect(
     page.getByRole("heading", { name: "Resultados" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("O faturamento retornado foi R$ 12,00."),
+  ).toBeVisible();
+  await page.getByText("Ver SQL executado").click();
+  await expect(page.getByText("SELECT label, total FROM sales")).toBeVisible();
   await page.getByRole("button", { name: "Gerar Gráfico" }).click();
   await expect(page.getByTestId("bar-chart")).toBeVisible();
 
