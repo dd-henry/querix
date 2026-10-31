@@ -81,6 +81,8 @@ grouping, and reconciliation rules.
 
 ### T2: Implement deterministic common sales query recognition
 
+**Status**: Done
+
 **What**: Add a pure query builder for revenue totals and product sales with
 Portuguese month parsing, current-period defaults, and half-open date intervals.
 **Where**: `core/analytical_queries.py`, `test_analytical_queries.py`

@@ -141,9 +141,9 @@ response, a warning response, and an explicit review response.
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| ANALYTICAL-01 | P1: Correct sales analysis | Design | Pending |
-| ANALYTICAL-02 | P1: Correct sales analysis | Design | Pending |
-| ANALYTICAL-03 | P1: Correct sales analysis | Design | Pending |
+| ANALYTICAL-01 | P1: Correct sales analysis | Design | Implementing |
+| ANALYTICAL-02 | P1: Correct sales analysis | Design | Implementing |
+| ANALYTICAL-03 | P1: Correct sales analysis | Design | Implementing |
 | ANALYTICAL-04 | P1: Correct sales analysis | Design | Implementing |
 | ANALYTICAL-05 | P1: Correct sales analysis | Design | Pending |
 | ANALYTICAL-06 | P1: Useful result presentation | Design | Pending |
