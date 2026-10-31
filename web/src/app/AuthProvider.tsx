@@ -67,7 +67,10 @@ export function AuthProvider({
     status: "loading",
     unsentText: "",
   });
-  const loadStarted = useRef(false);
+  const profileRequest = useRef<{
+    client: ApiClient;
+    request: ReturnType<ApiClient["auth"]["me"]>;
+  } | null>(null);
 
   const handleUnauthorized = useCallback(() => {
     setState((current) => ({
@@ -104,13 +107,14 @@ export function AuthProvider({
   }, []);
 
   useEffect(() => {
-    if (loadStarted.current) {
-      return;
-    }
-    loadStarted.current = true;
     let active = true;
+    const request =
+      profileRequest.current?.client === client
+        ? profileRequest.current.request
+        : client.auth.me();
+    profileRequest.current = { client, request };
 
-    client.auth.me().then(
+    request.then(
       (profile) => {
         if (active && profile) {
           setProfile(profile);

@@ -343,10 +343,12 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] The number of auth inputs never exceeds the pre-submit count during login.
-- [ ] Successful login shows the authenticated shell exactly once.
-- [ ] Invalid login keeps one form and clears only the password.
-- [ ] Logout returns to one login screen.
+- [x] The number of auth inputs never exceeds the pre-submit count during login.
+- [x] Successful login shows the authenticated shell exactly once.
+- [x] Invalid login keeps one form and clears only the password.
+- [x] Logout returns to one login screen.
+- [x] Gate passes with 128 Python, 26 frontend, and 5 browser tests:
+  `venv/bin/python -m pytest -m "not integration" -q && npm --prefix web run check && npm --prefix web run e2e`.
 
 **Tests**: e2e
 **Gate**: Full

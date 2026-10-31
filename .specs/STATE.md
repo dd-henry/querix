@@ -31,9 +31,9 @@
 Feature: web-frontend-migration
 Phase: 1 - API and frontend foundations
 Current batch: T1-T7, resumed inline after the delegated worker was cancelled
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, and T11
-In progress: T12 in Phase 2
-Next step: Add browser authentication and duplicate-DOM coverage in T12
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, and T12
+In progress: T13-T19 in Phase 3
+Next step: Define conversation API schemas in T13
 Blockers: None
-Uncommitted files: None; T11 committed as 0a83079
+Uncommitted files: T12 files are staged for commit
 Branch: main

@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -84,6 +85,34 @@ describe("AuthProvider", () => {
     );
     expect(screen.queryByTestId("public")).not.toBeInTheDocument();
     expect(screen.queryByTestId("blocked")).not.toBeInTheDocument();
+  });
+
+  it("loads an approved session when StrictMode re-runs the effect", async () => {
+    const me = vi.fn().mockResolvedValue(approvedProfile);
+    const client = createClient(me);
+
+    render(
+      <StrictMode>
+        <AuthProvider client={client}>
+          {() => (
+            <AuthRouter
+              publicView={<div data-testid="public">Login</div>}
+              authenticatedView={(profile) => (
+                <div data-testid="authenticated">{profile.name}</div>
+              )}
+              blockedView={(message) => (
+                <div data-testid="blocked">{message}</div>
+              )}
+            />
+          )}
+        </AuthProvider>
+      </StrictMode>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("authenticated")).toHaveTextContent("User"),
+    );
+    expect(me).toHaveBeenCalledOnce();
   });
 
   it("renders the public branch for an unauthenticated response", async () => {
