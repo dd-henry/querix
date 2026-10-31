@@ -35,5 +35,5 @@ Completed: Specification, design, tasks, dependency validation, execution-mode a
 In progress: T14-T19 in Phase 3
 Next step: Add owner-scoped conversation collection routes in T14
 Blockers: None
-Uncommitted files: T13 files are staged for commit
+Uncommitted files: None; T13 committed as 5cb7fdf
 Branch: main
