@@ -444,10 +444,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Service methods have no Streamlit imports or session-state mutation.
-- [ ] Prompt bounds, stable request IDs, six-turn context, warning responses, and retry reuse are explicit.
-- [ ] Only stored read-only SQL reaches `execute_read_only_query`.
-- [ ] Unit tests cover success, warning, translator failure, database failure, invalid SQL, duplicate request, and retry paths.
+- [x] Service methods have no Streamlit imports or session-state mutation.
+- [x] Prompt bounds, stable request IDs, six-turn context, warning responses, and retry reuse are explicit.
+- [x] Only stored read-only SQL reaches `execute_read_only_query`.
+- [x] Unit tests cover success, warning, translator failure, database failure, invalid SQL, duplicate request, and retry paths.
+- [x] Gate passes with 65 API tests: `venv/bin/python -m pytest api/tests -q`.
 
 **Tests**: unit
 **Gate**: Quick

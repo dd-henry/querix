@@ -1,0 +1,514 @@
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Mapping, NoReturn, Optional
+from uuid import UUID
+
+from api.serializers.results import ResultPayload, serialize_dataframe
+from database.conversations import ConversationRepository
+from database.postgres import PostgresAdapter
+from database.predefined_queries import PredefinedQueryRepository
+from database.query_history import QueryHistoryRepository
+
+logger = logging.getLogger(__name__)
+
+
+class ChatServiceError(RuntimeError):
+    """An expected chat operation failure exposed by the API layer."""
+
+    def __init__(self, status_code: int, code: str, message: str):
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+
+
+@dataclass
+class ChatResult:
+    conversation_id: UUID
+    request_id: UUID
+    status: str
+    content: str
+    sql: Optional[str] = None
+    chart: Optional[Dict[str, Any]] = None
+    result: Optional[ResultPayload] = None
+    retryable: bool = False
+    retry_kind: Optional[str] = None
+    warnings: List[str] = field(default_factory=list)
+
+
+class ChatService:
+    """Orchestrate chat persistence, translation, validation, and execution."""
+
+    def __init__(
+        self,
+        conversation_repository: ConversationRepository,
+        translator: Any,
+        database: PostgresAdapter,
+        query_history_repository: Optional[QueryHistoryRepository] = None,
+        prompt_limit: int = 2_000,
+        result_limit: int = 5_000,
+    ):
+        self.conversation_repository = conversation_repository
+        self.translator = translator
+        self.database = database
+        self.query_history_repository = query_history_repository
+        self.prompt_limit = prompt_limit
+        self.result_limit = result_limit
+
+    def translate_prompt(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+        prompt: str,
+        review_mode: bool = True,
+        retry: bool = False,
+    ) -> ChatResult:
+        normalized_prompt = self._validate_prompt(prompt)
+        messages = self.conversation_repository.get_messages(
+            user_id,
+            conversation_id,
+        )
+        if not retry:
+            existing = self._existing_result(
+                messages,
+                conversation_id,
+                request_id,
+            )
+            if existing is not None:
+                return existing
+
+        if not retry:
+            self._persist_user_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                normalized_prompt,
+                messages,
+            )
+
+        context = self.conversation_repository.get_context(
+            user_id,
+            conversation_id,
+            limit=6,
+            exclude_request_id=request_id if retry else None,
+        )
+        try:
+            translated = self.translator.translate_to_sql(
+                normalized_prompt,
+                conversation_context=context,
+            )
+        except Exception as exc:
+            logger.exception("Chat translation failed.")
+            self._persist_assistant_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                "Não foi possível traduzir a pergunta.",
+                error="translator_unavailable",
+                metadata={
+                    "retryable": True,
+                    "retry_kind": "translate",
+                },
+            )
+            raise ChatServiceError(
+                502,
+                "translator_unavailable",
+                "The translator service is unavailable.",
+            ) from exc
+
+        if not isinstance(translated, Mapping):
+            return self._handle_translation_failure(
+                user_id,
+                conversation_id,
+                request_id,
+                ValueError("The translator returned an invalid response."),
+            )
+
+        raw_sql = translated.get("sql")
+        sql = raw_sql.strip() if isinstance(raw_sql, str) else ""
+        chart = translated.get("grafico")
+        if sql.startswith("AVISO:"):
+            self._persist_assistant_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                sql,
+                metadata={"grafico": chart},
+            )
+            return ChatResult(
+                conversation_id=conversation_id,
+                request_id=request_id,
+                status="warning",
+                content=sql,
+                chart=chart,
+            )
+        if not sql:
+            return self._handle_translation_failure(
+                user_id,
+                conversation_id,
+                request_id,
+                ValueError("The translator returned no SQL."),
+            )
+
+        try:
+            normalized_sql = PredefinedQueryRepository.validate_query(sql, [])
+        except (AttributeError, TypeError, ValueError) as exc:
+            self._persist_assistant_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                "A consulta gerada não é somente leitura.",
+                sql=sql,
+                error="sql_not_read_only",
+                metadata={"grafico": chart},
+            )
+            raise ChatServiceError(
+                422,
+                "sql_not_read_only",
+                "Generated SQL must be a single read-only SELECT or WITH statement.",
+            ) from exc
+
+        content = (
+            "SQL gerado para revisão."
+            if review_mode
+            else "SQL gerado; consulta em execução."
+        )
+        self._persist_assistant_turn(
+            user_id,
+            conversation_id,
+            request_id,
+            content,
+            sql=normalized_sql,
+            metadata={"grafico": chart},
+        )
+        return ChatResult(
+            conversation_id=conversation_id,
+            request_id=request_id,
+            status="review" if review_mode else "translated",
+            content=content,
+            sql=normalized_sql,
+            chart=chart,
+        )
+
+    def execute_stored_query(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+    ) -> ChatResult:
+        messages = self.conversation_repository.get_messages(
+            user_id,
+            conversation_id,
+        )
+        assistant = self._find_message(messages, request_id, "assistant")
+        if assistant is None or not assistant.get("sql"):
+            raise ChatServiceError(
+                404,
+                "stored_query_not_found",
+                "No stored query is available for this request.",
+            )
+
+        raw_sql = str(assistant["sql"]).strip()
+        try:
+            sql = PredefinedQueryRepository.validate_query(raw_sql, [])
+        except (AttributeError, TypeError, ValueError) as exc:
+            self._persist_assistant_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                "A consulta armazenada não é somente leitura.",
+                sql=raw_sql,
+                error="sql_not_read_only",
+                metadata=self._metadata(assistant),
+            )
+            raise ChatServiceError(
+                422,
+                "sql_not_read_only",
+                "Stored SQL must be a single read-only SELECT or WITH statement.",
+            ) from exc
+
+        metadata = self._metadata(assistant)
+        parameters = metadata.get("parameters") or {}
+        if not isinstance(parameters, dict):
+            parameters = {}
+        try:
+            dataframe = self.database.execute_read_only_query(sql, parameters)
+            result = serialize_dataframe(dataframe, max_rows=self.result_limit)
+        except Exception as exc:
+            logger.exception("Stored query execution failed.")
+            self._persist_assistant_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                "Houve um problema ao executar a consulta.",
+                sql=sql,
+                error="database_unavailable",
+                metadata={
+                    **metadata,
+                    "retryable": True,
+                    "retry_kind": "execute",
+                },
+            )
+            raise ChatServiceError(
+                503,
+                "database_unavailable",
+                "The database is unavailable.",
+            ) from exc
+
+        warnings = self._record_history(
+            user_id,
+            conversation_id,
+            str(
+                (
+                    self._find_message(messages, request_id, "user")
+                    or {}
+                ).get("content") or ""
+            ),
+            sql,
+            parameters,
+            metadata,
+        )
+        self._persist_assistant_turn(
+            user_id,
+            conversation_id,
+            request_id,
+            "Aqui estão os resultados da consulta:",
+            sql=sql,
+            metadata={
+                "grafico": metadata.get("grafico"),
+                "source": metadata.get("source", "chat"),
+                "parameters": parameters,
+            },
+        )
+        return ChatResult(
+            conversation_id=conversation_id,
+            request_id=request_id,
+            status="executed",
+            content="Aqui estão os resultados da consulta:",
+            sql=sql,
+            chart=metadata.get("grafico"),
+            result=result,
+            warnings=warnings,
+        )
+
+    def retry_request(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+    ) -> ChatResult:
+        messages = self.conversation_repository.get_messages(
+            user_id,
+            conversation_id,
+        )
+        user_message = self._find_message(messages, request_id, "user")
+        assistant = self._find_message(messages, request_id, "assistant")
+        if user_message is None or assistant is None:
+            raise ChatServiceError(
+                404,
+                "request_not_found",
+                "No retryable request is available.",
+            )
+
+        retry_kind = self._metadata(assistant).get("retry_kind")
+        if retry_kind == "translate":
+            return self.translate_prompt(
+                user_id,
+                conversation_id,
+                request_id,
+                str(user_message.get("content") or ""),
+                review_mode=True,
+                retry=True,
+            )
+        if retry_kind == "execute":
+            return self.execute_stored_query(
+                user_id,
+                conversation_id,
+                request_id,
+            )
+        raise ChatServiceError(
+            422,
+            "request_not_retryable",
+            "This request cannot be retried.",
+        )
+
+    def _validate_prompt(self, prompt: str) -> str:
+        normalized = (prompt or "").strip()
+        if not normalized or len(normalized) > self.prompt_limit:
+            raise ChatServiceError(
+                422,
+                "validation_error",
+                f"Prompt must contain between 1 and {self.prompt_limit} characters.",
+            )
+        return normalized
+
+    def _persist_user_turn(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+        prompt: str,
+        messages: List[Dict[str, object]],
+    ) -> None:
+        if self._find_message(messages, request_id, "user") is not None:
+            return
+        if messages:
+            self.conversation_repository.append_message(
+                user_id,
+                conversation_id,
+                request_id,
+                "user",
+                prompt,
+            )
+        else:
+            self.conversation_repository.create_with_user_message(
+                user_id,
+                conversation_id,
+                request_id,
+                prompt,
+            )
+
+    def _persist_assistant_turn(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+        content: str,
+        sql: Optional[str] = None,
+        error: Optional[str] = None,
+        metadata: Optional[Mapping[str, object]] = None,
+    ) -> None:
+        existing = self.conversation_repository.get_messages(
+            user_id,
+            conversation_id,
+        )
+        values = dict(metadata or {})
+        if self._find_message(existing, request_id, "assistant") is not None:
+            self.conversation_repository.update_assistant_message(
+                user_id,
+                conversation_id,
+                request_id,
+                content,
+                sql=sql,
+                error=error,
+                metadata=values,
+            )
+        else:
+            self.conversation_repository.append_message(
+                user_id,
+                conversation_id,
+                request_id,
+                "assistant",
+                content,
+                sql=sql,
+                error=error,
+                metadata=values,
+            )
+
+    def _handle_translation_failure(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+        error: Exception,
+    ) -> NoReturn:
+        logger.error("Translator returned an invalid response: %s", error)
+        self._persist_assistant_turn(
+            user_id,
+            conversation_id,
+            request_id,
+            "Não foi possível traduzir a pergunta.",
+            error="translator_unavailable",
+            metadata={
+                "retryable": True,
+                "retry_kind": "translate",
+            },
+        )
+        raise ChatServiceError(
+            502,
+            "translator_unavailable",
+            "The translator service is unavailable.",
+        ) from error
+
+    def _record_history(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        prompt: str,
+        sql: str,
+        parameters: Dict[str, object],
+        metadata: Mapping[str, object],
+    ) -> List[str]:
+        if self.query_history_repository is None:
+            return []
+        try:
+            self.query_history_repository.record(
+                user_id,
+                prompt,
+                sql,
+                metadata.get("source", "chat"),
+                parameters,
+                session_id=conversation_id,
+            )
+        except Exception as exc:
+            logger.exception("Could not save query history.")
+            return [
+                f"A consulta foi executada, mas não foi salva no histórico. ({exc})"
+            ]
+        return []
+
+    @staticmethod
+    def _find_message(
+        messages: List[Dict[str, object]],
+        request_id: UUID,
+        role: str,
+    ) -> Optional[Dict[str, object]]:
+        request_value = str(request_id)
+        for message in messages:
+            if (
+                message.get("role") == role
+                and str(message.get("request_id")) == request_value
+            ):
+                return message
+        return None
+
+    @staticmethod
+    def _metadata(message: Mapping[str, object]) -> Dict[str, object]:
+        metadata = message.get("metadata")
+        return dict(metadata) if isinstance(metadata, Mapping) else {}
+
+    def _existing_result(
+        self,
+        messages: List[Dict[str, object]],
+        conversation_id: UUID,
+        request_id: UUID,
+    ) -> Optional[ChatResult]:
+        assistant = self._find_message(messages, request_id, "assistant")
+        if assistant is None:
+            return None
+        metadata = self._metadata(assistant)
+        error = assistant.get("error")
+        if error:
+            raise ChatServiceError(
+                {
+                    "translator_unavailable": 502,
+                    "database_unavailable": 503,
+                    "sql_not_read_only": 422,
+                }.get(str(error), 500),
+                str(error),
+                str(assistant.get("content") or "The request failed."),
+            )
+        sql = assistant.get("sql")
+        content = str(assistant.get("content") or "")
+        status = "warning" if content.startswith("AVISO:") else "review"
+        return ChatResult(
+            conversation_id=conversation_id,
+            request_id=request_id,
+            status=status,
+            content=content,
+            sql=str(sql) if sql else None,
+            chart=metadata.get("grafico"),
+            retryable=bool(metadata.get("retryable")),
+            retry_kind=metadata.get("retry_kind"),
+        )

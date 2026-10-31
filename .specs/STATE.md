@@ -31,9 +31,9 @@
 Feature: web-frontend-migration
 Phase: 3 - Core chat backend
 Current batch: T16-T19 in Phase 3, resumed inline
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, and T16
-In progress: T17-T19 in Phase 3
-Next step: Extract the chat orchestration service in T17
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, and T17
+In progress: T18-T19 in Phase 3
+Next step: Add chat translation routes in T18
 Blockers: None
-Uncommitted files: T16 changes pending commit
+Uncommitted files: T17 changes pending commit
 Branch: main
