@@ -484,10 +484,12 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Missing, foreign, or non-read-only stored SQL is rejected before the adapter call.
-- [ ] Successful execution returns bounded results and chart metadata.
-- [ ] Database failure stores a retryable assistant error.
-- [ ] TestClient tests prove raw SQL in the request body is ignored and DELETE never reaches the adapter.
+- [x] Missing, foreign, or non-read-only stored SQL is rejected before the adapter call.
+- [x] Successful execution returns bounded results and chart metadata.
+- [x] Database failure stores a retryable assistant error.
+- [x] TestClient tests prove raw SQL in the request body is ignored and DELETE never reaches the adapter.
+- [x] Gate passes with 171 Python tests, 26 frontend tests, and 5 browser tests:
+  `venv/bin/python -m pytest -m "not integration" -q && npm --prefix web run check && npm --prefix web run e2e`.
 
 **Tests**: integration
 **Gate**: Full

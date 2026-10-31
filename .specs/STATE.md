@@ -29,11 +29,11 @@
 ## Handoff
 
 Feature: web-frontend-migration
-Phase: 3 - Core chat backend
-Current batch: T16-T19 in Phase 3, resumed inline
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, and T18
-In progress: T19 in Phase 3
-Next step: Add stored-query execution and retry routes in T19
+Phase: 4 - Backend parity routes
+Current batch: T20-T23 in Phase 4, resumed inline
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, and T19
+In progress: T20-T23 in Phase 4
+Next step: Add query-history routes in T20
 Blockers: None
-Uncommitted files: T18 changes pending commit
+Uncommitted files: T19 changes pending commit
 Branch: main

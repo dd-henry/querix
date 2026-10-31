@@ -16,6 +16,21 @@ class ChatTranslateRequest(BaseModel):
     review_mode: bool = True
 
 
+class ChatExecuteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    conversation_id: UUID
+    request_id: UUID
+    sql: Optional[str] = None
+
+
+class ChatRetryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    conversation_id: UUID
+    request_id: UUID
+
+
 class ChatResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
