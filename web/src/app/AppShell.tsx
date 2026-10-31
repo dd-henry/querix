@@ -2,9 +2,13 @@ import { useState, type ReactNode } from "react";
 
 import type { Profile } from "../api/client";
 
+type SidebarContent =
+  | ReactNode
+  | ((closeSidebar: () => void) => ReactNode);
+
 export interface AppShellProps {
   profile: Profile;
-  sidebar: ReactNode;
+  sidebar: SidebarContent;
   chat: ReactNode;
   requestStatus?: string;
   onSignOut: () => void | Promise<void>;
@@ -18,6 +22,9 @@ export function AppShell({
   onSignOut,
 }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeSidebar = () => setSidebarOpen(false);
+  const sidebarContent =
+    typeof sidebar === "function" ? sidebar(closeSidebar) : sidebar;
 
   return (
     <div className="app-shell app-shell--authenticated">
@@ -40,12 +47,12 @@ export function AppShell({
           <p className="eyebrow">Ask SQL</p>
           <p>{profile.name}</p>
         </div>
-        <div className="app-sidebar__content">{sidebar}</div>
+        <div className="app-sidebar__content">{sidebarContent}</div>
         <button
           type="button"
           aria-label="Sair"
           onClick={() => {
-            setSidebarOpen(false);
+            closeSidebar();
             void onSignOut();
           }}
         >

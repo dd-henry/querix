@@ -60,6 +60,108 @@ textarea {
   flex: 1;
 }
 
+.conversation-sidebar {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.conversation-sidebar__header {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.conversation-sidebar__header h2,
+.conversation-sidebar__groups h3 {
+  margin: 0;
+  color: #f9fafb;
+}
+
+.conversation-sidebar__header h2 {
+  font-size: 1.15rem;
+}
+
+.conversation-sidebar__groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.conversation-sidebar__groups ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conversation-sidebar__groups h3 {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.conversation-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+}
+
+.conversation-item.is-selected {
+  border-color: #4b5563;
+  background: #374151;
+}
+
+.conversation-item__select {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-item__actions {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.conversation-item__actions button {
+  width: auto;
+  padding: 0.4rem;
+  color: #cbd5e1;
+  font-size: 0.75rem;
+}
+
+.conversation-item__confirmation {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.65rem;
+  border: 1px solid #92400e;
+  border-radius: 0.55rem;
+  background: #451a03;
+  color: #fef3c7;
+  font-size: 0.8rem;
+}
+
+.conversation-item__confirmation button {
+  width: auto;
+}
+
+.conversation-sidebar__feedback,
+.conversation-sidebar__notice {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.conversation-sidebar__feedback button,
+.conversation-sidebar__new {
+  width: auto;
+  border-color: #4b5563;
+  background: #374151;
+}
+
 .app-sidebar__content ul {
   display: grid;
   gap: 0.5rem;

@@ -5,6 +5,7 @@ import {
 } from "./app/AuthProvider";
 import { AppShell } from "./app/AppShell";
 import { AuthPage } from "./features/auth/AuthPage";
+import { ConversationSidebar } from "./features/conversations/ConversationSidebar";
 
 interface AppProps {
   client?: AuthProviderProps["client"];
@@ -22,26 +23,31 @@ export function App({ client }: AppProps) {
             <AppShell
               profile={profile}
               onSignOut={auth.logout}
-              sidebar={
-                <nav aria-label="Seções">
-                  <ul>
-                    <li>
-                      <button type="button">Conversas</button>
-                    </li>
-                    <li>
-                      <button type="button">Histórico</button>
-                    </li>
-                    <li>
-                      <button type="button">Consultas compartilhadas</button>
-                    </li>
-                    {profile.role !== "user" ? (
+              sidebar={(closeSidebar) => (
+                <>
+                  <ConversationSidebar
+                    client={auth.client}
+                    onCloseMobile={closeSidebar}
+                  />
+                  <nav aria-label="Seções">
+                    <ul>
                       <li>
-                        <button type="button">Administração</button>
+                        <button type="button">Histórico</button>
                       </li>
-                    ) : null}
-                  </ul>
-                </nav>
-              }
+                      <li>
+                        <button type="button">
+                          Consultas compartilhadas
+                        </button>
+                      </li>
+                      {profile.role !== "user" ? (
+                        <li>
+                          <button type="button">Administração</button>
+                        </li>
+                      ) : null}
+                    </ul>
+                  </nav>
+                </>
+              )}
               chat={<p>O chat será carregado aqui.</p>}
             />
           )}

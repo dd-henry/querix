@@ -27,6 +27,13 @@ function createClient(
       signup: vi.fn(),
       logout: vi.fn().mockResolvedValue({ message: "Logged out." }),
     },
+    conversations: {
+      list: vi.fn().mockResolvedValue({ groups: [], expired_count: 0 }),
+      get: vi.fn(),
+      create: vi.fn(),
+      favorite: vi.fn(),
+      delete: vi.fn(),
+    },
   };
 }
 

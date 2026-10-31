@@ -31,6 +31,7 @@ export type AuthState =
   | { status: "authenticated"; unsentText: string; profile: Profile };
 
 export type AuthContextValue = AuthState & {
+  client: ApiClient;
   login: (input: LoginInput) => Promise<Profile>;
   signup: (input: SignupInput) => Promise<SignupResponse | undefined>;
   logout: () => Promise<void>;
@@ -216,12 +217,13 @@ export function AuthProvider({
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
+      client,
       login,
       signup,
       logout,
       setUnsentText,
     }),
-    [login, logout, setUnsentText, signup, state],
+    [client, login, logout, setUnsentText, signup, state],
   );
 
   return (

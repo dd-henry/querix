@@ -585,9 +585,9 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Empty, loading, error, selected, favorite, delete-confirmation, and mobile states are rendered.
-- [ ] Conversation selection does not execute SQL automatically.
-- [ ] Component tests cover grouping, owner-safe actions, and empty state.
+- [x] Empty, loading, error, selected, favorite, delete-confirmation, and mobile states are rendered.
+- [x] Conversation selection does not execute SQL automatically.
+- [x] Component tests cover grouping, owner-safe actions, and empty state.
 
 **Tests**: unit
 **Gate**: Frontend

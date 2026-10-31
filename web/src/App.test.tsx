@@ -20,6 +20,13 @@ describe("App", () => {
         signup: () => Promise.reject(new Error("not used")),
         logout: () => Promise.resolve({ message: "Logged out." }),
       },
+      conversations: {
+        list: () => Promise.resolve({ groups: [], expired_count: 0 }),
+        get: () => Promise.reject(new Error("not used")),
+        create: () => Promise.reject(new Error("not used")),
+        favorite: () => Promise.reject(new Error("not used")),
+        delete: () => Promise.resolve(undefined),
+      },
     };
     render(<App client={client} />);
 

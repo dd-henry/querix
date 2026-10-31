@@ -23,6 +23,53 @@ export interface SignupResponse {
   message: string;
 }
 
+export type ConversationGroupKey =
+  | "today"
+  | "yesterday"
+  | "last_7_days"
+  | "last_30_days"
+  | "older";
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  is_favorite: boolean;
+  created_at: string;
+  last_activity: string;
+}
+
+export interface ConversationGroup {
+  key: ConversationGroupKey;
+  label: string;
+  conversations: ConversationSummary[];
+}
+
+export interface ConversationListResponse {
+  groups: ConversationGroup[];
+  expired_count: number;
+}
+
+export interface ConversationDetail extends ConversationSummary {
+  messages: ConversationMessage[];
+}
+
+export interface ConversationMessage {
+  id: number;
+  request_id: string;
+  role: "user" | "assistant";
+  content: string;
+  sql?: string | null;
+  error?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ConversationCreateInput {
+  conversation_id: string;
+  request_id: string;
+  prompt: string;
+}
+
 export interface MessageResponse {
   message: string;
 }
@@ -91,6 +138,20 @@ function parseApiError(
   );
 }
 
+function requireResponse<T>(
+  value: T | undefined,
+  resource: string,
+): T {
+  if (value === undefined) {
+    throw new ApiError(
+      "invalid_response",
+      `The API returned an empty ${resource} response.`,
+      502,
+    );
+  }
+  return value;
+}
+
 export function createApiClient({
   fetchImpl = fetch,
   onUnauthorized,
@@ -139,6 +200,51 @@ export function createApiClient({
           method: "POST",
         }),
       me: () => request<Profile>("/api/auth/me"),
+    },
+    conversations: {
+      list: async (timezone = "UTC") =>
+        requireResponse(
+          await request<ConversationListResponse>(
+            `/api/conversations?timezone=${encodeURIComponent(timezone)}`,
+          ),
+          "conversation list",
+        ),
+      get: async (conversationId: string) =>
+        requireResponse(
+          await request<ConversationDetail>(
+            `/api/conversations/${encodeURIComponent(conversationId)}`,
+          ),
+          "conversation detail",
+        ),
+      create: async (input: ConversationCreateInput) =>
+        requireResponse(
+          await request<{
+            conversation_id: string;
+            request_id: string;
+          }>("/api/conversations", {
+            method: "POST",
+            body: input,
+          }),
+          "conversation creation",
+        ),
+      favorite: async (conversationId: string, isFavorite: boolean) =>
+        requireResponse(
+          await request<ConversationSummary>(
+            `/api/conversations/${encodeURIComponent(conversationId)}`,
+            {
+              method: "PATCH",
+              body: { is_favorite: isFavorite },
+            },
+          ),
+          "conversation update",
+        ),
+      delete: async (conversationId: string) =>
+        request<void>(
+          `/api/conversations/${encodeURIComponent(conversationId)}?confirm=true`,
+          {
+            method: "DELETE",
+          },
+        ),
     },
   };
 }
