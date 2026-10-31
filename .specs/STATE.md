@@ -35,5 +35,5 @@ Completed: Specification, design, tasks, dependency validation, execution-mode a
 In progress: T13-T19 in Phase 3
 Next step: Define conversation API schemas in T13
 Blockers: None
-Uncommitted files: T12 files are staged for commit
+Uncommitted files: None; T12 committed as 93d98e0
 Branch: main
