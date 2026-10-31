@@ -86,6 +86,7 @@ def test_review_mode_off_executes_the_stored_request():
     service.execute_stored_query.return_value = _result(
         status="executed",
         content="Aqui estão os resultados da consulta:",
+        summary="O faturamento retornado foi R$ 12,00.",
         result={
             "columns": ["total"],
             "rows": [{"total": 12}],
@@ -102,6 +103,7 @@ def test_review_mode_off_executes_the_stored_request():
 
     assert response.status_code == 200
     assert response.json()["status"] == "executed"
+    assert response.json()["summary"] == "O faturamento retornado foi R$ 12,00."
     assert response.json()["result"]["rows"] == [{"total": 12}]
     service.execute_stored_query.assert_called_once_with(
         USER_ID,

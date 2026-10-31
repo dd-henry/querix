@@ -146,6 +146,8 @@ results, null/non-numeric values, and truncated payloads.
 
 ### T5: Expose summaries and automatic execution through the API
 
+**Status**: Done
+
 **What**: Add the optional summary to API response models and ChatService
 execution results while preserving explicit review mode and retry behavior.
 **Where**: `api/services/chat.py`, `api/schemas/chat.py`,

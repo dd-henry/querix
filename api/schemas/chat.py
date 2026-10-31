@@ -40,6 +40,7 @@ class ChatResponse(BaseModel):
     content: str
     sql: Optional[str] = None
     chart: Optional[Dict[str, Any]] = None
+    summary: Optional[str] = None
     result: Optional[Dict[str, Any]] = None
     retryable: bool = False
     retry_kind: Optional[RetryKind] = None

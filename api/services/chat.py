@@ -3,7 +3,11 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, NoReturn, Optional
 from uuid import UUID
 
-from api.serializers.results import ResultPayload, serialize_dataframe
+from api.serializers.results import (
+    ResultPayload,
+    serialize_dataframe,
+    summarize_result,
+)
 from database.conversations import ConversationRepository
 from database.postgres import PostgresAdapter
 from database.predefined_queries import PredefinedQueryRepository
@@ -30,6 +34,7 @@ class ChatResult:
     content: str
     sql: Optional[str] = None
     chart: Optional[Dict[str, Any]] = None
+    summary: Optional[str] = None
     result: Optional[ResultPayload] = None
     retryable: bool = False
     retry_kind: Optional[str] = None
@@ -128,6 +133,11 @@ class ChatService:
         raw_sql = translated.get("sql")
         sql = raw_sql.strip() if isinstance(raw_sql, str) else ""
         chart = translated.get("grafico")
+        parameters = translated.get("parameters")
+        if not isinstance(parameters, Mapping):
+            parameters = {}
+        parameters = {str(key): value for key, value in parameters.items()}
+        intent = translated.get("intent")
         if sql.startswith("AVISO:"):
             self._persist_assistant_turn(
                 user_id,
@@ -180,7 +190,11 @@ class ChatService:
             request_id,
             content,
             sql=normalized_sql,
-            metadata={"grafico": chart},
+            metadata={
+                "grafico": chart,
+                "parameters": parameters,
+                "intent": intent,
+            },
         )
         return ChatResult(
             conversation_id=conversation_id,
@@ -235,6 +249,7 @@ class ChatService:
         try:
             dataframe = self.database.execute_read_only_query(sql, parameters)
             result = serialize_dataframe(dataframe, max_rows=self.result_limit)
+            summary = summarize_result(result)
         except Exception as exc:
             logger.exception("Stored query execution failed.")
             self._persist_assistant_turn(
@@ -289,6 +304,7 @@ class ChatService:
             sql=sql,
             chart=metadata.get("grafico"),
             result=result,
+            summary=summary,
             warnings=warnings,
         )
 

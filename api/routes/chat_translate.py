@@ -29,6 +29,7 @@ def _response(result: ChatResult) -> ChatResponse:
         content=result.content,
         sql=result.sql,
         chart=result.chart,
+        summary=result.summary,
         result=result.result,
         retryable=result.retryable,
         retry_kind=result.retry_kind,

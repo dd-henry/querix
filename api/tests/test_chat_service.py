@@ -328,6 +328,7 @@ def test_stored_execution_is_read_only_bounded_and_records_history():
         "row_count": 1,
         "truncated": False,
     }
+    assert result.summary == "A consulta retornou 1 linha(s)."
     database.execute_read_only_query.assert_called_once_with("SELECT 1", {})
     history.record.assert_called_once_with(
         USER_ID,
@@ -338,6 +339,40 @@ def test_stored_execution_is_read_only_bounded_and_records_history():
         session_id=CONVERSATION_ID,
     )
     assert repository.update_calls[-1][3] == "Aqui estão os resultados da consulta:"
+
+
+def test_translation_persists_bound_parameters_for_known_analytical_query():
+    repository = MemoryConversationRepository()
+    translator = FakeTranslator(
+        response={
+            "sql": (
+                "SELECT total FROM vendas "
+                "WHERE data_hora >= :period_start "
+                "AND data_hora < :period_end"
+            ),
+            "parameters": {
+                "period_start": "2026-08-01T00:00:00+00:00",
+                "period_end": "2026-09-01T00:00:00+00:00",
+            },
+            "intent": "revenue_total",
+            "grafico": None,
+        }
+    )
+    service = _service(repository, translator)
+
+    service.translate_prompt(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+        "Qual foi o total de vendas em agosto?",
+    )
+
+    metadata = repository.messages[-1]["metadata"]
+    assert metadata["parameters"] == {
+        "period_start": "2026-08-01T00:00:00+00:00",
+        "period_end": "2026-09-01T00:00:00+00:00",
+    }
+    assert metadata["intent"] == "revenue_total"
 
 
 def test_database_failure_stores_a_retryable_error():
