@@ -292,6 +292,69 @@ class ChatService:
             warnings=warnings,
         )
 
+    def execute_history_query(
+        self,
+        user_id: str,
+        history_id: int,
+        conversation_id: UUID,
+        request_id: UUID,
+    ) -> ChatResult:
+        if self.query_history_repository is None:
+            raise ChatServiceError(
+                503,
+                "storage_unavailable",
+                "Query history is unavailable.",
+            )
+        history = self.query_history_repository.get(user_id, history_id)
+        if history is None:
+            raise ChatServiceError(
+                404,
+                "history_not_found",
+                "History record not found.",
+            )
+
+        raw_sql = str(history.get("sql") or "").strip()
+        try:
+            sql = PredefinedQueryRepository.validate_query(raw_sql, [])
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise ChatServiceError(
+                422,
+                "sql_not_read_only",
+                "Stored SQL must be a single read-only SELECT or WITH statement.",
+            ) from exc
+
+        parameters = history.get("parameters") or {}
+        if not isinstance(parameters, dict):
+            parameters = {}
+        prompt = str(history.get("prompt") or "Consulta do histórico")
+        messages = self.conversation_repository.get_messages(
+            user_id,
+            conversation_id,
+        )
+        self._persist_user_turn(
+            user_id,
+            conversation_id,
+            request_id,
+            prompt,
+            messages,
+        )
+        self._persist_assistant_turn(
+            user_id,
+            conversation_id,
+            request_id,
+            "SQL do histórico pronto para execução.",
+            sql=sql,
+            metadata={
+                "source": "chat",
+                "parameters": parameters,
+            },
+        )
+        return self.execute_stored_query(
+            user_id,
+            conversation_id,
+            request_id,
+        )
+
     def retry_request(
         self,
         user_id: str,

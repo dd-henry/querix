@@ -123,6 +123,19 @@ class QueryHistoryRepository:
         )
         return result.to_dict("records")
 
+    def get(self, user_id, history_id):
+        result = self.db.execute_query(
+            """
+            SELECT id, prompt, sql, parameters, source, session_id, is_pinned, created_at
+            FROM ask_sql_query_history
+            WHERE id = :history_id
+              AND user_id = CAST(:user_id AS uuid)
+            """,
+            {"user_id": str(user_id), "history_id": history_id},
+        )
+        records = result.to_dict("records")
+        return records[0] if records else None
+
     def set_pinned(self, user_id, history_id, pinned):
         self.db.execute_command(
             """

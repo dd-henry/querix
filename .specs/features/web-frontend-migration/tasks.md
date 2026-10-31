@@ -507,10 +507,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] History is limited to 20, pinned first, and owner-scoped.
-- [ ] Mutations cannot affect another user's record.
-- [ ] Rerun uses stored read-only SQL and the active conversation.
-- [ ] Route tests cover list, pin/unpin, delete, rerun, foreign ID, and database failure.
+- [x] History is limited to 20, pinned first, and owner-scoped.
+- [x] Mutations cannot affect another user's record.
+- [x] Rerun uses stored read-only SQL and the active conversation.
+- [x] Route tests cover list, pin/unpin, delete, rerun, foreign ID, and database failure.
 
 **Tests**: integration
 **Gate**: Full
