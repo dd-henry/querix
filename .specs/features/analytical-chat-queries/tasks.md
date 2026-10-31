@@ -9,7 +9,7 @@ before the next task begins.
 ---
 
 **Design**: `.specs/features/analytical-chat-queries/design.md`
-**Status**: In Progress
+**Status**: Done
 
 ---
 
