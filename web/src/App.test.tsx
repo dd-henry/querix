@@ -51,6 +51,9 @@ describe("App", () => {
         updateStatus: () => Promise.reject(new Error("not used")),
         updateRole: () => Promise.reject(new Error("not used")),
       },
+      schema: {
+        sync: () => Promise.resolve({ status: "synchronized" }),
+      },
     };
     render(<App client={client} />);
 

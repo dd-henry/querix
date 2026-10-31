@@ -23,6 +23,10 @@ export interface AdminProfileListResponse {
   profiles: AdminProfile[];
 }
 
+export interface SchemaSyncResponse {
+  status: "synchronized";
+}
+
 export interface LoginInput {
   email: string;
   password: string;
@@ -487,6 +491,15 @@ export function createApiClient({
             },
           ),
           "admin role update",
+        ),
+    },
+    schema: {
+      sync: async () =>
+        requireResponse(
+          await request<SchemaSyncResponse>("/api/schema/sync", {
+            method: "POST",
+          }),
+          "schema synchronization",
         ),
     },
   };

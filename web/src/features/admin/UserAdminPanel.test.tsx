@@ -67,6 +67,9 @@ function createClient(
       }),
       ...overrides,
     },
+    schema: {
+      sync: vi.fn().mockResolvedValue({ status: "synchronized" }),
+    },
   };
 }
 

@@ -60,6 +60,9 @@ function createClient(
       updateStatus: vi.fn(),
       updateRole: vi.fn(),
     },
+    schema: {
+      sync: vi.fn().mockResolvedValue({ status: "synchronized" }),
+    },
   };
 }
 

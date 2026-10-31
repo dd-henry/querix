@@ -719,10 +719,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] The button cannot submit twice while syncing.
-- [ ] Success invalidates translator/catalog queries and shows confirmation.
-- [ ] Failure is visible and does not claim that sync completed.
-- [ ] Component tests cover pending, success, and failure.
+- [x] The button cannot submit twice while syncing.
+- [x] Success invalidates translator/catalog queries and shows confirmation.
+- [x] Failure is visible and does not claim that sync completed.
+- [x] Component tests cover pending, success, and failure.
 
 **Tests**: unit
 **Gate**: Quick
