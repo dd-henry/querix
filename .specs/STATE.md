@@ -30,10 +30,10 @@
 
 Feature: web-frontend-migration
 Phase: 4 - Backend parity routes
-Current batch: T22-T23 in Phase 4, resumed inline
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, and T21
-In progress: T22-T23 in Phase 4
-Next step: Add administration routes in T22
+Current batch: T23 in Phase 4, resumed inline
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, and T22
+In progress: T23 in Phase 4
+Next step: Add schema synchronization route in T23
 Blockers: None
-Uncommitted files: None after the T21 commit
+Uncommitted files: None after the T22 commit
 Branch: main

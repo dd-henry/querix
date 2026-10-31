@@ -545,10 +545,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Non-admin callers receive 403 for every admin route.
-- [ ] Admin can list and update allowed status/role values.
-- [ ] Removing the last approved admin returns 409 and leaves data unchanged.
-- [ ] Route tests cover role matrix, invalid values, success, and last-admin conflict.
+- [x] Non-admin callers receive 403 for every admin route.
+- [x] Admin can list and update allowed status/role values.
+- [x] Removing the last approved admin returns 409 and leaves data unchanged.
+- [x] Route tests cover role matrix, invalid values, success, and last-admin conflict.
 
 **Tests**: integration
 **Gate**: Full

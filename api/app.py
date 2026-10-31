@@ -75,6 +75,7 @@ def create_app(
     app.state.settings = resolved_settings
     app.state.services = services
     from api.routes.auth import router as auth_router
+    from api.routes.admin import router as admin_router
     from api.routes.chat_execute import router as chat_execute_router
     from api.routes.chat_translate import router as chat_translate_router
     from api.routes.conversation_collection import router as conversation_router
@@ -83,6 +84,7 @@ def create_app(
     from api.routes.predefined import router as predefined_router
 
     app.include_router(auth_router, prefix="/api/auth")
+    app.include_router(admin_router)
     app.include_router(chat_execute_router)
     app.include_router(chat_translate_router)
     app.include_router(conversation_router)
