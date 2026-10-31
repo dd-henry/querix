@@ -757,10 +757,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Double-clicking send produces one user message and one assistant request.
-- [ ] Input and message counts do not increase during translation or execution.
-- [ ] Review, retry, warning, error, result, chart, and CSV flows pass.
-- [ ] The suite passes with the translator/database stubbed and with the API contract fixtures.
+- [x] Double-clicking send produces one user message and one assistant request.
+- [x] Input and message counts do not increase during translation or execution.
+- [x] Review, retry, warning, error, result, chart, and CSV flows pass.
+- [x] The suite passes with the translator/database stubbed and with the API contract fixtures.
 
 **Tests**: e2e
 **Gate**: Full

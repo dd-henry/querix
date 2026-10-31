@@ -66,7 +66,8 @@ test("keeps one auth form while login is pending and shows one shell after succe
   ).toHaveCount(1);
   await expect(page.locator("main")).toHaveCount(1);
   await expect(page.locator("aside")).toHaveCount(1);
-  await expect(page.locator("form")).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Entrar" })).toHaveCount(0);
+  await expect(page.locator("form")).toHaveCount(1);
 });
 
 test("keeps one form and clears only the password after an invalid login", async ({
