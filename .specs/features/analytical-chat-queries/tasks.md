@@ -102,6 +102,8 @@ Portuguese month parsing, current-period defaults, and half-open date intervals.
 
 ### T3: Prefer deterministic analytical queries before LLM fallback
 
+**Status**: Done
+
 **What**: Integrate the query builder into the translator while preserving the
 existing Ollama JSON parsing and fallback behavior.
 **Where**: `core/translator.py`, `test_translator.py`

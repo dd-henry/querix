@@ -64,6 +64,21 @@ def test_translate_to_sql_passes_context_before_current_question(translator):
     ]
 
 
+def test_translate_to_sql_uses_deterministic_product_query_before_ollama(translator):
+    with patch("core.translator.ollama.chat") as chat:
+        resultado = translator.translate_to_sql(
+            "Quais foram os produtos vendidos em agosto de 2026?"
+        )
+
+    assert resultado["intent"] == "product_sales"
+    assert "SUM(iv.quantidade) AS quantidade" in resultado["sql"]
+    assert "SUM(iv.subtotal) AS valor" in resultado["sql"]
+    assert resultado["parameters"]["period_start"] == (
+        "2026-08-01T00:00:00+00:00"
+    )
+    chat.assert_not_called()
+
+
 def test_translate_to_sql_preserves_two_message_request_without_context(translator):
     with patch(
         "core.translator.ollama.chat",

@@ -4,6 +4,8 @@ from typing import Dict, Optional, Sequence
 
 import ollama
 
+from core.analytical_queries import build_known_query
+
 
 class Translator:
     """
@@ -59,6 +61,10 @@ class Translator:
         Returns:
             dict: Objeto contendo chaves "sql" e "grafico".
         """
+        known_query = build_known_query(user_question)
+        if known_query is not None:
+            return known_query.as_translation()
+
         context_messages = list(conversation_context or ())[-12:]
         messages = [
             {"role": "system", "content": self.system_prompt},
