@@ -3,6 +3,7 @@ import {
   AuthRouter,
   type AuthProviderProps,
 } from "./app/AuthProvider";
+import { AuthPage } from "./features/auth/AuthPage";
 
 interface AppProps {
   client?: AuthProviderProps["client"];
@@ -14,12 +15,7 @@ export function App({ client }: AppProps) {
       {() => (
         <AuthRouter
           publicView={
-            <main className="app-shell">
-              <section className="welcome-card" aria-labelledby="app-title">
-                <p className="eyebrow">Ask SQL</p>
-                <h1 id="app-title">Entrar para continuar</h1>
-              </section>
-            </main>
+            <AuthPage />
           }
           authenticatedView={(profile) => (
             <main className="app-shell">

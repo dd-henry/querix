@@ -31,9 +31,9 @@
 Feature: web-frontend-migration
 Phase: 1 - API and frontend foundations
 Current batch: T1-T7, resumed inline after the delegated worker was cancelled
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, and T9
-In progress: T10-T12 in Phase 2
-Next step: Implement controlled login/signup forms in T10
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, and T10
+In progress: T11-T12 in Phase 2
+Next step: Implement the authenticated application shell in T11
 Blockers: None
-Uncommitted files: None; T9 committed as cfe4525
+Uncommitted files: T10 files are staged for commit
 Branch: main

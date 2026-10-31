@@ -303,10 +303,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Invalid signup data never calls the API.
-- [ ] Failed login retains email, clears password, and displays the required prefix.
-- [ ] Submit buttons are disabled only for the active operation and cannot double-submit.
-- [ ] Component tests cover all validation branches and login/signup success/failure.
+- [x] Invalid signup data never calls the API.
+- [x] Failed login retains email, clears password, and displays the required prefix.
+- [x] Submit buttons are disabled only for the active operation and cannot double-submit.
+- [x] Component tests cover all validation branches and login/signup success/failure.
+- [x] Gate passes with 21 frontend tests: `npm --prefix web run check`.
 
 **Tests**: unit
 **Gate**: quick
