@@ -74,6 +74,23 @@ export interface MessageResponse {
   message: string;
 }
 
+export type HistorySource = "chat" | "predefined";
+
+export interface HistoryRecord {
+  id: number;
+  prompt: string;
+  sql: string;
+  parameters: Record<string, unknown>;
+  source: HistorySource;
+  session_id?: string | null;
+  is_pinned: boolean;
+  created_at: string;
+}
+
+export interface HistoryListResponse {
+  records: HistoryRecord[];
+}
+
 export type ChatStatus = "review" | "translated" | "warning" | "executed";
 export type ChatRetryKind = "translate" | "execute";
 
@@ -306,6 +323,48 @@ export function createApiClient({
             }),
             "chat retry",
           ),
+    },
+    history: {
+          list: async () =>
+            requireResponse(
+              await request<HistoryListResponse>("/api/history"),
+              "history list",
+            ),
+          pin: async (historyId: number, isPinned: boolean) =>
+            requireResponse(
+              await request<{ id: number; is_pinned: boolean }>(
+                `/api/history/${historyId}`,
+                {
+                  method: "PATCH",
+                  body: { is_pinned: isPinned },
+                },
+              ),
+              "history update",
+            ),
+          delete: async (historyId: number) =>
+            requireResponse(
+              await request<{ id: number; is_pinned: boolean }>(
+                `/api/history/${historyId}`,
+                {
+                  method: "DELETE",
+                },
+              ),
+              "history deletion",
+            ),
+          rerun: async (
+            historyId: number,
+            input: ChatRequestInput,
+          ) =>
+            requireResponse(
+              await request<ChatResponse>(
+                `/api/history/${historyId}/rerun`,
+                {
+                  method: "POST",
+                  body: input,
+                },
+              ),
+              "history rerun",
+            ),
     },
   };
 }

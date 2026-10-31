@@ -67,6 +67,12 @@ function createClient(
       execute: vi.fn(),
       retry: vi.fn(),
     },
+    history: {
+      list: vi.fn().mockResolvedValue({ records: [] }),
+      pin: vi.fn(),
+      delete: vi.fn(),
+      rerun: vi.fn(),
+    },
   };
 }
 

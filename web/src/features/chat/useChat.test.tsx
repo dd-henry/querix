@@ -51,6 +51,12 @@ function createClient(
       retry: vi.fn().mockResolvedValue(reviewResponse),
       ...overrides,
     },
+    history: {
+      list: vi.fn(),
+      pin: vi.fn(),
+      delete: vi.fn(),
+      rerun: vi.fn(),
+    },
   };
 }
 

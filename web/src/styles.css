@@ -162,6 +162,96 @@ textarea {
   background: #374151;
 }
 
+.history-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.history-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.history-panel__header h2 {
+  margin: 0;
+  color: #f9fafb;
+  font-size: 1.15rem;
+}
+
+.history-panel__header button,
+.history-panel__actions button,
+.history-panel__confirmation button {
+  width: auto;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #4b5563;
+  border-radius: 0.45rem;
+  color: #cbd5e1;
+  background: #374151;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.history-panel__list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-panel__item {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid #374151;
+  border-radius: 0.65rem;
+  background: #111827;
+}
+
+.history-panel__item h3,
+.history-panel__item p {
+  margin: 0;
+}
+
+.history-panel__item h3 {
+  color: #f9fafb;
+  font-size: 0.85rem;
+}
+
+.history-panel__item p {
+  margin-top: 0.25rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.history-panel__item pre {
+  max-height: 5rem;
+  overflow: auto;
+  margin: 0.5rem 0 0;
+  color: #bfdbfe;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+}
+
+.history-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.history-panel__confirmation {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border: 1px solid #92400e;
+  border-radius: 0.5rem;
+  background: #451a03;
+  color: #fef3c7;
+  font-size: 0.75rem;
+}
+
 .app-sidebar__content ul {
   display: grid;
   gap: 0.5rem;

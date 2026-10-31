@@ -662,10 +662,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Loading, empty, error, and populated states are accessible.
-- [ ] Pin/delete mutations invalidate only the current user's list.
-- [ ] Rerun uses the stored record and displays the result in chat.
-- [ ] Component tests cover ordering, actions, and failure feedback.
+- [x] Loading, empty, error, and populated states are accessible.
+- [x] Pin/delete mutations invalidate only the current user's list.
+- [x] Rerun uses the stored record and displays the result in chat.
+- [x] Component tests cover ordering, actions, and failure feedback.
 
 **Tests**: unit
 **Gate**: Frontend

@@ -32,6 +32,12 @@ describe("App", () => {
         execute: () => Promise.reject(new Error("not used")),
         retry: () => Promise.reject(new Error("not used")),
       },
+      history: {
+        list: () => Promise.resolve({ records: [] }),
+        pin: () => Promise.reject(new Error("not used")),
+        delete: () => Promise.reject(new Error("not used")),
+        rerun: () => Promise.reject(new Error("not used")),
+      },
     };
     render(<App client={client} />);
 
