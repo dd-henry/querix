@@ -242,10 +242,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] `npm --prefix web run check` runs typecheck, lint, and unit tests.
-- [ ] `npm --prefix web run build` produces a production bundle.
-- [ ] `npm --prefix web run e2e` has a configured browser project and local web-server contract.
-- [ ] The scaffold contains no Streamlit-specific code.
+- [x] `npm --prefix web run check` runs typecheck, lint, and unit tests.
+- [x] `npm --prefix web run build` produces a production bundle.
+- [x] `npm --prefix web run e2e` has a configured browser project and local web-server contract.
+- [x] The scaffold contains no Streamlit-specific code.
+- [x] Gates pass: `npm --prefix web run check`, `npm --prefix web run build`, and `npm --prefix web run e2e -- --list`.
 
 **Tests**: none
 **Gate**: build
