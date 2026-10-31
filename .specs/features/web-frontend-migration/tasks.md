@@ -526,10 +526,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Search returns shared rows with per-user favorite state.
-- [ ] Required parameters are validated and bound; missing values return 422 naming the parameter.
-- [ ] Unauthorized CRUD returns 403 and invalid SQL returns 422.
-- [ ] Route tests cover search, parameter success/failure, favorite, CRUD role matrix, and invalid SQL.
+- [x] Search returns shared rows with per-user favorite state.
+- [x] Required parameters are validated and bound; missing values return 422 naming the parameter.
+- [x] Unauthorized CRUD returns 403 and invalid SQL returns 422.
+- [x] Route tests cover search, parameter success/failure, favorite, CRUD role matrix, and invalid SQL.
 
 **Tests**: integration
 **Gate**: Full

@@ -85,6 +85,22 @@ class PredefinedQueryRepository:
         )
         return result.to_dict("records")
 
+    def get(self, user_id, query_id):
+        result = self.db.execute_query(
+            """
+            SELECT q.id, q.name, q.description, q.sql, q.tags, q.author,
+                   q.parameters, q.updated_at,
+                   (f.query_id IS NOT NULL) AS is_favorite
+            FROM ask_sql_predefined_queries q
+            LEFT JOIN ask_sql_query_favorites_v2 f
+              ON f.query_id = q.id AND f.user_id = CAST(:user_id AS uuid)
+            WHERE q.id = :query_id
+            """,
+            {"user_id": str(user_id), "query_id": query_id},
+        )
+        records = result.to_dict("records")
+        return records[0] if records else None
+
     def create(self, name, description, sql, tags, author, parameters):
         sql = self.validate_query(sql, parameters)
         self.db.execute_command(

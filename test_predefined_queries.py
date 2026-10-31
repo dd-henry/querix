@@ -36,3 +36,21 @@ def test_list_returns_records_with_favorites():
 
     assert repository.list("user-id") == [{"id": 1, "name": "Clientes", "is_favorite": True}]
     assert db.execute_query.call_args.args[1]["user_id"] == "user-id"
+
+
+def test_get_returns_record_with_favorite_state_for_user():
+    db = MagicMock()
+    db.execute_query.return_value = pd.DataFrame(
+        [{"id": 7, "name": "Clientes", "is_favorite": False}]
+    )
+    repository = PredefinedQueryRepository(db)
+
+    assert repository.get("user-id", 7) == {
+        "id": 7,
+        "name": "Clientes",
+        "is_favorite": False,
+    }
+    assert db.execute_query.call_args.args[1] == {
+        "user_id": "user-id",
+        "query_id": 7,
+    }

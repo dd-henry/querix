@@ -80,6 +80,7 @@ def create_app(
     from api.routes.conversation_collection import router as conversation_router
     from api.routes.conversation_item import router as conversation_item_router
     from api.routes.history import router as history_router
+    from api.routes.predefined import router as predefined_router
 
     app.include_router(auth_router, prefix="/api/auth")
     app.include_router(chat_execute_router)
@@ -87,6 +88,7 @@ def create_app(
     app.include_router(conversation_router)
     app.include_router(conversation_item_router)
     app.include_router(history_router)
+    app.include_router(predefined_router)
 
     app.add_middleware(
         CORSMiddleware,
