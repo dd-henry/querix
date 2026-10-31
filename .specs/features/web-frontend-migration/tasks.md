@@ -622,10 +622,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Stable React keys use request IDs and do not duplicate on state updates.
-- [ ] Earlier messages remain mounted during pending requests.
-- [ ] Retry buttons are disabled while the target request is pending.
-- [ ] Component tests cover one-render-per-message, warning, error, retry, and live status.
+- [x] Stable React keys use request IDs and do not duplicate on state updates.
+- [x] Earlier messages remain mounted during pending requests.
+- [x] Retry buttons are disabled while the target request is pending.
+- [x] Component tests cover one-render-per-message, warning, error, retry, and live status.
 
 **Tests**: unit
 **Gate**: Frontend
