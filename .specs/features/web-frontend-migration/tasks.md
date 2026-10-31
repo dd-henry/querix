@@ -366,9 +366,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Schemas represent ordered messages, SQL, errors, retry metadata, and favorites.
-- [ ] Unknown/foreign records cannot be represented as a successful response.
-- [ ] Unit tests cover required/optional fields and date serialization.
+- [x] Schemas represent ordered messages, SQL, errors, retry metadata, and favorites.
+- [x] Unknown/foreign records cannot be represented as a successful response.
+- [x] Unit tests cover required/optional fields and date serialization.
+- [x] Gate passes with 38 API tests: `venv/bin/python -m pytest api/tests -q`.
 
 **Tests**: unit
 **Gate**: quick
