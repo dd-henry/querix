@@ -75,8 +75,10 @@ def create_app(
     app.state.settings = resolved_settings
     app.state.services = services
     from api.routes.auth import router as auth_router
+    from api.routes.conversation_collection import router as conversation_router
 
     app.include_router(auth_router, prefix="/api/auth")
+    app.include_router(conversation_router)
 
     app.add_middleware(
         CORSMiddleware,

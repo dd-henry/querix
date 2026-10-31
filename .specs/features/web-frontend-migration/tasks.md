@@ -385,10 +385,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] First prompt creates one owned conversation and repeated request ID does not duplicate it.
-- [ ] Results are grouped by browser-provided timezone metadata without changing persistence timestamps.
-- [ ] Favorites are preserved and expiry cleanup remains owner-scoped.
-- [ ] TestClient tests cover empty list, creation, duplicate request, grouping, and owner isolation.
+- [x] First prompt creates one owned conversation and repeated request ID does not duplicate it.
+- [x] Results are grouped by browser-provided timezone metadata without changing persistence timestamps.
+- [x] Favorites are preserved and expiry cleanup remains owner-scoped.
+- [x] TestClient tests cover empty list, creation, duplicate request, grouping, and owner isolation.
+- [x] Gate passes with 44 API tests: `venv/bin/python -m pytest api/tests -q`.
 
 **Tests**: integration
 **Gate**: API

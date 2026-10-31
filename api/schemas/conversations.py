@@ -72,6 +72,21 @@ class ConversationListResponse(BaseModel):
     expired_count: int = 0
 
 
+class ConversationCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    conversation_id: UUID
+    request_id: UUID
+    prompt: str = Field(min_length=1, max_length=2000)
+
+
+class ConversationCreateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    conversation_id: UUID
+    request_id: UUID
+
+
 class ConversationDetailResponse(ConversationSummarySchema):
     messages: list[ConversationMessageSchema] = Field(default_factory=list)
 
