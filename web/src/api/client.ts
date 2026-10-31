@@ -9,6 +9,20 @@ export interface Profile {
   status: ProfileStatus;
 }
 
+export type AdminRole = "user" | "dev" | "admin";
+export type AdminStatus = "approved" | "rejected" | "disabled";
+
+export interface AdminProfile extends Omit<Profile, "role"> {
+  role: AdminRole;
+  created_at: string;
+  approved_at?: string | null;
+  disabled_at?: string | null;
+}
+
+export interface AdminProfileListResponse {
+  profiles: AdminProfile[];
+}
+
 export interface LoginInput {
   email: string;
   password: string;
@@ -444,6 +458,35 @@ export function createApiClient({
             },
           ),
           "shared query execution",
+        ),
+    },
+    admin: {
+      listUsers: async () =>
+        requireResponse(
+          await request<AdminProfileListResponse>("/api/admin/users"),
+          "admin user list",
+        ),
+      updateStatus: async (userId: string, status: AdminStatus) =>
+        requireResponse(
+          await request<{ id: string; status: AdminStatus }>(
+            `/api/admin/users/${encodeURIComponent(userId)}/status`,
+            {
+              method: "PATCH",
+              body: { status },
+            },
+          ),
+          "admin status update",
+        ),
+      updateRole: async (userId: string, role: AdminRole) =>
+        requireResponse(
+          await request<{ id: string; role: AdminRole }>(
+            `/api/admin/users/${encodeURIComponent(userId)}/role`,
+            {
+              method: "PATCH",
+              body: { role },
+            },
+          ),
+          "admin role update",
         ),
     },
   };

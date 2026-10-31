@@ -65,6 +65,11 @@ function createClient(
       delete: vi.fn(),
       execute: vi.fn(),
     },
+    admin: {
+      listUsers: vi.fn(),
+      updateStatus: vi.fn(),
+      updateRole: vi.fn(),
+    },
   };
 }
 

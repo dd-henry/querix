@@ -53,6 +53,11 @@ function createClient(
       delete: vi.fn(),
       execute: vi.fn(),
     },
+    admin: {
+      listUsers: vi.fn().mockResolvedValue({ profiles: [] }),
+      updateStatus: vi.fn(),
+      updateRole: vi.fn(),
+    },
   };
 }
 

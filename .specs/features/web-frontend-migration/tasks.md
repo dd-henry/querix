@@ -700,10 +700,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Non-admin users do not render the panel.
-- [ ] Admin updates show success/failure without remounting unrelated chat state.
-- [ ] Last-admin conflicts are presented as actionable errors.
-- [ ] Component tests cover role gating, status/role update, validation, and 409 conflict.
+- [x] Non-admin users do not render the panel.
+- [x] Admin updates show success/failure without remounting unrelated chat state.
+- [x] Last-admin conflicts are presented as actionable errors.
+- [x] Component tests cover role gating, status/role update, validation, and 409 conflict.
 
 **Tests**: unit
 **Gate**: Frontend

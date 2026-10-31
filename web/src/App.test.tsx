@@ -46,6 +46,11 @@ describe("App", () => {
         delete: () => Promise.reject(new Error("not used")),
         execute: () => Promise.reject(new Error("not used")),
       },
+      admin: {
+        listUsers: () => Promise.resolve({ profiles: [] }),
+        updateStatus: () => Promise.reject(new Error("not used")),
+        updateRole: () => Promise.reject(new Error("not used")),
+      },
     };
     render(<App client={client} />);
 
