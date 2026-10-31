@@ -30,10 +30,10 @@
 
 Feature: web-frontend-migration
 Phase: 1 - API and frontend foundations
-Current batch: T1-T7, delegated sequentially to a batch worker
-Completed: Specification, design, tasks, dependency validation, and execution-mode approval
-In progress: T1 - T7 have not started; worker dispatch is next
-Next step: Execute T1 through T7 in order, running each task gate and creating one atomic commit per task
+Current batch: T1-T7, resumed inline after the delegated worker was cancelled
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, and T1
+In progress: T2-T7 in Phase 1
+Next step: Implement T2, then T3/T4 in dependency order, running each task gate and creating one atomic commit per task
 Blockers: None
-Uncommitted files: app.py and test_app.py are pre-existing flicker changes; planning artifacts are committed separately
+Uncommitted files: api/ is staged for the T1 commit
 Branch: main

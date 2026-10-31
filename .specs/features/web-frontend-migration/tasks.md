@@ -122,10 +122,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Missing `SESSION_SECRET` or `WEB_ORIGIN` fails startup with an explicit configuration error.
-- [ ] Defaults are bounded and match the spec: 8-hour session, 5,000 rows, 2,000 prompt characters.
-- [ ] Unit tests cover valid settings, missing secret, and boolean production cookie configuration.
-- [ ] Gate passes with the expected focused test count recorded in the commit.
+- [x] Missing `SESSION_SECRET` or `WEB_ORIGIN` fails startup with an explicit configuration error.
+- [x] Defaults are bounded and match the spec: 8-hour session, 5,000 rows, 2,000 prompt characters.
+- [x] Unit tests cover valid settings, missing secret, and boolean production cookie configuration.
+- [x] Gate passes with the expected focused test count recorded in the commit: `venv/bin/pytest -q api/tests` → 3 passed.
 
 **Tests**: unit
 **Gate**: quick
