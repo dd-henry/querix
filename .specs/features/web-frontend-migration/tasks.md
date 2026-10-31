@@ -564,10 +564,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Approved users can trigger one explicit refresh.
-- [ ] The refresh does not expose schema contents in the response.
-- [ ] Failures return an explicit 503 error and do not claim success.
-- [ ] Route tests cover approved, blocked, success, and failure paths.
+- [x] Approved users can trigger one explicit refresh.
+- [x] The refresh does not expose schema contents in the response.
+- [x] Failures return an explicit 503 error and do not claim success.
+- [x] Route tests cover approved, blocked, success, and failure paths.
 
 **Tests**: integration
 **Gate**: Full
