@@ -77,6 +77,14 @@ function createClient(
       delete: vi.fn().mockResolvedValue({ id: 1, is_pinned: false }),
       rerun: vi.fn().mockResolvedValue(rerunResponse),
     },
+    predefined: {
+      list: vi.fn(),
+      favorite: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      execute: vi.fn(),
+    },
   };
 }
 

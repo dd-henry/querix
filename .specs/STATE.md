@@ -31,9 +31,9 @@
 Feature: web-frontend-migration
 Phase: 6 - Parity frontend
 Current batch: T29-T31 in Phase 6, resumed inline
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, and T28
-In progress: T29-T31 in Phase 6
-Next step: Build the shared-query panel in T29
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, and T29
+In progress: T30-T31 in Phase 6
+Next step: Build the user administration panel in T30
 Blockers: None
-Uncommitted files: T28 implementation and test files, pending atomic commit
+Uncommitted files: T29 implementation, tests, API contracts, and test fakes, pending atomic commit
 Branch: main

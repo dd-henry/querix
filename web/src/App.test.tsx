@@ -38,6 +38,14 @@ describe("App", () => {
         delete: () => Promise.reject(new Error("not used")),
         rerun: () => Promise.reject(new Error("not used")),
       },
+      predefined: {
+        list: () => Promise.resolve({ queries: [] }),
+        favorite: () => Promise.reject(new Error("not used")),
+        create: () => Promise.reject(new Error("not used")),
+        update: () => Promise.reject(new Error("not used")),
+        delete: () => Promise.reject(new Error("not used")),
+        execute: () => Promise.reject(new Error("not used")),
+      },
     };
     render(<App client={client} />);
 

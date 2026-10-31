@@ -681,10 +681,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Search and empty states are rendered without duplicate requests.
-- [ ] Required parameters are labeled and validated before execution.
-- [ ] CRUD controls are absent for unauthorized roles and errors are inline.
-- [ ] Component tests cover search, parameter validation, favorite, role gating, and execution.
+- [x] Search and empty states are rendered without duplicate requests.
+- [x] Required parameters are labeled and validated before execution.
+- [x] CRUD controls are absent for unauthorized roles and errors are inline.
+- [x] Component tests cover search, parameter validation, favorite, role gating, and execution.
 
 **Tests**: unit
 **Gate**: Frontend

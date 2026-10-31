@@ -57,6 +57,14 @@ function createClient(
       delete: vi.fn(),
       rerun: vi.fn(),
     },
+    predefined: {
+      list: vi.fn(),
+      favorite: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      execute: vi.fn(),
+    },
   };
 }
 

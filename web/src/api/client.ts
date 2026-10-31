@@ -91,6 +91,41 @@ export interface HistoryListResponse {
   records: HistoryRecord[];
 }
 
+export interface PredefinedParameter {
+  name: string;
+  label?: string | null;
+  required: boolean;
+}
+
+export interface PredefinedQuery {
+  id: number;
+  name: string;
+  description: string;
+  sql: string;
+  tags: string[];
+  author: string;
+  parameters: PredefinedParameter[];
+  updated_at: string;
+  is_favorite: boolean;
+}
+
+export interface PredefinedListResponse {
+  queries: PredefinedQuery[];
+}
+
+export interface PredefinedWriteInput {
+  name: string;
+  description: string;
+  sql: string;
+  tags: string[];
+  parameters: Array<Record<string, unknown>>;
+}
+
+export interface PredefinedExecutionResponse {
+  query_id: number;
+  result: ChatResultPayload;
+}
+
 export type ChatStatus = "review" | "translated" | "warning" | "executed";
 export type ChatRetryKind = "translate" | "execute";
 
@@ -299,72 +334,117 @@ export function createApiClient({
         ),
     },
     chat: {
-        translate: async (input: ChatTranslateInput) =>
-          requireResponse(
-            await request<ChatResponse>("/api/chat/translate", {
-              method: "POST",
-              body: input,
-            }),
-            "chat translation",
-          ),
-        execute: async (input: ChatRequestInput) =>
-          requireResponse(
-            await request<ChatResponse>("/api/chat/execute", {
-              method: "POST",
-              body: input,
-            }),
-            "chat execution",
-          ),
-        retry: async (input: ChatRequestInput) =>
-          requireResponse(
-            await request<ChatResponse>("/api/chat/retry", {
-              method: "POST",
-              body: input,
-            }),
-            "chat retry",
-          ),
+      translate: async (input: ChatTranslateInput) =>
+        requireResponse(
+          await request<ChatResponse>("/api/chat/translate", {
+            method: "POST",
+            body: input,
+          }),
+          "chat translation",
+        ),
+      execute: async (input: ChatRequestInput) =>
+        requireResponse(
+          await request<ChatResponse>("/api/chat/execute", {
+            method: "POST",
+            body: input,
+          }),
+          "chat execution",
+        ),
+      retry: async (input: ChatRequestInput) =>
+        requireResponse(
+          await request<ChatResponse>("/api/chat/retry", {
+            method: "POST",
+            body: input,
+          }),
+          "chat retry",
+        ),
     },
     history: {
-          list: async () =>
-            requireResponse(
-              await request<HistoryListResponse>("/api/history"),
-              "history list",
-            ),
-          pin: async (historyId: number, isPinned: boolean) =>
-            requireResponse(
-              await request<{ id: number; is_pinned: boolean }>(
-                `/api/history/${historyId}`,
-                {
-                  method: "PATCH",
-                  body: { is_pinned: isPinned },
-                },
-              ),
-              "history update",
-            ),
-          delete: async (historyId: number) =>
-            requireResponse(
-              await request<{ id: number; is_pinned: boolean }>(
-                `/api/history/${historyId}`,
-                {
-                  method: "DELETE",
-                },
-              ),
-              "history deletion",
-            ),
-          rerun: async (
-            historyId: number,
-            input: ChatRequestInput,
-          ) =>
-            requireResponse(
-              await request<ChatResponse>(
-                `/api/history/${historyId}/rerun`,
-                {
-                  method: "POST",
-                  body: input,
-                },
-              ),
-              "history rerun",
-            ),
+      list: async () =>
+        requireResponse(
+          await request<HistoryListResponse>("/api/history"),
+          "history list",
+        ),
+      pin: async (historyId: number, isPinned: boolean) =>
+        requireResponse(
+          await request<{ id: number; is_pinned: boolean }>(
+            `/api/history/${historyId}`,
+            {
+              method: "PATCH",
+              body: { is_pinned: isPinned },
+            },
+          ),
+          "history update",
+        ),
+      delete: async (historyId: number) =>
+        requireResponse(
+          await request<{ id: number; is_pinned: boolean }>(
+            `/api/history/${historyId}`,
+            {
+              method: "DELETE",
+            },
+          ),
+          "history deletion",
+        ),
+      rerun: async (historyId: number, input: ChatRequestInput) =>
+        requireResponse(
+          await request<ChatResponse>(
+            `/api/history/${historyId}/rerun`,
+            {
+              method: "POST",
+              body: input,
+            },
+          ),
+          "history rerun",
+        ),
+    },
+    predefined: {
+      list: async (search = "") =>
+        requireResponse(
+          await request<PredefinedListResponse>(
+            `/api/predefined-queries?search=${encodeURIComponent(search)}`,
+          ),
+          "shared query list",
+        ),
+      favorite: async (queryId: number, isFavorite: boolean) =>
+        requireResponse(
+          await request<{ id: number; is_favorite: boolean }>(
+            `/api/predefined-queries/${queryId}/favorite`,
+            {
+              method: "PATCH",
+              body: { is_favorite: isFavorite },
+            },
+          ),
+          "shared query favorite",
+        ),
+      create: async (input: PredefinedWriteInput) =>
+        request<{ status: string }>("/api/predefined-queries", {
+          method: "POST",
+          body: input,
+        }),
+      update: async (queryId: number, input: PredefinedWriteInput) =>
+        request<{ status: string }>(`/api/predefined-queries/${queryId}`, {
+          method: "PATCH",
+          body: input,
+        }),
+      delete: async (queryId: number) =>
+        request<{ status: string }>(`/api/predefined-queries/${queryId}`, {
+          method: "DELETE",
+        }),
+      execute: async (
+        queryId: number,
+        parameters: Record<string, unknown>,
+      ) =>
+        requireResponse(
+          await request<PredefinedExecutionResponse>(
+            `/api/predefined-queries/${queryId}/execute`,
+            {
+              method: "POST",
+              body: { parameters },
+            },
+          ),
+          "shared query execution",
+        ),
     },
   };
 }
