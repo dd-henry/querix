@@ -464,10 +464,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Empty/oversized prompts return 422 without persistence.
-- [ ] Review mode returns stored SQL and no execution result.
-- [ ] Warnings and translator failures use the documented response shape.
-- [ ] TestClient tests cover double submit with one request ID, review on/off, warning, and translator outage.
+- [x] Empty/oversized prompts return 422 without persistence.
+- [x] Review mode returns stored SQL and no execution result.
+- [x] Warnings and translator failures use the documented response shape.
+- [x] TestClient tests cover double submit with one request ID, review on/off, warning, and translator outage.
+- [x] Gate passes with 71 API tests: `venv/bin/python -m pytest api/tests -q`.
 
 **Tests**: integration
 **Gate**: API

@@ -5,6 +5,7 @@ from fastapi import Depends, Request
 
 from api.auth.session import SessionClaims, SessionError, require_session
 from api.config import Settings
+from api.services.chat import ChatService
 from core.prompter import Prompter
 from core.translator import Translator
 from database.conversations import ConversationRepository
@@ -56,6 +57,27 @@ def get_translator() -> Translator:
         live_schema=database.get_schema_info()
     )
     return Translator(system_prompt=system_prompt, model_name="qwen2.5-coder:7b")
+
+
+def get_chat_service(
+    settings: Settings = Depends(get_api_settings),
+    conversation_repository: ConversationRepository = Depends(
+        get_conversation_repository
+    ),
+    translator: Translator = Depends(get_translator),
+    database: PostgresAdapter = Depends(get_db_adapter),
+    query_history_repository: QueryHistoryRepository = Depends(
+        get_query_history_repository
+    ),
+) -> ChatService:
+    return ChatService(
+        conversation_repository,
+        translator,
+        database,
+        query_history_repository=query_history_repository,
+        prompt_limit=settings.prompt_limit,
+        result_limit=settings.result_limit,
+    )
 
 
 def get_current_session(
