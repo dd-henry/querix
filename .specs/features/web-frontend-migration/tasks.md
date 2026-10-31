@@ -323,10 +323,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] The shell has one sidebar and one main chat region.
-- [ ] The sidebar collapses below 768 px and is keyboard-operable.
-- [ ] Every shell action has an accessible name and status region is `aria-live`.
-- [ ] Component tests cover desktop, mobile, keyboard, and sign-out rendering.
+- [x] The shell has one sidebar and one main chat region.
+- [x] The sidebar collapses below 768 px and is keyboard-operable.
+- [x] Every shell action has an accessible name and status region is `aria-live`.
+- [x] Component tests cover desktop, mobile, keyboard, and sign-out rendering.
+- [x] Gate passes with 25 frontend tests: `npm --prefix web run check`.
 
 **Tests**: unit
 **Gate**: Frontend
