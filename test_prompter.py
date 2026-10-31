@@ -14,6 +14,21 @@ def test_build_system_prompt_vazio(tmp_path):
     assert "=== CONTEXTO: ESQUEMA ATUAL" not in prompt
     assert "=== CONTEXTO: REGRAS DE NEGÓCIO ===" not in prompt
 
+
+def test_build_system_prompt_inclui_regras_analiticas_de_vendas(tmp_path):
+    prompter = Prompter(context_dir=str(tmp_path))
+
+    prompt = prompter.build_system_prompt()
+
+    assert "status = 'concluida'" in prompt
+    assert "SUM(vendas.valor_total)" in prompt
+    assert "SUM(itens_venda.quantidade)" in prompt
+    assert "SUM(itens_venda.subtotal)" in prompt
+    assert "vendas -> itens_venda -> produtos" in prompt
+    assert "coluna >= início AND coluna < fim" in prompt
+    assert "produto, quantidade e valor" in prompt
+
+
 def test_build_system_prompt_com_schema(tmp_path):
     """Testa se o schema lido do banco é anexado ao prompt."""
     prompter = Prompter(context_dir=str(tmp_path))
