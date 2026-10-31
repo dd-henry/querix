@@ -181,10 +181,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Valid login returns a user identity and session source data without exposing the Supabase token to route callers.
-- [ ] Missing Supabase configuration fails explicitly.
-- [ ] Supabase failures map to typed service errors instead of success-shaped values.
-- [ ] Unit tests cover login success/failure, signup success/failure, and client isolation.
+- [x] Valid login returns a user identity and session source data without exposing the Supabase token to route callers.
+- [x] Missing Supabase configuration fails explicitly.
+- [x] Supabase failures map to typed service errors instead of success-shaped values.
+- [x] Unit tests cover login success/failure, signup success/failure, and client isolation.
+- [x] Gate passes with 15 API tests: `venv/bin/pytest -q api/tests`.
 
 **Tests**: unit
 **Gate**: quick
