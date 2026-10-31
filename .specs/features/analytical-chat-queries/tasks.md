@@ -124,6 +124,8 @@ existing Ollama JSON parsing and fallback behavior.
 
 ### T4: Add deterministic summaries to serialized results
 
+**Status**: Done
+
 **What**: Add summary generation for product metrics, revenue totals, generic
 results, null/non-numeric values, and truncated payloads.
 **Where**: `api/serializers/results.py`, `api/tests/test_result_serializer.py`

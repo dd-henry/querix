@@ -14,6 +14,66 @@ class ResultPayload(TypedDict):
     truncated: bool
 
 
+def _decimal_values(rows: List[Dict[str, Any]], column: str) -> List[Decimal]:
+    values = []
+    for row in rows:
+        value = row.get(column)
+        if value is None or isinstance(value, bool):
+            continue
+        try:
+            values.append(Decimal(str(value)))
+        except (ArithmeticError, ValueError):
+            continue
+    return values
+
+
+def _format_number(value: Decimal) -> str:
+    normalized = value.normalize()
+    if normalized == normalized.to_integral():
+        return f"{normalized:.0f}"
+    return f"{normalized:f}".rstrip("0").rstrip(".")
+
+
+def _format_currency(value: Decimal) -> str:
+    formatted = f"{value:,.2f}"
+    return f"R$ {formatted.replace(',', 'X').replace('.', ',').replace('X', '.')}"
+
+
+def summarize_result(result: ResultPayload) -> str:
+    """Create a truthful summary from a bounded result payload."""
+
+    columns = set(result["columns"])
+    rows = result["rows"]
+    row_count = result["row_count"]
+    suffix = (
+        " O resumo considera apenas as linhas retornadas porque o resultado "
+        "foi limitado."
+        if result["truncated"]
+        else ""
+    )
+
+    if {"produto", "quantidade", "valor"}.issubset(columns):
+        quantities = _decimal_values(rows, "quantidade")
+        values = _decimal_values(rows, "valor")
+        details = [f"Encontrei {row_count} produto(s)"]
+        if quantities:
+            details.append(
+                f"totalizando {_format_number(sum(quantities))} unidade(s)"
+            )
+        if values:
+            details.append(
+                f"{_format_currency(sum(values))} em valor dos itens"
+            )
+        return ", ".join(details) + "." + suffix
+
+    if "total_vendas" in columns:
+        values = _decimal_values(rows, "total_vendas")
+        if values:
+            return f"O faturamento retornado foi {_format_currency(values[0])}.{suffix}"
+
+    return f"A consulta retornou {row_count} linha(s).{suffix}"
+
+
 def _is_null(value: Any) -> bool:
     if value is None:
         return True

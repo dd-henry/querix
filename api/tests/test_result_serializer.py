@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pandas as pd
 
-from api.serializers.results import serialize_dataframe
+from api.serializers.results import serialize_dataframe, summarize_result
 
 
 def test_serialize_empty_dataframe_preserves_columns_and_shape():
@@ -88,4 +88,48 @@ def test_serialize_dataframe_normalizes_special_values_deterministically():
         '"row_count": 1, "rows": [{"date": "2025-01-02", '
         '"datetime": "2025-01-02T12:30:00+00:00", "decimal": "12.3400", '
         '"nan": null, "null": null}], "truncated": false}'
+    )
+
+
+def test_summarize_product_result_includes_rows_quantity_and_value():
+    result = {
+        "columns": ["produto", "quantidade", "valor"],
+        "rows": [
+            {"produto": "Picanha", "quantidade": "2", "valor": "10.00"},
+            {"produto": "Cerveja", "quantidade": "3", "valor": "5.50"},
+        ],
+        "row_count": 2,
+        "truncated": False,
+    }
+
+    assert summarize_result(result) == (
+        "Encontrei 2 produto(s), totalizando 5 unidade(s), "
+        "R$ 15,50 em valor dos itens."
+    )
+
+
+def test_summarize_revenue_result_uses_returned_total():
+    result = {
+        "columns": ["total_vendas"],
+        "rows": [{"total_vendas": "1498.00"}],
+        "row_count": 1,
+        "truncated": False,
+    }
+
+    assert summarize_result(result) == "O faturamento retornado foi R$ 1.498,00."
+
+
+def test_summarize_result_ignores_invalid_metrics_and_marks_truncation():
+    result = {
+        "columns": ["produto", "quantidade", "valor"],
+        "rows": [
+            {"produto": "Picanha", "quantidade": None, "valor": "invalido"},
+        ],
+        "row_count": 5001,
+        "truncated": True,
+    }
+
+    assert summarize_result(result) == (
+        "Encontrei 5001 produto(s). O resumo considera apenas as linhas "
+        "retornadas porque o resultado foi limitado."
     )
