@@ -137,6 +137,39 @@ test("blocks invalid signup data before making an API request", async ({
   expect(signupCalled).toBe(false);
 });
 
+test("lets a blocked account return to the login screen", async ({ page }) => {
+  await page.route("**/api/auth/me", async (route) => {
+    await route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "account_not_approved",
+          message: "Sua conta aguarda aprovação.",
+        },
+      }),
+    });
+  });
+  await page.route("**/api/auth/logout", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Logged out." }),
+    });
+  });
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Acesso pendente" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sair" })).toHaveCount(1);
+  await page.getByRole("button", { name: "Sair" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Entrar para continuar" }),
+  ).toHaveCount(1);
+});
+
 test("returns to one login screen after logout", async ({ page }) => {
   await page.route("**/api/auth/me", async (route) => {
     await route.fulfill({

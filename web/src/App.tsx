@@ -31,6 +31,9 @@ export function App({ client }: AppProps) {
                 <p className="eyebrow">Ask SQL</p>
                 <h1 id="app-title">Acesso pendente</h1>
                 <p>{message}</p>
+                <button type="button" onClick={() => void auth.logout()}>
+                  Sair
+                </button>
               </section>
             </main>
           )}
