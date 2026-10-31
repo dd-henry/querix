@@ -71,6 +71,56 @@ describe("MessageList", () => {
     );
   });
 
+  it("places attachments immediately after their assistant message", () => {
+    const { container } = render(
+      <MessageList
+        messages={[
+          userMessage,
+          assistantMessage,
+          {
+            requestId: "request-2",
+            role: "user",
+            content: "Show profit",
+            warnings: [],
+          },
+          {
+            requestId: "request-2",
+            role: "assistant",
+            content: "Resultado calculado.",
+            status: "executed",
+            result: {
+              columns: ["total"],
+              rows: [{ total: 42 }],
+              row_count: 1,
+              truncated: false,
+            },
+            warnings: [],
+          },
+        ]}
+        onRetry={vi.fn()}
+        renderAfterMessage={(message) =>
+          message.role === "assistant" && message.result ? (
+            <div data-testid={`result-${message.requestId}`}>
+              Resultado da consulta
+            </div>
+          ) : null
+        }
+      />,
+    );
+
+    const items = Array.from(
+      container.querySelector(".message-list__items")?.children ?? [],
+    ).map((item) => item.textContent);
+
+    expect(items).toEqual([
+      "VocêShow revenue",
+      "Ask SQLSQL gerado para revisão.",
+      "VocêShow profit",
+      "Ask SQLResultado calculado.",
+      "Resultado da consulta",
+    ]);
+  });
+
   it("renders warnings without a retry action", () => {
     render(
       <MessageList

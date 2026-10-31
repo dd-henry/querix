@@ -204,13 +204,6 @@ export function ChatWorkspace({
       messages.find((message) => message.status === "pending")?.requestId,
     [messages],
   );
-  const reviewMessages = messages.filter(
-    (message) =>
-      message.role === "assistant" &&
-      message.reviewState === "open" &&
-      message.sql,
-  );
-
   const submitPrompt = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const sent = await onSend(prompt);
@@ -248,62 +241,70 @@ export function ChatWorkspace({
         onRetry={(requestId) => {
           void onRetry(requestId);
         }}
-      />
-      {reviewMessages.map((message) => (
-        <section
-          className="chat-review"
-          key={`review-${message.requestId}`}
-          aria-label="Revisão de SQL"
-        >
-          <h2>SQL aguardando revisão</h2>
-          <pre>{message.sql}</pre>
-          <div className="chat-review__actions">
-            <button
-              type="button"
-              disabled={Boolean(pendingRequestId)}
-              onClick={() => void onConfirmExecution(message.requestId)}
-            >
-              Executar SQL revisado
-            </button>
-            <button
-              type="button"
-              disabled={Boolean(pendingRequestId)}
-              onClick={() => onCancelReview(message.requestId)}
-            >
-              Cancelar revisão
-            </button>
-          </div>
-        </section>
-      ))}
-      {messages
-        .filter(
-          (message): message is ChatMessage & { result: ResultData } =>
-            message.role === "assistant" && Boolean(message.result),
-        )
-        .map((message) => (
-          <section
-            className="chat-result-actions"
-            key={`result-${message.requestId}`}
-            aria-label="Ações do resultado"
-          >
-            {message.chart ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => toggleChart(message.requestId)}
+        renderAfterMessage={(message) => {
+          if (message.role !== "assistant") {
+            return null;
+          }
+
+          return (
+            <>
+              {message.reviewState === "open" && message.sql ? (
+                <section
+                  className="chat-review"
+                  aria-label="Revisão de SQL"
                 >
-                  {visibleCharts.has(message.requestId)
-                    ? "Ocultar Gráfico"
-                    : "Gerar Gráfico"}
-                </button>
-                {visibleCharts.has(message.requestId) ? (
-                  <ChartView message={message} result={message.result} />
-                ) : null}
-              </>
-            ) : null}
-            <ResultView message={message} />
-          </section>
-        ))}
+                  <h2>SQL aguardando revisão</h2>
+                  <pre>{message.sql}</pre>
+                  <div className="chat-review__actions">
+                    <button
+                      type="button"
+                      disabled={Boolean(pendingRequestId)}
+                      onClick={() =>
+                        void onConfirmExecution(message.requestId)
+                      }
+                    >
+                      Executar SQL revisado
+                    </button>
+                    <button
+                      type="button"
+                      disabled={Boolean(pendingRequestId)}
+                      onClick={() => onCancelReview(message.requestId)}
+                    >
+                      Cancelar revisão
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+              {message.result ? (
+                <section
+                  className="chat-result-actions"
+                  aria-label="Ações do resultado"
+                >
+                  {message.chart ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => toggleChart(message.requestId)}
+                      >
+                        {visibleCharts.has(message.requestId)
+                          ? "Ocultar Gráfico"
+                          : "Gerar Gráfico"}
+                      </button>
+                      {visibleCharts.has(message.requestId) ? (
+                        <ChartView
+                          message={message}
+                          result={message.result}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                  <ResultView message={message} />
+                </section>
+              ) : null}
+            </>
+          );
+        }}
+      />
       {error ? <p role="alert">{error}</p> : null}
       <form className="chat-composer" onSubmit={(event) => void submitPrompt(event)}>
         <label htmlFor="chat-prompt">Pergunte sobre seus dados</label>
