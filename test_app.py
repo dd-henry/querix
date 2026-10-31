@@ -970,8 +970,9 @@ def test_login_failure_is_reported_without_losing_the_login_view(monkeypatch):
     _click(app, "Entrar")
 
     assert any("Não foi possível entrar" in item.value for item in app.error)
-    assert {item.label for item in app.tabs} == {"Entrar", "Criar conta"}
-    assert "Validando credenciais..." in progress_labels
+    assert app.radio[0].label == "Tipo de acesso"
+    assert app.radio[0].options == ["Entrar", "Criar conta"]
+    assert progress_labels == []
 
 
 def test_successful_login_opens_the_approved_chat(chat_app):
@@ -1002,14 +1003,16 @@ def test_account_request_success_shows_progress_and_confirmation(chat_app):
     )
     app.session_state["auth_user"] = None
     app.run()
-    app.text_input[2].set_value("Nova pessoa")
-    app.text_input[3].set_value("novo@example.com")
-    app.text_input[4].set_value("senha-segura")
-    app.text_input[5].set_value("senha-segura")
+    app.radio[0].set_value("Criar conta")
+    app.run()
+    app.text_input[0].set_value("Nova pessoa")
+    app.text_input[1].set_value("novo@example.com")
+    app.text_input[2].set_value("senha-segura")
+    app.text_input[3].set_value("senha-segura")
 
     _click(app, "Solicitar acesso")
 
-    assert "Enviando solicitação de acesso..." in services.progress_labels
+    assert services.progress_labels == []
     assert any("Cadastro recebido." in item.value for item in app.success)
     services.users.create_pending_profile.assert_called_once_with(
         USER_ID, "novo@example.com", "Nova pessoa"
@@ -1020,14 +1023,16 @@ def test_account_request_failure_shows_progress_and_error(chat_app):
     app, services = chat_app
     app.session_state["auth_user"] = None
     app.run()
-    app.text_input[2].set_value("Nova pessoa")
-    app.text_input[3].set_value("novo@example.com")
-    app.text_input[4].set_value("senha-segura")
-    app.text_input[5].set_value("senha-segura")
+    app.radio[0].set_value("Criar conta")
+    app.run()
+    app.text_input[0].set_value("Nova pessoa")
+    app.text_input[1].set_value("novo@example.com")
+    app.text_input[2].set_value("senha-segura")
+    app.text_input[3].set_value("senha-segura")
 
     _click(app, "Solicitar acesso")
 
-    assert "Enviando solicitação de acesso..." in services.progress_labels
+    assert services.progress_labels == []
     assert any(
         "Não foi possível criar a conta: Cadastro indisponível." in item.value
         for item in app.error

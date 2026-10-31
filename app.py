@@ -109,55 +109,55 @@ except Exception as error:
 def render_auth_screen():
     st.title("Ask SQL")
     st.caption("Entre para consultar seus dados ou solicite acesso à sua equipe.")
-    login_tab, signup_tab = st.tabs(["Entrar", "Criar conta"])
+    auth_mode = st.radio(
+        "Tipo de acesso",
+        ["Entrar", "Criar conta"],
+        horizontal=True,
+        label_visibility="collapsed",
+    )
 
-    with login_tab:
-        with st.form("login_form"):
-            email = st.text_input("Email")
-            password = st.text_input("Senha", type="password")
-            if st.form_submit_button("Entrar", type="primary"):
+    if auth_mode == "Entrar":
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Senha", type="password", key="login_password")
+        if st.button("Entrar", type="primary", key="login_submit"):
+            try:
+                user, _session = auth_service.sign_in(email.strip(), password)
+                st.session_state.auth_user = {
+                    "id": str(user.id),
+                    "email": user.email or email.strip(),
+                }
+                st.rerun()
+            except Exception as error:
+                logger.warning("Falha no login: %s", error)
+                st.error(f"Não foi possível entrar: {error}")
+    else:
+        name = st.text_input("Nome completo", key="signup_name")
+        email = st.text_input("Email", key="signup_email")
+        password = st.text_input("Senha", type="password", key="signup_password")
+        password_confirmation = st.text_input(
+            "Confirmar senha", type="password", key="signup_password_confirmation"
+        )
+        if st.button("Solicitar acesso", type="primary", key="signup_submit"):
+            if not name.strip() or not email.strip():
+                st.error("Informe nome e email.")
+            elif len(password) < 8:
+                st.error("A senha deve ter pelo menos 8 caracteres.")
+            elif password != password_confirmation:
+                st.error("As senhas não conferem.")
+            else:
                 try:
-                    with st.spinner("Validando credenciais..."):
-                        user, _session = auth_service.sign_in(email.strip(), password)
-                    st.session_state.auth_user = {
-                        "id": str(user.id),
-                        "email": user.email or email.strip(),
-                    }
-                    st.rerun()
+                    user, normalized_name = auth_service.sign_up(
+                        email.strip(), password, name
+                    )
+                    user_repository.create_pending_profile(
+                        user.id, user.email or email.strip(), normalized_name
+                    )
+                    st.success(
+                        "Cadastro recebido. Confirme seu email e aguarde a aprovação de um admin."
+                    )
                 except Exception as error:
-                    logger.warning("Falha no login: %s", error)
-                    st.error(f"Não foi possível entrar: {error}")
-
-    with signup_tab:
-        with st.form("signup_form"):
-            name = st.text_input("Nome completo")
-            email = st.text_input("Email", key="signup_email")
-            password = st.text_input("Senha", type="password", key="signup_password")
-            password_confirmation = st.text_input(
-                "Confirmar senha", type="password"
-            )
-            if st.form_submit_button("Solicitar acesso"):
-                if not name.strip() or not email.strip():
-                    st.error("Informe nome e email.")
-                elif len(password) < 8:
-                    st.error("A senha deve ter pelo menos 8 caracteres.")
-                elif password != password_confirmation:
-                    st.error("As senhas não conferem.")
-                else:
-                    try:
-                        with st.spinner("Enviando solicitação de acesso..."):
-                            user, normalized_name = auth_service.sign_up(
-                                email.strip(), password, name
-                            )
-                            user_repository.create_pending_profile(
-                                user.id, user.email or email.strip(), normalized_name
-                            )
-                        st.success(
-                            "Cadastro recebido. Confirme seu email e aguarde a aprovação de um admin."
-                        )
-                    except Exception as error:
-                        logger.warning("Falha ao solicitar acesso: %s", error)
-                        st.error(f"Não foi possível criar a conta: {error}")
+                    logger.warning("Falha ao solicitar acesso: %s", error)
+                    st.error(f"Não foi possível criar a conta: {error}")
 
 
 def clear_chat_state():
