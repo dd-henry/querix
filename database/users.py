@@ -47,7 +47,9 @@ class UserRepository:
         )
         if result.empty:
             return None
-        return result.iloc[0].to_dict()
+        profile = result.iloc[0].to_dict()
+        profile["id"] = str(profile["id"])
+        return profile
 
     def list_profiles(self):
         result = self.db.execute_query(
@@ -57,7 +59,10 @@ class UserRepository:
             ORDER BY created_at DESC
             """
         )
-        return result.to_dict("records")
+        profiles = result.to_dict("records")
+        for profile in profiles:
+            profile["id"] = str(profile["id"])
+        return profiles
 
     def set_status(self, target_id, status, admin_id):
         if status not in VALID_STATUSES:

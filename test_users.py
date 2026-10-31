@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 from unittest.mock import MagicMock
+from uuid import UUID
 
 from database.users import UserRepository
 
@@ -24,3 +25,23 @@ def test_last_admin_cannot_be_disabled():
 
     with pytest.raises(ValueError, match="último admin"):
         UserRepository(db).set_status("admin-id", "disabled", "other-admin")
+
+
+def test_get_profile_normalizes_database_uuid_to_string():
+    db = MagicMock()
+    user_id = UUID("00000000-0000-0000-0000-000000000001")
+    db.execute_query.return_value = pd.DataFrame(
+        [
+            {
+                "id": user_id,
+                "email": "user@example.com",
+                "name": "User",
+                "role": "admin",
+                "status": "approved",
+            }
+        ]
+    )
+
+    profile = UserRepository(db).get_profile(user_id)
+
+    assert profile["id"] == str(user_id)
