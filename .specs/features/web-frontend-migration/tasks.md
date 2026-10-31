@@ -603,10 +603,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] One send creates one user message and one assistant request state.
-- [ ] Double-click and network retry reuse the same request ID.
-- [ ] Review confirmation/cancel and retry update only the target request.
-- [ ] Unit tests cover pending, success, warning, failure, retry, review on/off, and duplicate submission.
+- [x] One send creates one user message and one assistant request state.
+- [x] Double-click and network retry reuse the same request ID.
+- [x] Review confirmation/cancel and retry update only the target request.
+- [x] Unit tests cover pending, success, warning, failure, retry, review on/off, and duplicate submission.
 
 **Tests**: unit
 **Gate**: Quick

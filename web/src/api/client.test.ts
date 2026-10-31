@@ -112,4 +112,40 @@ describe("createApiClient", () => {
       ),
     );
   });
+
+  it("sends chat requests with stable request identifiers", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      response({
+        conversation_id: "conversation-1",
+        request_id: "request-1",
+        status: "review",
+        content: "SQL gerado para revisão.",
+        sql: "SELECT 1",
+        retryable: false,
+        warnings: [],
+      }),
+    );
+    const client = createApiClient({ fetchImpl });
+
+    await client.chat.translate({
+      conversation_id: "conversation-1",
+      request_id: "request-1",
+      prompt: "Show revenue",
+      review_mode: true,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/chat/translate",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({
+          conversation_id: "conversation-1",
+          request_id: "request-1",
+          prompt: "Show revenue",
+          review_mode: true,
+        }),
+      }),
+    );
+  });
 });

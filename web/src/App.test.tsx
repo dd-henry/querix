@@ -27,6 +27,11 @@ describe("App", () => {
         favorite: () => Promise.reject(new Error("not used")),
         delete: () => Promise.resolve(undefined),
       },
+      chat: {
+        translate: () => Promise.reject(new Error("not used")),
+        execute: () => Promise.reject(new Error("not used")),
+        retry: () => Promise.reject(new Error("not used")),
+      },
     };
     render(<App client={client} />);
 

@@ -36,6 +36,11 @@ function createClient(
       favorite: vi.fn(),
       delete: vi.fn(),
     },
+    chat: {
+      translate: vi.fn(),
+      execute: vi.fn(),
+      retry: vi.fn(),
+    },
   };
 }
 

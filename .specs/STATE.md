@@ -30,10 +30,10 @@
 
 Feature: web-frontend-migration
 Phase: 5 - Chat frontend
-Current batch: T25 in Phase 5, resumed inline
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, and T24
-In progress: T25 in Phase 5
-Next step: Build chat request state in T25
+Current batch: T26-T27 in Phase 5, resumed inline
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, and T25
+In progress: T26-T27 in Phase 5
+Next step: Render chat messages and status in T26
 Blockers: None
-Uncommitted files: T24 implementation and test files, pending atomic commit
+Uncommitted files: T25 implementation and test files, pending atomic commit
 Branch: main

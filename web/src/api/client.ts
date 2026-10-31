@@ -74,6 +74,41 @@ export interface MessageResponse {
   message: string;
 }
 
+export type ChatStatus = "review" | "translated" | "warning" | "executed";
+export type ChatRetryKind = "translate" | "execute";
+
+export interface ChatTranslateInput {
+  conversation_id: string;
+  request_id: string;
+  prompt: string;
+  review_mode: boolean;
+}
+
+export interface ChatRequestInput {
+  conversation_id: string;
+  request_id: string;
+}
+
+export interface ChatResultPayload {
+  columns: string[];
+  rows: Array<Record<string, unknown>>;
+  row_count: number;
+  truncated: boolean;
+}
+
+export interface ChatResponse {
+  conversation_id: string;
+  request_id: string;
+  status: ChatStatus;
+  content: string;
+  sql?: string | null;
+  chart?: Record<string, unknown> | null;
+  result?: ChatResultPayload | null;
+  retryable: boolean;
+  retry_kind?: ChatRetryKind | null;
+  warnings: string[];
+}
+
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
@@ -245,6 +280,32 @@ export function createApiClient({
             method: "DELETE",
           },
         ),
+    },
+    chat: {
+        translate: async (input: ChatTranslateInput) =>
+          requireResponse(
+            await request<ChatResponse>("/api/chat/translate", {
+              method: "POST",
+              body: input,
+            }),
+            "chat translation",
+          ),
+        execute: async (input: ChatRequestInput) =>
+          requireResponse(
+            await request<ChatResponse>("/api/chat/execute", {
+              method: "POST",
+              body: input,
+            }),
+            "chat execution",
+          ),
+        retry: async (input: ChatRequestInput) =>
+          requireResponse(
+            await request<ChatResponse>("/api/chat/retry", {
+              method: "POST",
+              body: input,
+            }),
+            "chat retry",
+          ),
     },
   };
 }

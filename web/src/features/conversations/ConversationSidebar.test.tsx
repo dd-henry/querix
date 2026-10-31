@@ -62,6 +62,11 @@ function createClient(
       favorite: vi.fn().mockResolvedValue(conversations.groups[0].conversations[0]),
       delete: vi.fn().mockResolvedValue(undefined),
     },
+    chat: {
+      translate: vi.fn(),
+      execute: vi.fn(),
+      retry: vi.fn(),
+    },
   };
 }
 
