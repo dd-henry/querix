@@ -161,10 +161,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] A valid claim contains user ID, issued-at, and expiry.
-- [ ] Missing, malformed, tampered, and expired cookies all produce the same 401 error code.
-- [ ] The cookie is httpOnly, SameSite=Lax, Secure according to settings, and max-age is eight hours.
-- [ ] Unit tests cover valid, tampered, expired, missing, and clear paths.
+- [x] A valid claim contains user ID, issued-at, and expiry.
+- [x] Missing, malformed, tampered, and expired cookies all produce the same 401 error code.
+- [x] The cookie is httpOnly, SameSite=Lax, Secure according to settings, and max-age is eight hours.
+- [x] Unit tests cover valid, tampered, expired, missing, and clear paths.
+- [x] Gate passes with 10 API tests: `venv/bin/pytest -q api/tests`.
 
 **Tests**: unit
 **Gate**: quick
