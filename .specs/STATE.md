@@ -35,5 +35,5 @@ Completed: Specification, design, tasks, dependency validation, execution-mode a
 In progress: T10-T12 in Phase 2
 Next step: Implement controlled login/signup forms in T10
 Blockers: None
-Uncommitted files: T9 files are staged for commit
+Uncommitted files: None; T9 committed as cfe4525
 Branch: main
