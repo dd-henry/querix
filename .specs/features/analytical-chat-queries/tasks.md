@@ -192,6 +192,8 @@ chat to request automatic execution by default.
 
 ### T7: Render summary and collapsed SQL details
 
+**Status**: Done
+
 **What**: Render the summary before the result table and expose SQL through an
 accessible collapsed details element without duplicating the timeline.
 **Where**: `web/src/features/chat/ChatWorkspace.tsx`,

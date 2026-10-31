@@ -146,6 +146,15 @@ function ResultView({ message }: { message: ChatMessage }) {
         <h3>Resultados</h3>
         <span>{result.row_count} linha(s)</span>
       </div>
+      {message.summary ? (
+        <p className="chat-result__summary">{message.summary}</p>
+      ) : null}
+      {message.sql ? (
+        <details className="chat-result__sql">
+          <summary>Ver SQL executado</summary>
+          <pre>{message.sql}</pre>
+        </details>
+      ) : null}
       {result.truncated ? (
         <p className="chat-result__notice">
           Os resultados foram limitados às primeiras 5.000 linhas.

@@ -26,6 +26,7 @@ const executedMessage: ChatMessage = {
   status: "executed",
   reviewState: "confirmed",
   content: "Aqui estão os resultados da consulta:",
+  summary: "O resultado reúne 5.001 linhas.",
   chart: {
     tipo: "bar",
     eixo_x: "month",
@@ -119,6 +120,19 @@ describe("ChatWorkspace", () => {
     renderWorkspace([userMessage, executedMessage]);
 
     expect(screen.getByRole("table")).toBeInTheDocument();
+    const summary = screen.getByText("O resultado reúne 5.001 linhas.");
+    const table = screen.getByRole("table");
+    expect(summary.compareDocumentPosition(table)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    const sqlDetails = screen.getByText("Ver SQL executado").closest("details");
+    expect(sqlDetails).toBeInTheDocument();
+    expect(sqlDetails).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Ver SQL executado"));
+    expect(sqlDetails).toHaveAttribute("open");
+    expect(
+      screen.getByText("SELECT month, total FROM sales"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "Jan" })).toBeInTheDocument();
     expect(screen.getByText("Os resultados foram limitados às primeiras 5.000 linhas.")).toBeInTheDocument();
     const download = screen.getByRole("link", {
