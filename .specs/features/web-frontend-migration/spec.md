@@ -204,13 +204,13 @@ The Streamlit interface re-executes the whole script on every interaction. Login
 | -------------- | ----- | ----- | ------ |
 | WEB-01 | P1: Stable authentication | Tasks | In Progress |
 | WEB-02 | P1: Stable authentication | Tasks | Pending |
-| WEB-03 | P1: Stable authentication | Tasks | Pending |
+| WEB-03 | P1: Stable authentication | Tasks | In Progress |
 | WEB-04 | P1: Stable authentication | Tasks | Pending |
 | WEB-05 | P1: Stable authentication | Tasks | Pending |
 | WEB-06 | P1: Stable authentication | Tasks | In Progress |
 | WEB-07 | P1: Stable authentication | Tasks | In Progress |
 | WEB-08 | P1: Stable authentication | Tasks | In Progress |
-| WEB-09 | P1: Stable authentication | Tasks | Pending |
+| WEB-09 | P1: Stable authentication | Tasks | In Progress |
 | WEB-10 | P1: Stable chat | Tasks | Pending |
 | WEB-11 | P1: Stable chat | Tasks | Pending |
 | WEB-12 | P1: Stable chat | Tasks | Pending |

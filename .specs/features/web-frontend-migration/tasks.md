@@ -201,10 +201,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Every authenticated request reloads the profile by session user ID.
-- [ ] Pending, rejected, and disabled profiles produce `account_not_approved`.
-- [ ] Role guards distinguish user, dev/dba, and admin actions.
-- [ ] Unit/integration tests cover missing session, foreign profile, status guard, and role guard.
+- [x] Every authenticated request reloads the profile by session user ID.
+- [x] Pending, rejected, and disabled profiles produce `account_not_approved`.
+- [x] Role guards distinguish user, dev/dba, and admin actions.
+- [x] Unit/integration tests cover missing session, foreign profile, status guard, and role guard.
+- [x] Gate passes with 22 API tests: `venv/bin/pytest -q api/tests`.
 
 **Tests**: integration
 **Gate**: API

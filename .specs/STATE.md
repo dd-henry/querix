@@ -31,9 +31,9 @@
 Feature: web-frontend-migration
 Phase: 1 - API and frontend foundations
 Current batch: T1-T7, resumed inline after the delegated worker was cancelled
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, and T4
-In progress: T5-T7 in Phase 1
-Next step: Implement T5 after T3/T4, then T6; T7 remains independent
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, and T5
+In progress: T6-T7 in Phase 1
+Next step: Implement T6 authentication routes; T7 remains independent and can follow the route contract
 Blockers: None
-Uncommitted files: T4 files are staged for commit
+Uncommitted files: T5 files are staged for commit
 Branch: main
