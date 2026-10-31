@@ -776,9 +776,9 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Each existing user-facing feature has one happy-path and one relevant failure/authorization assertion.
-- [ ] Owner isolation is proven with two fixture users.
-- [ ] Responsive and keyboard assertions pass at desktop and 360px viewports.
+- [x] Each existing user-facing feature has one happy-path and one relevant failure/authorization assertion.
+- [x] Owner isolation is proven with two fixture users.
+- [x] Responsive and keyboard assertions pass at desktop and 360px viewports.
 
 **Tests**: e2e
 **Gate**: Full
