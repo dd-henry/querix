@@ -137,7 +137,7 @@ export function AuthPage() {
         <h1 id="auth-title">
           {mode === "login" ? "Entrar para continuar" : "Criar sua conta"}
         </h1>
-        <div role="tablist" aria-label="Autenticação">
+        <div className="auth-tabs" role="tablist" aria-label="Autenticação">
           <button
             type="button"
             role="tab"
@@ -160,6 +160,7 @@ export function AuthPage() {
 
         {mode === "login" ? (
           <form
+            className="auth-form"
             aria-busy={activeOperation === "login"}
             noValidate
             onSubmit={submitLogin}
@@ -188,6 +189,7 @@ export function AuthPage() {
           </form>
         ) : (
           <form
+            className="auth-form"
             aria-busy={activeOperation === "signup"}
             noValidate
             onSubmit={submitSignup}
@@ -239,7 +241,10 @@ export function AuthPage() {
         )}
 
         {feedback ? (
-          <p role={feedback.kind === "error" ? "alert" : "status"}>
+          <p
+            className={`auth-feedback auth-feedback--${feedback.kind}`}
+            role={feedback.kind === "error" ? "alert" : "status"}
+          >
             {feedback.message}
           </p>
         ) : null}
