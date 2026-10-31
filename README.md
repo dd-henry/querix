@@ -21,8 +21,10 @@ O projeto é construído com uma arquitetura modular, garantindo que cada compon
 
 ```mermaid
 graph TD
-    A[Usuário via Interface] --> B(app.py);
-    B --> C{Prompter};
+    A[Usuário via React] --> B(web/);
+    L[Usuário via Streamlit legado] --> M(app.py);
+    B --> N(FastAPI api/);
+    N --> C{Prompter};
     D[Schema do Banco] --> C;
     E[Regras de Negócio] --> C;
     C --> F{Translator (Ollama)};
@@ -33,10 +35,12 @@ graph TD
     B --> A;
 ```
 
-1.  **Interface (`app.py` e `components.py`):** Ponto de entrada da aplicação. Gerencia a interface do usuário, o estado da sessão e o fluxo principal.
-2.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" que será enviado ao modelo de linguagem, unindo regras de negócio, o esquema do banco de dados e a pergunta do usuário.
-3.  **Motor de Tradução (`core/translator.py`):** Comunica-se com a API do Ollama, enviando o prompt e tratando a resposta para extrair a consulta SQL do JSON retornado.
-4.  **Banco de Dados (`database/postgres.py`):** Implementa a lógica de conexão com o PostgreSQL usando SQLAlchemy, executa a consulta e retorna os resultados como um DataFrame do pandas.
+1.  **Interface web (`web/`):** Frontend React + TypeScript + Vite. Mantém o estado do chat no navegador e chama a API por cookie de sessão.
+2.  **API (`api/`):** Backend FastAPI que expõe autenticação, conversas, chat, histórico, consultas compartilhadas, administração e sincronização do schema.
+3.  **Interface legada (`app.py` e `components.py`):** Frontend Streamlit mantido durante a migração. Ele continua disponível, mas não é necessário para executar o frontend web.
+4.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" que será enviado ao modelo de linguagem, unindo regras de negócio, o esquema do banco de dados e a pergunta do usuário.
+5.  **Motor de Tradução (`core/translator.py`):** Comunica-se com a API do Ollama, enviando o prompt e tratando a resposta para extrair a consulta SQL do JSON retornado.
+6.  **Banco de Dados (`database/postgres.py`):** Implementa a lógica de conexão com o PostgreSQL usando SQLAlchemy, executa a consulta e retorna os resultados como um DataFrame do pandas.
 
 ## 🚀 Instalação e Configuração
 
@@ -83,11 +87,57 @@ O cadastro exige confirmação de email e cria um perfil `pending`. Um admin pre
 
 ## 🏃 Como Usar
 
-Para executar a aplicação principal, use o `app.py`. A interface será aberta no seu navegador.
+### Frontend web React + API FastAPI
+
+O frontend e a API são processos independentes. Em desenvolvimento, o Vite usa a porta `5173` e encaminha `/api` para a API na porta `8000`; os dois podem executar ao mesmo tempo que o Streamlit na porta `8501`.
+
+1. Configure no `.env` as variáveis da API:
+
+```env
+WEB_ORIGIN=http://127.0.0.1:5173
+SESSION_SECRET=gere-um-segredo-aleatorio-com-mais-de-32-caracteres
+DATABASE_URL=postgresql+psycopg2://usuario@127.0.0.1:5432/banco
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua_chave_anon_publica
+OLLAMA_API_URL=http://127.0.0.1:11434
+```
+
+`DATABASE_URL` pode ser substituída pelos campos `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DBNAME`. Em desenvolvimento local, mantenha `COOKIE_SECURE=false`; ative-o somente quando a aplicação estiver atrás de HTTPS. Nunca coloque `SESSION_SECRET`, credenciais do banco ou a chave `service_role` do Supabase no frontend.
+
+2. Inicie a API em um terminal:
+
+```bash
+venv/bin/uvicorn api.app:create_app --factory --host 127.0.0.1 --port 8000 --reload
+```
+
+3. Instale as dependências do frontend uma vez e inicie-o em outro terminal:
+
+```bash
+npm --prefix web install
+npm --prefix web run dev
+```
+
+Abra <http://127.0.0.1:5173>. O navegador conversa apenas com o frontend; o proxy do Vite encaminha as chamadas `/api` para `127.0.0.1:8000`, preservando o cookie de sessão.
+
+Para validar o frontend:
+
+```bash
+npm --prefix web run check
+npm --prefix web run build
+npm --prefix web run e2e
+```
+
+Os testes E2E usam fixtures HTTP do Playwright e iniciam o servidor Vite automaticamente; a API real não precisa estar ativa para essa suíte.
+
+### Frontend Streamlit legado
+
+O Streamlit permanece disponível durante a migração e pode ser iniciado da forma anterior:
 
 ```bash
 streamlit run app.py
 ```
+
+Ele será removido somente depois de uma verificação independente com resultado PASS e aprovação explícita do responsável pelo projeto. Até lá, não remova nem substitua esse comando em ambientes existentes.
 
 ### Conversas e histórico de consultas
 

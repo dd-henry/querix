@@ -796,10 +796,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] A contributor can start API and web independently using documented commands.
-- [ ] The README states that Streamlit remains available until the Verifier PASS and owner approval.
-- [ ] The README does not instruct users to expose cookies, Supabase secrets, or raw SQL.
-- [ ] Manual documentation review is complete.
+- [x] A contributor can start API and web independently using documented commands.
+- [x] The README states that Streamlit remains available until the Verifier PASS and owner approval.
+- [x] The README does not instruct users to expose cookies, Supabase secrets, or raw SQL.
+- [x] Manual documentation review is complete.
 
 **Tests**: none
 **Gate**: Build
