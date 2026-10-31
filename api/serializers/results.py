@@ -55,7 +55,7 @@ def summarize_result(result: ResultPayload) -> str:
     if {"produto", "quantidade", "valor"}.issubset(columns):
         quantities = _decimal_values(rows, "quantidade")
         values = _decimal_values(rows, "valor")
-        details = [f"Encontrei {row_count} produto(s)"]
+        details = [f"Encontrei {len(rows)} produto(s)"]
         if quantities:
             details.append(
                 f"totalizando {_format_number(sum(quantities))} unidade(s)"

@@ -130,6 +130,6 @@ def test_summarize_result_ignores_invalid_metrics_and_marks_truncation():
     }
 
     assert summarize_result(result) == (
-        "Encontrei 5001 produto(s). O resumo considera apenas as linhas "
+        "Encontrei 1 produto(s). O resumo considera apenas as linhas "
         "retornadas porque o resultado foi limitado."
     )

@@ -29,6 +29,7 @@ def test_builds_grouped_product_query_with_quantity_and_value():
 
     assert result is not None
     assert result.intent == "product_sales"
+    assert "p.nome AS produto" in result.sql
     assert "SUM(iv.quantidade) AS quantidade" in result.sql
     assert "SUM(iv.subtotal) AS valor" in result.sql
     assert "JOIN itens_venda iv" in result.sql
@@ -60,6 +61,16 @@ def test_invalid_numeric_month_does_not_fabricate_a_period():
     assert (
         build_known_query(
             "Qual foi o total de vendas do mês 13?",
+            reference_date=date(2026, 10, 31),
+        )
+        is None
+    )
+
+
+def test_unknown_text_month_falls_back_to_llm():
+    assert (
+        build_known_query(
+            "Qual foi o total de vendas do mês de smarch?",
             reference_date=date(2026, 10, 31),
         )
         is None
