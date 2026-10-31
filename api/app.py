@@ -74,6 +74,9 @@ def create_app(
     app = FastAPI(title="Ask SQL API")
     app.state.settings = resolved_settings
     app.state.services = services
+    from api.routes.auth import router as auth_router
+
+    app.include_router(auth_router, prefix="/api/auth")
 
     app.add_middleware(
         CORSMiddleware,

@@ -31,9 +31,9 @@
 Feature: web-frontend-migration
 Phase: 1 - API and frontend foundations
 Current batch: T1-T7, resumed inline after the delegated worker was cancelled
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, and T5
-In progress: T6-T7 in Phase 1
-Next step: Implement T6 authentication routes; T7 remains independent and can follow the route contract
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, and T6
+In progress: T7 in Phase 1
+Next step: Scaffold the React/Vite workspace and run its build/check gates
 Blockers: None
-Uncommitted files: T5 files are staged for commit
+Uncommitted files: T6 files are staged for commit
 Branch: main

@@ -221,11 +221,12 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Successful login sets the cookie and returns the approved profile.
-- [ ] Invalid login keeps the API stateless and returns a safe error.
-- [ ] Signup validates server-side and creates a pending profile.
-- [ ] Logout clears the cookie; `/me` requires the cookie.
-- [ ] TestClient tests cover happy, invalid, pending, disabled, malformed input, and logout paths.
+- [x] Successful login sets the cookie and returns the approved profile.
+- [x] Invalid login keeps the API stateless and returns a safe error.
+- [x] Signup validates server-side and creates a pending profile.
+- [x] Logout clears the cookie; `/me` requires the cookie.
+- [x] TestClient tests cover happy, invalid, pending, disabled, malformed input, and logout paths.
+- [x] Gate passes with 34 API tests: `venv/bin/pytest -q api/tests`.
 
 **Tests**: integration
 **Gate**: API
