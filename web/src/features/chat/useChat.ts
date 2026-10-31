@@ -20,6 +20,7 @@ export interface ChatMessage {
   content: string;
   status?: ChatMessageStatus;
   sql?: string;
+  summary?: string;
   error?: string;
   retryable?: boolean;
   retryKind?: ChatRetryKind;
@@ -84,6 +85,7 @@ function responseMessage(
     status: response.status,
     sql: response.sql ?? undefined,
     chart: response.chart ?? undefined,
+    summary: response.summary ?? undefined,
     result: response.result ?? undefined,
     retryable: response.retryable,
     retryKind: response.retry_kind ?? undefined,
@@ -109,6 +111,7 @@ function assistantFromResponse(
     status: response.status,
     sql: response.sql ?? undefined,
     chart: response.chart ?? undefined,
+    summary: response.summary ?? undefined,
     result: response.result ?? undefined,
     retryable: response.retryable,
     retryKind: response.retry_kind ?? undefined,
@@ -125,6 +128,7 @@ function assistantFromResponse(
 function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
   return detail.messages.map((message) => {
     const chart = message.metadata.grafico;
+    const summary = message.metadata.summary;
     const retryKind =
       message.metadata.retry_kind === "translate" ||
       message.metadata.retry_kind === "execute"
@@ -135,6 +139,7 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
       role: message.role,
       content: message.content,
       sql: message.sql ?? undefined,
+      summary: typeof summary === "string" ? summary : undefined,
       error: message.error ?? undefined,
       retryable: Boolean(message.metadata.retryable),
       retryKind,

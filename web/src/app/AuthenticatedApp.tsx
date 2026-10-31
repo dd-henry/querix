@@ -57,7 +57,7 @@ export function AuthenticatedApp({
 }: AuthenticatedAppProps) {
   const [activePanel, setActivePanel] = useState<ActivePanel>("chat");
   const panelRef = useRef<HTMLDivElement>(null);
-  const chat = useChat({ client });
+  const chat = useChat({ client, reviewMode: false });
   const copy = panelCopy[activePanel];
 
   useEffect(() => {

@@ -41,6 +41,7 @@ function createClient(
         ...reviewResponse,
         status: "executed",
         content: "Aqui estão os resultados da consulta:",
+        summary: "O faturamento retornado foi R$ 1,00.",
         result: {
           columns: ["total"],
           rows: [{ total: 1 }],
@@ -261,6 +262,7 @@ describe("useChat", () => {
       ...reviewResponse,
       status: "executed",
       content: "Aqui estão os resultados da consulta:",
+      summary: "O faturamento retornado foi R$ 1,00.",
     });
     const client = createClient({ translate });
     render(<Harness client={client} reviewMode={false} />);
@@ -271,6 +273,9 @@ describe("useChat", () => {
       expect(readMessages()[1]).toEqual(
         expect.objectContaining({ status: "executed" }),
       ),
+    );
+    expect(readMessages()[1].summary).toBe(
+      "O faturamento retornado foi R$ 1,00.",
     );
     expect(translate).toHaveBeenCalledWith(
       expect.objectContaining({ review_mode: false }),

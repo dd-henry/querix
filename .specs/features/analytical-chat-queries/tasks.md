@@ -170,6 +170,8 @@ ANALYTICAL-12
 
 ### T6: Carry summaries and automatic mode through React chat state
 
+**Status**: Done
+
 **What**: Add summary typing/state propagation and configure the authenticated
 chat to request automatic execution by default.
 **Where**: `web/src/api/client.ts`, `web/src/features/chat/useChat.ts`,

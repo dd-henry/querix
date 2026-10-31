@@ -173,6 +173,7 @@ export interface ChatResponse {
   content: string;
   sql?: string | null;
   chart?: Record<string, unknown> | null;
+  summary?: string | null;
   result?: ChatResultPayload | null;
   retryable: boolean;
   retry_kind?: ChatRetryKind | null;

@@ -58,6 +58,36 @@ function createClient(): ApiClient {
 }
 
 describe("AuthenticatedApp", () => {
+  it("uses automatic execution for the normal chat flow", async () => {
+    const client = createClient();
+    vi.mocked(client.chat.translate).mockResolvedValue({
+      conversation_id: "conversation-1",
+      request_id: "request-1",
+      status: "executed",
+      content: "Aqui estão os resultados da consulta:",
+      retryable: false,
+      warnings: [],
+    });
+    render(
+      <AuthenticatedApp
+        client={client}
+        profile={profile}
+        onSignOut={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Pergunte sobre seus dados"), {
+      target: { value: "Qual foi o faturamento?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar pergunta" }));
+
+    await waitFor(() =>
+      expect(client.chat.translate).toHaveBeenCalledWith(
+        expect.objectContaining({ review_mode: false }),
+      ),
+    );
+  });
+
   it("switches accessible panels and moves focus to the opened panel", async () => {
     render(
       <AuthenticatedApp
