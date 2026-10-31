@@ -264,9 +264,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Requests use `credentials: "include"` and never write tokens to browser storage.
-- [ ] Non-2xx responses become typed errors with code and message.
-- [ ] Unit tests cover JSON success, empty success, validation error, 401 callback, and malformed error payload.
+- [x] Requests use `credentials: "include"` and never write tokens to browser storage.
+- [x] Non-2xx responses become typed errors with code and message.
+- [x] Unit tests cover JSON success, empty success, validation error, 401 callback, and malformed error payload.
+- [x] Gate passes with 6 frontend tests: `npm --prefix web run check`.
 
 **Tests**: unit
 **Gate**: quick
