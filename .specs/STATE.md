@@ -35,5 +35,5 @@ Completed: Specification, design, tasks, dependency validation, execution-mode a
 In progress: T12 in Phase 2
 Next step: Add browser authentication and duplicate-DOM coverage in T12
 Blockers: None
-Uncommitted files: T11 files are staged for commit
+Uncommitted files: None; T11 committed as 0a83079
 Branch: main
