@@ -5,10 +5,26 @@ import {
 } from "./app/AuthProvider";
 import { AppShell } from "./app/AppShell";
 import { AuthPage } from "./features/auth/AuthPage";
+import { ChatWorkspace } from "./features/chat/ChatWorkspace";
 import { ConversationSidebar } from "./features/conversations/ConversationSidebar";
+import { useChat } from "./features/chat/useChat";
 
 interface AppProps {
   client?: AuthProviderProps["client"];
+}
+
+function AuthenticatedChat({ client }: { client: NonNullable<AuthProviderProps["client"]> }) {
+  const chat = useChat({ client });
+  return (
+    <ChatWorkspace
+      messages={chat.messages}
+      error={chat.error}
+      onSend={chat.send}
+      onRetry={chat.retry}
+      onConfirmExecution={chat.confirmExecution}
+      onCancelReview={chat.cancelReview}
+    />
+  );
 }
 
 export function App({ client }: AppProps) {
@@ -48,7 +64,7 @@ export function App({ client }: AppProps) {
                   </nav>
                 </>
               )}
-              chat={<p>O chat será carregado aqui.</p>}
+              chat={<AuthenticatedChat client={auth.client} />}
             />
           )}
           blockedView={(message) => (

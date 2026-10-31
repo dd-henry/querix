@@ -70,9 +70,11 @@ export function AppShell({
         <section className="app-chat" aria-label="Chat">
           {chat}
         </section>
-        <div className="app-status" role="status" aria-live="polite">
-          {requestStatus}
-        </div>
+        {requestStatus ? (
+          <div className="app-status" role="status" aria-live="polite">
+            {requestStatus}
+          </div>
+        ) : null}
       </main>
     </div>
   );

@@ -641,10 +641,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Enter submits and Shift+Enter inserts a newline.
-- [ ] Review mode cannot execute before confirmation and cancel clears only review state.
-- [ ] Results, truncation, chart success/failure, and UTF-8 CSV are rendered correctly.
-- [ ] Component tests cover keyboard, disabled/pending, review, result, chart, and CSV paths.
+- [x] Enter submits and Shift+Enter inserts a newline.
+- [x] Review mode cannot execute before confirmation and cancel clears only review state.
+- [x] Results, truncation, chart success/failure, and UTF-8 CSV are rendered correctly.
+- [x] Component tests cover keyboard, disabled/pending, review, result, chart, and CSV paths.
 
 **Tests**: unit
 **Gate**: Frontend
