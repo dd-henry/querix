@@ -1,0 +1,74 @@
+import math
+from datetime import date, datetime
+from decimal import Decimal
+from numbers import Real
+from typing import Any, Dict, List, Mapping, TypedDict
+
+import pandas as pd
+
+
+class ResultPayload(TypedDict):
+    columns: List[str]
+    rows: List[Dict[str, Any]]
+    row_count: int
+    truncated: bool
+
+
+def _is_null(value: Any) -> bool:
+    if value is None:
+        return True
+    try:
+        result = pd.isna(value)
+    except (TypeError, ValueError):
+        return False
+    return isinstance(result, bool) and result
+
+
+def _json_safe(value: Any) -> Any:
+    if _is_null(value):
+        return None
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, Real):
+        if isinstance(value, float) and not math.isfinite(value):
+            return None
+        item = getattr(value, "item", None)
+        return item() if callable(item) else value
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+def serialize_dataframe(
+    dataframe: pd.DataFrame,
+    max_rows: int = 5_000,
+) -> ResultPayload:
+    """Convert a DataFrame into a bounded, JSON-safe result payload."""
+
+    if not isinstance(max_rows, int) or isinstance(max_rows, bool) or max_rows < 0:
+        raise ValueError("max_rows must be a non-negative integer.")
+
+    columns = [str(column) for column in dataframe.columns]
+    row_count = len(dataframe)
+    rows = [
+        {
+            column: _json_safe(value)
+            for column, value in zip(columns, values)
+        }
+        for values in dataframe.head(max_rows).itertuples(
+            index=False,
+            name=None,
+        )
+    ]
+    return {
+        "columns": columns,
+        "rows": rows,
+        "row_count": row_count,
+        "truncated": row_count > max_rows,
+    }

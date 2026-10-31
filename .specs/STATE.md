@@ -29,11 +29,11 @@
 ## Handoff
 
 Feature: web-frontend-migration
-Phase: 1 - API and frontend foundations
-Current batch: T15-T19 in Phase 3, resumed inline
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, and T15
-In progress: T16-T19 in Phase 3
-Next step: Add bounded result serialization in T16
+Phase: 3 - Core chat backend
+Current batch: T16-T19 in Phase 3, resumed inline
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, and T16
+In progress: T17-T19 in Phase 3
+Next step: Extract the chat orchestration service in T17
 Blockers: None
-Uncommitted files: T15 changes pending commit
+Uncommitted files: T16 changes pending commit
 Branch: main

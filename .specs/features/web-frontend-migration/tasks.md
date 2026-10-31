@@ -425,9 +425,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Results are limited to 5,000 rows and expose `truncated`.
-- [ ] Null-like, date, datetime, and Decimal values serialize deterministically.
-- [ ] Unit tests cover empty, bounded, truncated, and special-value frames.
+- [x] Results are limited to 5,000 rows and expose `truncated`.
+- [x] Null-like, date, datetime, and Decimal values serialize deterministically.
+- [x] Unit tests cover empty, bounded, truncated, and special-value frames.
+- [x] Gate passes with 53 API tests: `venv/bin/python -m pytest api/tests -q`.
 
 **Tests**: unit
 **Gate**: quick
