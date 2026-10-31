@@ -30,10 +30,10 @@
 
 Feature: web-frontend-migration
 Phase: 1 - API and frontend foundations
-Current batch: T1-T7, resumed inline after the delegated worker was cancelled
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, and T14
-In progress: T15-T19 in Phase 3
-Next step: Add conversation detail and mutation routes in T15
+Current batch: T15-T19 in Phase 3, resumed inline
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, and T15
+In progress: T16-T19 in Phase 3
+Next step: Add bounded result serialization in T16
 Blockers: None
-Uncommitted files: None; T14 committed as 7024516
+Uncommitted files: T15 changes pending commit
 Branch: main

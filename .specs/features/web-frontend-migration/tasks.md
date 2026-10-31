@@ -405,10 +405,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Opening restores messages in order and never executes SQL.
-- [ ] Foreign conversation IDs return 404 without leaking existence details.
-- [ ] Deletion removes linked history through the repository contract.
-- [ ] Tests cover detail, foreign access, favorite, delete confirmation, cancel/no-op, and context limit.
+- [x] Opening restores messages in order and never executes SQL.
+- [x] Foreign conversation IDs return 404 without leaking existence details.
+- [x] Deletion removes linked history through the repository contract.
+- [x] Tests cover detail, foreign access, favorite, delete confirmation, cancel/no-op, and context limit.
+- [x] Gate passes with 49 API tests: `venv/bin/python -m pytest api/tests -q`.
 
 **Tests**: integration
 **Gate**: API
