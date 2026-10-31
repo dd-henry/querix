@@ -283,10 +283,11 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Initial auth loading has one stable shell and no duplicate auth tree.
-- [ ] 401 transitions to the public branch and preserves only in-memory unsent text.
-- [ ] Pending/rejected/disabled profiles cannot render the chat branch.
-- [ ] Unit tests cover loading, authenticated, unauthenticated, and blocked-profile states.
+- [x] Initial auth loading has one stable shell and no duplicate auth tree.
+- [x] 401 transitions to the public branch and preserves only in-memory unsent text.
+- [x] Pending/rejected/disabled profiles cannot render the chat branch.
+- [x] Unit tests cover loading, authenticated, unauthenticated, and blocked-profile states.
+- [x] Gate passes with 13 frontend tests: `npm --prefix web run check`.
 
 **Tests**: unit
 **Gate**: quick
