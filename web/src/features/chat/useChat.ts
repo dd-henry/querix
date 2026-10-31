@@ -7,6 +7,8 @@ import {
   type ChatRetryKind,
   type ChatStatus,
   type ChatResultPayload,
+  type ConversationDetail,
+  type PredefinedExecutionResponse,
 } from "../../api/client";
 
 export type ChatMessageStatus = ChatStatus | "pending" | "error";
@@ -41,7 +43,10 @@ export interface UseChatResult {
   confirmExecution: (requestId: string) => Promise<boolean>;
   cancelReview: (requestId: string) => void;
   retry: (requestId: string) => Promise<boolean>;
-  openConversation: (conversationId: string) => void;
+  openConversation: (conversationId: string) => Promise<boolean>;
+  newConversation: () => boolean;
+  appendChatResponse: (response: ChatResponse) => void;
+  appendPredefinedResult: (response: PredefinedExecutionResponse) => void;
 }
 
 interface ActiveRequest {
@@ -91,6 +96,55 @@ function responseMessage(
           ? "confirmed"
           : undefined,
   };
+}
+
+function assistantFromResponse(
+  response: ChatResponse,
+  requestId = response.request_id,
+): ChatMessage {
+  return {
+    requestId,
+    role: "assistant",
+    content: response.content,
+    status: response.status,
+    sql: response.sql ?? undefined,
+    chart: response.chart ?? undefined,
+    result: response.result ?? undefined,
+    retryable: response.retryable,
+    retryKind: response.retry_kind ?? undefined,
+    warnings: response.warnings ?? [],
+    reviewState:
+      response.status === "review"
+        ? "open"
+        : response.status === "executed"
+          ? "confirmed"
+          : undefined,
+  };
+}
+
+function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
+  return detail.messages.map((message) => {
+    const chart = message.metadata.grafico;
+    const retryKind =
+      message.metadata.retry_kind === "translate" ||
+      message.metadata.retry_kind === "execute"
+        ? message.metadata.retry_kind
+        : undefined;
+    return {
+      requestId: message.request_id,
+      role: message.role,
+      content: message.content,
+      sql: message.sql ?? undefined,
+      error: message.error ?? undefined,
+      retryable: Boolean(message.metadata.retryable),
+      retryKind,
+      chart:
+        chart && typeof chart === "object"
+          ? (chart as Record<string, unknown>)
+          : undefined,
+      warnings: [],
+    };
+  });
 }
 
 function replaceAssistant(
@@ -314,21 +368,77 @@ export function useChat({
     [client, messages, startRequest, updateAssistant],
   );
 
-  const openConversation = useCallback((nextConversationId: string) => {
-    const normalizedId = nextConversationId.trim();
-    if (!normalizedId) {
-      setError("O identificador da conversa é obrigatório.");
-      return;
-    }
+  const openConversation = useCallback(
+    async (nextConversationId: string) => {
+      const normalizedId = nextConversationId.trim();
+      if (!normalizedId) {
+        setError("O identificador da conversa é obrigatório.");
+        return false;
+      }
+      if (activeRequestRef.current) {
+        setError("Aguarde a solicitação atual terminar.");
+        return false;
+      }
+      setError(null);
+      try {
+        const detail = await client.conversations.get(normalizedId);
+        conversationIdRef.current = detail.id;
+        setConversationId(detail.id);
+        setMessages(messagesFromConversation(detail));
+        return true;
+      } catch (conversationError: unknown) {
+        const described = describeError(conversationError);
+        setError(described.message);
+        return false;
+      }
+    },
+    [client],
+  );
+
+  const newConversation = useCallback(() => {
     if (activeRequestRef.current) {
       setError("Aguarde a solicitação atual terminar.");
-      return;
+      return false;
     }
-    conversationIdRef.current = normalizedId;
-    setConversationId(normalizedId);
+    const nextConversationId = createId();
+    conversationIdRef.current = nextConversationId;
+    setConversationId(nextConversationId);
     setMessages([]);
     setError(null);
+    return true;
   }, []);
+
+  const appendChatResponse = useCallback((response: ChatResponse) => {
+    conversationIdRef.current = response.conversation_id;
+    setConversationId(response.conversation_id);
+    setMessages((current) => [
+      ...current,
+      assistantFromResponse(response),
+    ]);
+  }, []);
+
+  const appendPredefinedResult = useCallback(
+    (response: PredefinedExecutionResponse) => {
+      const activeConversationId =
+        conversationIdRef.current ?? createId();
+      conversationIdRef.current = activeConversationId;
+      setConversationId(activeConversationId);
+      setMessages((current) => [
+        ...current,
+        {
+          requestId: createId(),
+          role: "assistant",
+          content: "Resultado da consulta compartilhada.",
+          status: "executed",
+          result: response.result,
+          retryable: false,
+          warnings: [],
+          reviewState: "confirmed",
+        },
+      ]);
+    },
+    [],
+  );
 
   return {
     conversationId,
@@ -339,5 +449,8 @@ export function useChat({
     cancelReview,
     retry,
     openConversation,
+    newConversation,
+    appendChatResponse,
+    appendPredefinedResult,
   };
 }

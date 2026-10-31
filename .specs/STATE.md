@@ -31,9 +31,9 @@
 Feature: web-frontend-migration
 Phase: 6 - Parity frontend
 Current batch: T29-T31 in Phase 6, resumed inline
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, and T31
-In progress: T32 in Phase 6
-Next step: Integrate the responsive authenticated layout in T32
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, and T32
+In progress: T33-T34 in Phase 7
+Next step: Add browser verification for chat transitions in T33
 Blockers: None
-Uncommitted files: T31 implementation, tests, API contract, and test fakes, pending atomic commit
+Uncommitted files: T32 implementation, tests, and responsive styles, pending atomic commit
 Branch: main

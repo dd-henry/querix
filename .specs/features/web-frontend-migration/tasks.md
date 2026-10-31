@@ -738,10 +738,10 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Desktop and 360px layouts have no horizontal overflow.
-- [ ] The composer remains usable at the bottom of the main column.
-- [ ] Keyboard-only navigation reaches every action and focus moves predictably when panels open.
-- [ ] Accessibility/component tests cover labels, tab order, mobile menu, and live status.
+- [x] Desktop and 360px layouts have no horizontal overflow.
+- [x] The composer remains usable at the bottom of the main column.
+- [x] Keyboard-only navigation reaches every action and focus moves predictably when panels open.
+- [x] Accessibility/component tests cover labels, tab order, mobile menu, and live status.
 
 **Tests**: unit
 **Gate**: Frontend

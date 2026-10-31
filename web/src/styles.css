@@ -58,6 +58,8 @@ textarea {
 
 .app-sidebar__content {
   flex: 1;
+  min-width: 0;
+  overflow-y: auto;
 }
 
 .conversation-sidebar {
@@ -252,6 +254,212 @@ textarea {
   font-size: 0.75rem;
 }
 
+.authenticated-panel {
+  width: min(100%, 72rem);
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.authenticated-panel:focus {
+  outline: none;
+}
+
+.predefined-panel,
+.admin-panel,
+.sync-panel {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.predefined-panel__header,
+.admin-panel__header,
+.sync-panel {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.predefined-panel__header,
+.admin-panel__header {
+  display: flex;
+  gap: 1rem;
+}
+
+.predefined-panel__header h2,
+.admin-panel__header h2,
+.sync-panel h2 {
+  margin: 0;
+  color: #f9fafb;
+  font-size: 1.15rem;
+}
+
+.predefined-panel__header button,
+.predefined-panel__search button,
+.predefined-card__actions button,
+.predefined-editor button,
+.admin-panel__header button,
+.admin-panel__control button,
+.sync-panel button {
+  width: auto;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #4b5563;
+  border-radius: 0.45rem;
+  color: #e5e7eb;
+  background: #374151;
+  cursor: pointer;
+}
+
+.predefined-panel__search,
+.predefined-editor,
+.predefined-panel__item,
+.admin-panel__item,
+.sync-panel {
+  padding: 1rem;
+  border: 1px solid #374151;
+  border-radius: 0.75rem;
+  background: #1f2937;
+}
+
+.predefined-panel__search,
+.predefined-editor,
+.predefined-panel__item,
+.admin-panel__item {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.predefined-panel__search {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.predefined-panel__search label,
+.predefined-editor label,
+.admin-panel__control label {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.predefined-panel__search label {
+  grid-column: 1 / -1;
+}
+
+.predefined-panel__search input,
+.predefined-editor input,
+.predefined-editor textarea,
+.predefined-editor select,
+.predefined-card input,
+.admin-panel__control select {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #4b5563;
+  border-radius: 0.45rem;
+  color: #f9fafb;
+  background: #111827;
+}
+
+.predefined-editor textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.predefined-editor h3,
+.predefined-card h3,
+.admin-panel__item h3 {
+  margin: 0;
+  color: #f9fafb;
+}
+
+.predefined-panel__item p,
+.admin-panel__item p,
+.sync-panel p:last-child {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.predefined-card__tags,
+.predefined-card__actions,
+.predefined-card__parameters,
+.predefined-panel__item > button,
+.predefined-panel__item > div[role="group"],
+.predefined-editor__actions,
+.admin-panel__control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.predefined-card__parameters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.predefined-card__parameters label {
+  display: grid;
+  gap: 0.35rem;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.predefined-card__actions {
+  align-items: center;
+}
+
+.predefined-panel__item pre {
+  max-height: 7rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 0.45rem;
+  color: #bfdbfe;
+  background: #111827;
+  white-space: pre-wrap;
+}
+
+.predefined-panel__list,
+.admin-panel__list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-panel__item {
+  grid-template-columns: minmax(0, 1fr) repeat(2, minmax(12rem, 1fr));
+}
+
+.admin-panel__control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.admin-panel__control label {
+  grid-column: 1 / -1;
+}
+
+.sync-panel {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.sync-panel > div {
+  flex: 1 1 18rem;
+}
+
+.sync-panel p {
+  max-width: 45rem;
+}
+
+button:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .app-sidebar__content ul {
   display: grid;
   gap: 0.5rem;
@@ -284,6 +492,7 @@ textarea {
   min-height: 100vh;
   flex-direction: column;
   padding: 2rem clamp(1.25rem, 4vw, 4rem);
+  overflow-x: hidden;
 }
 
 .app-main__header {
@@ -580,5 +789,32 @@ h1 {
   .app-main {
     min-height: 100vh;
     padding: 5rem 1.25rem 1.25rem;
+  }
+
+  .app-main__header {
+    padding-bottom: 1rem;
+  }
+
+  .app-main__header h1 {
+    font-size: 1.65rem;
+  }
+
+  .predefined-panel__header,
+  .admin-panel__header {
+    display: grid;
+  }
+
+  .predefined-panel__search {
+    grid-template-columns: 1fr;
+  }
+
+  .predefined-panel__search button,
+  .admin-panel__header button,
+  .sync-panel button {
+    width: 100%;
+  }
+
+  .admin-panel__item {
+    grid-template-columns: 1fr;
   }
 }

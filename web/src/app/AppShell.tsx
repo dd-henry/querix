@@ -11,6 +11,9 @@ export interface AppShellProps {
   sidebar: SidebarContent;
   chat: ReactNode;
   requestStatus?: string;
+  mainEyebrow?: string;
+  mainTitle?: string;
+  mainAriaLabel?: string;
   onSignOut: () => void | Promise<void>;
 }
 
@@ -19,6 +22,9 @@ export function AppShell({
   sidebar,
   chat,
   requestStatus = "",
+  mainEyebrow = "Conversa",
+  mainTitle = "Converse com seus dados",
+  mainAriaLabel = "Chat",
   onSignOut,
 }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,12 +68,12 @@ export function AppShell({
       <main className="app-main" aria-label="Área de chat">
         <header className="app-main__header">
           <div>
-            <p className="eyebrow">Conversa</p>
-            <h1>Converse com seus dados</h1>
+            <p className="eyebrow">{mainEyebrow}</p>
+            <h1>{mainTitle}</h1>
           </div>
           <span aria-label={`Perfil: ${profile.role}`}>{profile.role}</span>
         </header>
-        <section className="app-chat" aria-label="Chat">
+        <section className="app-chat" aria-label={mainAriaLabel}>
           {chat}
         </section>
         {requestStatus ? (
