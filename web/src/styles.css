@@ -605,7 +605,9 @@ select:disabled {
 
 .chat-review,
 .chat-result-actions,
-.chat-insights {
+.chat-insights,
+.chat-interpretation,
+.chat-diagnostics {
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
@@ -617,7 +619,9 @@ select:disabled {
 .chat-review h2,
 .chat-result h3,
 .chat-insights h2,
-.chat-insight h3 {
+.chat-insight h3,
+.chat-interpretation h2,
+.chat-diagnostics h3 {
   margin: 0;
   color: #f9fafb;
   font-size: 1rem;
@@ -648,6 +652,56 @@ select:disabled {
 .chat-insights {
   border-color: #2563eb;
   background: #172554;
+}
+
+.chat-interpretation {
+  border-color: #0f766e;
+  background: #134e4a;
+}
+
+.chat-interpretation__intent,
+.chat-diagnostics p {
+  margin: 0;
+}
+
+.chat-interpretation dl {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.chat-interpretation dl div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.chat-interpretation dt {
+  color: #99f6e4;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.chat-interpretation dd {
+  margin: 0;
+}
+
+.chat-interpretation h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.chat-interpretation ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.chat-diagnostics {
+  border-color: #a16207;
+  background: #422006;
+}
+
+.chat-diagnostics p {
+  color: #fef3c7;
 }
 
 .chat-insights__header,

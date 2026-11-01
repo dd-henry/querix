@@ -90,6 +90,17 @@ test("keeps one user and assistant message during a double-clicked send", async 
             },
           },
         ],
+        interpretation: {
+          intent: "Total de vendas por período",
+          dimensions: ["label"],
+          metrics: ["total"],
+          period: {
+            label: "mês atual",
+            start: "2025-01-01",
+            end: "2025-02-01",
+          },
+          assumptions: ["total representa a métrica disponível"],
+        },
       }),
     });
   });
@@ -114,6 +125,12 @@ test("keeps one user and assistant message during a double-clicked send", async 
   await expect(
     page.getByRole("heading", { name: "Indicadores do período" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Interpretação da pergunta" }),
+  ).toContainText("Total de vendas por período");
+  await expect(
+    page.getByRole("region", { name: "Interpretação da pergunta" }),
+  ).toContainText("mês atual");
   await expect(page.locator("[data-message-id$=':user']")).toHaveCount(1);
   await expect(page.locator("[data-message-id$=':assistant']")).toHaveCount(1);
   expect(requestBody?.review_mode).toBe(false);

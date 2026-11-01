@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import type { ChatInsight } from "../../api/client";
+import type { ChatDiagnostics, ChatInterpretation } from "../../api/client";
 import type { ChatMessage } from "./useChat";
 import { MessageList } from "./MessageList";
 
@@ -197,6 +198,82 @@ function ResultView({ message }: { message: ChatMessage }) {
   );
 }
 
+function listValue(values: string[]): string {
+  return values.length > 0 ? values.join(", ") : "Nenhuma informada";
+}
+
+function periodValue(period: ChatInterpretation["period"]): string {
+  if (!period) {
+    return "Nenhum período definido";
+  }
+  const label = typeof period.label === "string" ? period.label : "";
+  const start = typeof period.start === "string" ? period.start : "";
+  const end = typeof period.end === "string" ? period.end : "";
+  const interval = start && end ? `${start} até ${end}` : "";
+  return [label, interval].filter(Boolean).join(" — ") || "Período interpretado";
+}
+
+function InterpretationView({
+  interpretation,
+}: {
+  interpretation: ChatInterpretation;
+}) {
+  return (
+    <section
+      className="chat-interpretation"
+      aria-label="Interpretação da pergunta"
+    >
+      <h2>Como entendi sua pergunta</h2>
+      <p className="chat-interpretation__intent">{interpretation.intent}</p>
+      <dl>
+        <div>
+          <dt>Dimensões</dt>
+          <dd>{listValue(interpretation.dimensions)}</dd>
+        </div>
+        <div>
+          <dt>Métricas</dt>
+          <dd>{listValue(interpretation.metrics)}</dd>
+        </div>
+        <div>
+          <dt>Período</dt>
+          <dd>{periodValue(interpretation.period)}</dd>
+        </div>
+      </dl>
+      {interpretation.assumptions.length > 0 ? (
+        <div>
+          <h3>Premissas</h3>
+          <ul>
+            {interpretation.assumptions.map((assumption) => (
+              <li key={assumption}>{assumption}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function DiagnosticsView({
+  diagnostics,
+}: {
+  diagnostics: ChatDiagnostics;
+}) {
+  return (
+    <section
+      className="chat-diagnostics"
+      aria-label="Diagnóstico do resultado"
+    >
+      <h3>Sobre este resultado</h3>
+      <p>{diagnostics.message}</p>
+      {diagnostics.expected_columns.length > 0 ? (
+        <p>
+          Colunas esperadas: {diagnostics.expected_columns.join(", ")}.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function InsightView({
   insight,
   requestId,
@@ -371,6 +448,9 @@ export function ChatWorkspace({
 
           return (
             <>
+              {message.interpretation ? (
+                <InterpretationView interpretation={message.interpretation} />
+              ) : null}
               {showReview || showReexecution ? (
                 <section
                   className="chat-review"
@@ -408,12 +488,15 @@ export function ChatWorkspace({
                   </div>
                 </section>
               ) : null}
-              {message.result ? (
+              {message.result || message.diagnostics ? (
                 <section
                   className="chat-result-actions"
                   aria-label="Ações do resultado"
                 >
-                  {message.chart ? (
+                  {message.diagnostics ? (
+                    <DiagnosticsView diagnostics={message.diagnostics} />
+                  ) : null}
+                  {message.chart && message.result ? (
                     <>
                       <button
                         type="button"
@@ -431,7 +514,7 @@ export function ChatWorkspace({
                       ) : null}
                     </>
                   ) : null}
-                  <ResultView message={message} />
+                  {message.result ? <ResultView message={message} /> : null}
                 </section>
               ) : null}
               <InsightsView message={message} />

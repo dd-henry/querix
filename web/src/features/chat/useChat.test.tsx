@@ -228,6 +228,42 @@ describe("useChat", () => {
     );
   });
 
+  it("stores interpretation and diagnostics on the same assistant message", async () => {
+    const translate = vi.fn().mockResolvedValue({
+      ...reviewResponse,
+      interpretation: {
+        intent: "Comparar receita por região",
+        dimensions: ["region"],
+        metrics: ["revenue"],
+        period: null,
+        assumptions: ["revenue is the order total"],
+      },
+      diagnostics: {
+        kind: "empty_result",
+        message: "A consulta não encontrou dados compatíveis.",
+        expected_columns: [],
+      },
+    });
+    const client = createClient({ translate });
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "send" }));
+
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          interpretation: expect.objectContaining({
+            dimensions: ["region"],
+          }),
+          diagnostics: expect.objectContaining({
+            kind: "empty_result",
+          }),
+        }),
+      ),
+    );
+    expect(readMessages()).toHaveLength(2);
+  });
+
   it("ignores a double-click while reusing the same request", () => {
     const request = deferred<ChatResponse>();
     const translate = vi.fn().mockReturnValue(request.promise);
@@ -317,6 +353,39 @@ describe("useChat", () => {
       request_id: "request-1",
     });
     expect(execute.mock.calls[0][0]).not.toHaveProperty("sql");
+    expect(readMessages()).toHaveLength(2);
+  });
+
+  it("restores interpretation and diagnostics from conversation metadata", async () => {
+    const detail = restoredConversation();
+    detail.messages[1].metadata = {
+      interpretation: {
+        intent: "Comparar receita por região",
+        dimensions: ["region"],
+        metrics: ["revenue"],
+        period: null,
+        assumptions: ["revenue is the order total"],
+      },
+      diagnostics: {
+        kind: "empty_result",
+        message: "A consulta não encontrou dados compatíveis.",
+        expected_columns: [],
+      },
+    };
+    const client = createClient();
+    vi.mocked(client.conversations.get).mockResolvedValue(detail);
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          interpretation: expect.objectContaining({ intent: "Comparar receita por região" }),
+          diagnostics: expect.objectContaining({ kind: "empty_result" }),
+        }),
+      ),
+    );
     expect(readMessages()).toHaveLength(2);
   });
 

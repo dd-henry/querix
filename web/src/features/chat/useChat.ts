@@ -5,6 +5,8 @@ import {
   type ApiClient,
   type ChatResponse,
   type ChatInsight,
+  type ChatDiagnostics,
+  type ChatInterpretation,
   type ChatRetryKind,
   type ChatStatus,
   type ChatResultPayload,
@@ -28,6 +30,8 @@ export interface ChatMessage {
   chart?: Record<string, unknown>;
   result?: ChatResultPayload;
   insights?: ChatInsight[];
+  interpretation?: ChatInterpretation;
+  diagnostics?: ChatDiagnostics;
   warnings: string[];
   reviewState?: ChatReviewState;
   reexecuteAvailable?: boolean;
@@ -91,6 +95,8 @@ function responseMessage(
     summary: response.summary ?? undefined,
     result: response.result ?? undefined,
     insights: response.insights ?? [],
+    interpretation: response.interpretation ?? undefined,
+    diagnostics: response.diagnostics ?? undefined,
     retryable: response.retryable,
     retryKind: response.retry_kind ?? undefined,
     error: undefined,
@@ -118,6 +124,8 @@ function assistantFromResponse(
     summary: response.summary ?? undefined,
     result: response.result ?? undefined,
     insights: response.insights ?? [],
+    interpretation: response.interpretation ?? undefined,
+    diagnostics: response.diagnostics ?? undefined,
     retryable: response.retryable,
     retryKind: response.retry_kind ?? undefined,
     warnings: response.warnings ?? [],
@@ -134,6 +142,10 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
   return detail.messages.map((message) => {
     const chart = message.metadata.grafico;
     const summary = message.metadata.summary;
+    const interpretation = parseInterpretation(
+      message.metadata.interpretation,
+    );
+    const diagnostics = parseDiagnostics(message.metadata.diagnostics);
     const retryKind =
       message.metadata.retry_kind === "translate" ||
       message.metadata.retry_kind === "execute"
@@ -146,6 +158,8 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
       sql: message.sql ?? undefined,
       summary: typeof summary === "string" ? summary : undefined,
       insights: [],
+      interpretation,
+      diagnostics,
       error: message.error ?? undefined,
       retryable: Boolean(message.metadata.retryable),
       retryKind,
@@ -160,6 +174,42 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
         !message.metadata.retryable,
     };
   });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function parseInterpretation(
+  value: unknown,
+): ChatInterpretation | undefined {
+  if (!isRecord(value) || typeof value.intent !== "string") {
+    return undefined;
+  }
+  return {
+    intent: value.intent,
+    dimensions: stringArray(value.dimensions),
+    metrics: stringArray(value.metrics),
+    period: isRecord(value.period) ? value.period : null,
+    assumptions: stringArray(value.assumptions),
+  };
+}
+
+function parseDiagnostics(value: unknown): ChatDiagnostics | undefined {
+  if (!isRecord(value) || typeof value.kind !== "string") {
+    return undefined;
+  }
+  return {
+    kind: value.kind,
+    message: typeof value.message === "string" ? value.message : "",
+    expected_columns: stringArray(value.expected_columns),
+  };
 }
 
 function replaceAssistant(

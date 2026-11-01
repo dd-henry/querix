@@ -175,12 +175,12 @@ the exact aggregate metrics.
 | AQI-13 | P1: Validate and recover query execution | Design | Complete |
 | AQI-14 | P1: Validate and recover query execution | Design | Complete |
 | AQI-15 | P2: Explain the interpretation | Design | Complete |
-| AQI-16 | P2: Explain the interpretation | Design | Pending |
+| AQI-16 | P2: Explain the interpretation | Design | Complete |
 | AQI-17 | P2: Measure query quality | Design | Pending |
 | AQI-18 | P2: Measure query quality | Design | Pending |
 | AQI-19 | P2: Measure query quality | Design | Pending |
 
-**Coverage**: 15 complete, 4 pending.
+**Coverage**: 16 complete, 3 pending.
 
 ## Success Criteria
 

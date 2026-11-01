@@ -166,6 +166,20 @@ export interface ChatResultPayload {
   truncated: boolean;
 }
 
+export interface ChatInterpretation {
+  intent: string;
+  dimensions: string[];
+  metrics: string[];
+  period?: Record<string, unknown> | null;
+  assumptions: string[];
+}
+
+export interface ChatDiagnostics {
+  kind: string;
+  message: string;
+  expected_columns: string[];
+}
+
 export interface ChatInsight {
   key: string;
   title: string;
@@ -185,6 +199,8 @@ export interface ChatResponse {
   summary?: string | null;
   result?: ChatResultPayload | null;
   insights?: ChatInsight[];
+  interpretation?: ChatInterpretation | null;
+  diagnostics?: ChatDiagnostics | null;
   retryable: boolean;
   retry_kind?: ChatRetryKind | null;
   warnings: string[];

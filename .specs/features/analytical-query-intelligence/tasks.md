@@ -242,7 +242,7 @@ columns, preserving valid results and prohibiting invented numeric claims.
 
 ### T7: Showing interpretation and diagnostics
 
-**Status**: Pending
+**Status**: Complete
 
 **What**: Render plan interpretation and result diagnostics in the existing
 assistant response without adding chat messages or disrupting review/execute.

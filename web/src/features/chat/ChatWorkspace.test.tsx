@@ -213,6 +213,44 @@ describe("ChatWorkspace", () => {
     expect(download).toHaveAttribute("download", "relatorio-request-1.csv");
   });
 
+  it("renders interpretation and diagnostics beside one assistant response", () => {
+    renderWorkspace([
+      userMessage,
+      {
+        ...executedMessage,
+        interpretation: {
+          intent: "Comparar receita por região",
+          dimensions: ["region"],
+          metrics: ["revenue"],
+          period: {
+            label: "mês atual",
+            start: "2025-01-01",
+            end: "2025-02-01",
+          },
+          assumptions: ["revenue is the order total"],
+        },
+        diagnostics: {
+          kind: "missing_expected_columns",
+          message: "O resultado não contém todas as colunas esperadas.",
+          expected_columns: ["revenue"],
+        },
+      },
+    ]);
+
+    expect(screen.getAllByRole("article")).toHaveLength(2);
+    expect(
+      screen.getByRole("region", { name: "Interpretação da pergunta" }),
+    ).toHaveTextContent("Comparar receita por região");
+    expect(screen.getByText("region")).toBeInTheDocument();
+    expect(screen.getByText("revenue")).toBeInTheDocument();
+    expect(screen.getByText("mês atual — 2025-01-01 até 2025-02-01")).toBeInTheDocument();
+    expect(screen.getByText("revenue is the order total")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Diagnóstico do resultado" }),
+    ).toHaveTextContent("O resultado não contém todas as colunas esperadas.");
+    expect(screen.getByText("Colunas esperadas: revenue.")).toBeInTheDocument();
+  });
+
   it("renders managerial insights after the primary result without another message", () => {
     const message: ChatMessage = {
       ...executedMessage,
