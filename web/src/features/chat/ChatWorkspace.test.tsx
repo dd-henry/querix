@@ -122,6 +122,57 @@ describe("ChatWorkspace", () => {
     expect(onCancelReview).toHaveBeenCalledWith("request-1");
   });
 
+  it("offers re-execution for restored SQL without showing review controls", async () => {
+    const onConfirmExecution = vi.fn().mockResolvedValue(true);
+    renderWorkspace([
+      userMessage,
+      {
+        ...reviewMessage,
+        status: undefined,
+        reviewState: undefined,
+        reexecuteAvailable: true,
+        content: "Consulta carregada.",
+      },
+    ], { onConfirmExecution });
+
+    expect(screen.getByText("SELECT month, total FROM sales")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reexecutar consulta" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Cancelar revisão" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reexecutar consulta" }));
+
+    await waitFor(() =>
+      expect(onConfirmExecution).toHaveBeenCalledWith("request-1"),
+    );
+  });
+
+  it.each([
+    {
+      label: "without SQL",
+      message: { ...reviewMessage, sql: undefined, reexecuteAvailable: true },
+    },
+    {
+      label: "after a failed execution",
+      message: {
+        ...reviewMessage,
+        status: "error" as const,
+        reviewState: undefined,
+        reexecuteAvailable: true,
+        retryable: true,
+      },
+    },
+  ])("does not show re-execution for a restored message $label", ({ message }) => {
+    renderWorkspace([userMessage, message]);
+
+    expect(
+      screen.queryByRole("button", { name: "Reexecutar consulta" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders bounded results, truncation notice, and UTF-8 CSV download", () => {
     renderWorkspace([userMessage, executedMessage]);
 

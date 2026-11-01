@@ -121,6 +121,9 @@ function Harness({
       >
         retry
       </button>
+      <button onClick={() => void chat.openConversation("conversation-1")}>
+        open
+      </button>
     </>
   );
 }
@@ -235,6 +238,78 @@ describe("useChat", () => {
       conversation_id: "generated-1",
       request_id: "generated-2",
     });
+    expect(readMessages()).toHaveLength(2);
+  });
+
+  it("restores stored SQL as re-executable and updates the same assistant", async () => {
+    const execute = vi.fn().mockResolvedValue({
+      ...reviewResponse,
+      status: "executed",
+      content: "Resultado atualizado.",
+      result: {
+        columns: ["total"],
+        rows: [{ total: 4 }],
+        row_count: 1,
+        truncated: false,
+      },
+    });
+    const client = createClient({ execute });
+    vi.mocked(client.conversations.get).mockResolvedValue({
+      id: "conversation-1",
+      title: "Revenue",
+      is_favorite: false,
+      created_at: "2025-01-15T10:00:00Z",
+      last_activity: "2025-01-15T10:30:00Z",
+      messages: [
+        {
+          id: 1,
+          request_id: "request-1",
+          role: "user",
+          content: "Show revenue",
+          sql: null,
+          error: null,
+          metadata: {},
+          created_at: "2025-01-15T10:00:00Z",
+        },
+        {
+          id: 2,
+          request_id: "request-1",
+          role: "assistant",
+          content: "Consulta carregada.",
+          sql: "SELECT 1",
+          error: null,
+          metadata: { retryable: false },
+          created_at: "2025-01-15T10:00:01Z",
+        },
+      ],
+    });
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          sql: "SELECT 1",
+          reexecuteAvailable: true,
+        }),
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "confirm" }));
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          status: "executed",
+          content: "Resultado atualizado.",
+          result: expect.objectContaining({ row_count: 1 }),
+        }),
+      ),
+    );
+    expect(execute).toHaveBeenCalledWith({
+      conversation_id: "conversation-1",
+      request_id: "request-1",
+    });
+    expect(execute.mock.calls[0][0]).not.toHaveProperty("sql");
     expect(readMessages()).toHaveLength(2);
   });
 

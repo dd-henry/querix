@@ -30,6 +30,7 @@ export interface ChatMessage {
   insights?: ChatInsight[];
   warnings: string[];
   reviewState?: ChatReviewState;
+  reexecuteAvailable?: boolean;
 }
 
 export interface UseChatOptions {
@@ -153,6 +154,10 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
           ? (chart as Record<string, unknown>)
           : undefined,
       warnings: [],
+      reexecuteAvailable:
+        message.role === "assistant" &&
+        Boolean(message.sql) &&
+        !message.metadata.retryable,
     };
   });
 }
@@ -299,7 +304,7 @@ export function useChat({
           message.role === "assistant" && message.requestId === requestId,
       );
       if (!current || !conversationIdRef.current) {
-        const message = "A consulta revisada não está disponível.";
+        const message = "A consulta armazenada não está disponível.";
         setError(message);
         return Promise.resolve(false);
       }

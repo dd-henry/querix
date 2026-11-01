@@ -361,14 +361,28 @@ export function ChatWorkspace({
             return null;
           }
 
+          const showReexecution =
+            Boolean(message.reexecuteAvailable) &&
+            Boolean(message.sql) &&
+            !message.result &&
+            message.status !== "pending" &&
+            message.status !== "error";
+          const showReview = message.reviewState === "open" && message.sql;
+
           return (
             <>
-              {message.reviewState === "open" && message.sql ? (
+              {showReview || showReexecution ? (
                 <section
                   className="chat-review"
-                  aria-label="Revisão de SQL"
+                  aria-label={
+                    showReview ? "Revisão de SQL" : "Reexecução da consulta"
+                  }
                 >
-                  <h2>SQL aguardando revisão</h2>
+                  <h2>
+                    {showReview
+                      ? "SQL aguardando revisão"
+                      : "Consulta pronta para reexecução"}
+                  </h2>
                   <pre>{message.sql}</pre>
                   <div className="chat-review__actions">
                     <button
@@ -378,15 +392,19 @@ export function ChatWorkspace({
                         void onConfirmExecution(message.requestId)
                       }
                     >
-                      Executar SQL revisado
+                      {showReview
+                        ? "Executar SQL revisado"
+                        : "Reexecutar consulta"}
                     </button>
-                    <button
-                      type="button"
-                      disabled={Boolean(pendingRequestId)}
-                      onClick={() => onCancelReview(message.requestId)}
-                    >
-                      Cancelar revisão
-                    </button>
+                    {showReview ? (
+                      <button
+                        type="button"
+                        disabled={Boolean(pendingRequestId)}
+                        onClick={() => onCancelReview(message.requestId)}
+                      >
+                        Cancelar revisão
+                      </button>
+                    ) : null}
                   </div>
                 </section>
               ) : null}
