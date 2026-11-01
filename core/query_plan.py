@@ -25,9 +25,21 @@ class QueryPlan:
 
         intent = _required_text(payload, "intent")
         tables = _text_sequence(payload, "tables", required=True)
-        relationships = _text_sequence(payload, "relationships")
-        dimensions = _text_sequence(payload, "dimensions")
-        metrics = _text_sequence(payload, "metrics")
+        relationships = _text_sequence(
+            payload,
+            "relationships",
+            allow_empty_items=True,
+        )
+        dimensions = _text_sequence(
+            payload,
+            "dimensions",
+            allow_empty_items=True,
+        )
+        metrics = _text_sequence(
+            payload,
+            "metrics",
+            allow_empty_items=True,
+        )
         assumptions = _text_sequence(payload, "assumptions", required=True)
         filters = _filters(payload.get("filters"))
         grain = payload.get("grain")
@@ -71,6 +83,7 @@ def _text_sequence(
     payload: Mapping[str, object],
     field: str,
     required: bool = False,
+    allow_empty_items: bool = False,
 ) -> tuple[str, ...]:
     value = payload.get(field)
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
@@ -78,11 +91,18 @@ def _text_sequence(
 
     normalized = []
     for item in value:
-        if not isinstance(item, str) or not item.strip():
+        if not isinstance(item, str):
             raise QueryPlanError(
                 f"The planner field '{field}' must contain non-empty strings."
             )
-        normalized.append(item.strip())
+        normalized_item = item.strip()
+        if not normalized_item:
+            if allow_empty_items:
+                continue
+            raise QueryPlanError(
+                f"The planner field '{field}' must contain non-empty strings."
+            )
+        normalized.append(normalized_item)
     if required and not normalized:
         raise QueryPlanError(f"The planner field '{field}' must not be empty.")
     return tuple(normalized)
