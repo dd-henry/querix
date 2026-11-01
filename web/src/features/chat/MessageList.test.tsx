@@ -91,6 +91,8 @@ describe("MessageList", () => {
 
     expect(screen.getByRole("button", { name: "Cancelar consulta em andamento" }))
       .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancelar consulta em andamento" }))
+      .toHaveClass("chat-cancel-button");
     expect(screen.getByRole("status")).not.toHaveTextContent(
       "Processando sua pergunta...",
     );

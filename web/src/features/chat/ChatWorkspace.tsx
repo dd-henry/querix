@@ -223,33 +223,45 @@ function InterpretationView({
     <section
       className="chat-interpretation"
       aria-label="Interpretação da pergunta"
+      role="region"
     >
-      <h2>Como entendi sua pergunta</h2>
-      <p className="chat-interpretation__intent">{interpretation.intent}</p>
-      <dl>
-        <div>
-          <dt>Dimensões</dt>
-          <dd>{listValue(interpretation.dimensions)}</dd>
+      <details className="chat-collapsible">
+        <summary className="chat-collapsible__summary" role="button">
+          <span className="chat-collapsible__title">
+            Como entendi sua pergunta
+          </span>
+          <span className="chat-collapsible__hint">Ver detalhes</span>
+        </summary>
+        <div className="chat-collapsible__content">
+          <p className="chat-interpretation__intent">
+            {interpretation.intent}
+          </p>
+          <dl>
+            <div>
+              <dt>Dimensões</dt>
+              <dd>{listValue(interpretation.dimensions)}</dd>
+            </div>
+            <div>
+              <dt>Métricas</dt>
+              <dd>{listValue(interpretation.metrics)}</dd>
+            </div>
+            <div>
+              <dt>Período</dt>
+              <dd>{periodValue(interpretation.period)}</dd>
+            </div>
+          </dl>
+          {interpretation.assumptions.length > 0 ? (
+            <div>
+              <h3>Premissas</h3>
+              <ul>
+                {interpretation.assumptions.map((assumption) => (
+                  <li key={assumption}>{assumption}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
-        <div>
-          <dt>Métricas</dt>
-          <dd>{listValue(interpretation.metrics)}</dd>
-        </div>
-        <div>
-          <dt>Período</dt>
-          <dd>{periodValue(interpretation.period)}</dd>
-        </div>
-      </dl>
-      {interpretation.assumptions.length > 0 ? (
-        <div>
-          <h3>Premissas</h3>
-          <ul>
-            {interpretation.assumptions.map((assumption) => (
-              <li key={assumption}>{assumption}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      </details>
     </section>
   );
 }
@@ -364,18 +376,24 @@ function InsightsView({
   }
   return (
     <section className="chat-insights" aria-label="Leitura gerencial">
-      <div className="chat-insights__header">
-        <h2>Leitura gerencial</h2>
-        <span>Indicadores complementares para contextualizar a resposta</span>
-      </div>
-      {message.insights.map((insight, index) => (
-        <InsightView
-          key={insight.key}
-          insight={insight}
-          requestId={message.requestId}
-          index={index}
-        />
-      ))}
+      <details className="chat-collapsible" role="region">
+        <summary className="chat-collapsible__summary" role="button">
+          <span className="chat-collapsible__title">Leitura gerencial</span>
+          <span className="chat-collapsible__hint">
+            Indicadores complementares para contextualizar a resposta
+          </span>
+        </summary>
+        <div className="chat-collapsible__content">
+          {message.insights.map((insight, index) => (
+            <InsightView
+              key={insight.key}
+              insight={insight}
+              requestId={message.requestId}
+              index={index}
+            />
+          ))}
+        </div>
+      </details>
     </section>
   );
 }

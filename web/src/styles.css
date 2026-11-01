@@ -539,6 +539,50 @@ select:disabled {
   gap: 0.9rem;
 }
 
+.message-list__live-status {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+}
+
+.chat-cancel-button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgb(248 113 113 / 55%);
+  border-radius: 999px;
+  color: #fecaca;
+  background: rgb(127 29 29 / 30%);
+  box-shadow: 0 0.35rem 1rem rgb(127 29 29 / 15%);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.chat-cancel-button:hover {
+  border-color: #f87171;
+  background: rgb(153 27 27 / 55%);
+  transform: translateY(-1px);
+}
+
+.chat-cancel-button__icon {
+  display: inline-grid;
+  width: 1.15rem;
+  height: 1.15rem;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .chat-message {
   width: min(100%, 48rem);
   padding: 1rem 1.1rem;
@@ -618,9 +662,7 @@ select:disabled {
 
 .chat-review h2,
 .chat-result h3,
-.chat-insights h2,
 .chat-insight h3,
-.chat-interpretation h2,
 .chat-diagnostics h3 {
   margin: 0;
   color: #f9fafb;
@@ -704,7 +746,6 @@ select:disabled {
   color: #fef3c7;
 }
 
-.chat-insights__header,
 .chat-insight__header {
   display: flex;
   justify-content: space-between;
@@ -712,8 +753,51 @@ select:disabled {
   color: #cbd5e1;
 }
 
-.chat-insights__header span {
+.chat-collapsible {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.chat-collapsible__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #f9fafb;
+  cursor: pointer;
+  list-style: none;
+}
+
+.chat-collapsible__summary::-webkit-details-marker {
+  display: none;
+}
+
+.chat-collapsible__summary::after {
+  flex: 0 0 auto;
+  color: #93c5fd;
+  content: "+";
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.chat-collapsible[open] > .chat-collapsible__summary::after {
+  content: "−";
+}
+
+.chat-collapsible__title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.chat-collapsible__hint {
+  margin-left: auto;
+  color: #cbd5e1;
   font-size: 0.85rem;
+}
+
+.chat-collapsible__content {
+  display: grid;
+  gap: 0.75rem;
 }
 
 .chat-insight {

@@ -276,9 +276,17 @@ describe("ChatWorkspace", () => {
     ]);
 
     expect(screen.getAllByRole("article")).toHaveLength(2);
-    expect(
-      screen.getByRole("region", { name: "Interpretação da pergunta" }),
-    ).toHaveTextContent("Comparar receita por região");
+    const interpretation = screen.getByRole("region", {
+      name: "Interpretação da pergunta",
+    });
+    expect(interpretation.querySelector("details")).not.toHaveAttribute("open");
+    fireEvent.click(
+      within(interpretation).getByRole("button", {
+        name: /Como entendi sua pergunta/,
+      }),
+    );
+    expect(interpretation.querySelector("details")).toHaveAttribute("open", "");
+    expect(interpretation).toHaveTextContent("Comparar receita por região");
     expect(screen.getByText("region")).toBeInTheDocument();
     expect(screen.getByText("revenue")).toBeInTheDocument();
     expect(screen.getByText("mês atual — 2025-01-01 até 2025-02-01")).toBeInTheDocument();
@@ -320,6 +328,11 @@ describe("ChatWorkspace", () => {
     const insights = screen.getByRole("region", {
       name: "Leitura gerencial",
     });
+    expect(insights.querySelector("details")).not.toHaveAttribute("open");
+    fireEvent.click(
+      within(insights).getByRole("button", { name: /Leitura gerencial/ }),
+    );
+    expect(insights.querySelector("details")).toHaveAttribute("open", "");
     expect(primaryTable.compareDocumentPosition(insights)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );

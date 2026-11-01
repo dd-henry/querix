@@ -89,11 +89,15 @@ export function MessageList({
         {!pendingRequestId ? liveStatus(messages) : null}
         {pendingRequestId && onCancelRequest ? (
           <button
+            className="chat-cancel-button"
             type="button"
             onClick={onCancelRequest}
             aria-label="Cancelar consulta em andamento"
           >
-            Cancelar consulta
+            <span className="chat-cancel-button__icon" aria-hidden="true">
+              ×
+            </span>
+            <span>Cancelar consulta</span>
           </button>
         ) : null}
       </div>
