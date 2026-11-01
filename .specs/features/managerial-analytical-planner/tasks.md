@@ -1,5 +1,9 @@
 # Managerial Analytical Planner Tasks
 
+> Historical task record. Use
+> `.specs/features/schema-driven-query-planning/tasks.md` for the current
+> planner architecture.
+
 ## Execution Protocol
 
 Implement one task at a time with the `tlc-spec-driven` skill. Each task is

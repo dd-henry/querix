@@ -108,8 +108,8 @@ or a fabricated result.
 | SDQP-04 | P1: Portable planning | Execute | Verified by T2 |
 | SDQP-05 | P1: Portable planning | Execute | Verified by T2 |
 | SDQP-06 | P1: Safe execution | Execute | Verified by T1 |
-| SDQP-07 | P1: Useful analysis | Execute | Pending |
-| SDQP-08 | P1: Useful analysis | Execute | Pending |
+| SDQP-07 | P1: Useful analysis | Execute | Verified by existing API service tests |
+| SDQP-08 | P1: Useful analysis | Execute | Verified by existing API and frontend tests |
 
 ## Success Criteria
 

@@ -98,7 +98,7 @@ relationships from PostgreSQL introspection.
 
 ### T3: Updating architecture documentation and closing verification
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Update the public architecture documentation and run the complete
 non-integration/build validation for the schema-driven planner.
@@ -109,10 +109,10 @@ non-integration/build validation for the schema-driven planner.
 
 **Done when**:
 
-- [ ] Documentation states that query plans are generated from runtime schema
+- [x] Documentation states that query plans are generated from runtime schema
       context rather than domain-specific SQL.
-- [ ] Requirement traceability is marked verified with test evidence.
-- [ ] Build and non-integration gates pass.
+- [x] Requirement traceability is marked verified with test evidence.
+- [x] Build and non-integration gates pass.
 
 **Tests**: unit
 **Gate**: build

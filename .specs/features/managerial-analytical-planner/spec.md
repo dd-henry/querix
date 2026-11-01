@@ -1,5 +1,10 @@
 # Managerial Analytical Planner Specification
 
+> Historical feature record. The domain-specific deterministic planner
+> described here was superseded by
+> `.specs/features/schema-driven-query-planning/`, which keeps the managerial
+> insight contract but generates all SQL from runtime context.
+
 ## Problem Statement
 
 The current analytical fast path handles revenue totals and product

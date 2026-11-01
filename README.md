@@ -12,7 +12,7 @@ O **Ask-SQL** é uma ferramenta interativa que traduz perguntas em linguagem nat
 *   **Histórico personalizado de consultas:** Cada usuário pode consultar, fixar, excluir e executar novamente consultas anteriores sem misturar dados entre contas.
 *   **Conversas privadas e retomáveis:** Cada usuário aprovado pode iniciar conversas separadas, retomar sessões anteriores e favoritar as mais importantes.
 *   **Arquitetura Modular:** Código organizado em componentes com responsabilidades claras, facilitando a manutenção e extensão.
-*   **Engenharia de Prompt Avançada:** Utiliza o esquema do banco de dados e regras de negócio customizadas para gerar prompts mais precisos.
+*   **Engenharia de Prompt Avançada:** Utiliza o esquema atual, os relacionamentos, DDLs e regras de negócio para gerar planos sem SQL específico de um nicho.
 *   **Suíte de Testes Abrangente:** Inclui testes unitários e de integração para garantir a qualidade e a confiabilidade do código.
 
 ## 🏗️ Arquitetura e Fluxo de Dados
@@ -25,7 +25,7 @@ graph TD
     L[Usuário via Streamlit legado] --> M(app.py);
     B --> N(FastAPI api/);
     N --> C{Prompter};
-    D[Schema do Banco] --> C;
+    D[Schema e relacionamentos do Banco] --> C;
     E[Regras de Negócio] --> C;
     C --> F{Translator (Ollama)};
     F --> G[Consulta SQL Gerada];
@@ -38,9 +38,9 @@ graph TD
 1.  **Interface web (`web/`):** Frontend React + TypeScript + Vite. Mantém o estado do chat no navegador e chama a API por cookie de sessão.
 2.  **API (`api/`):** Backend FastAPI que expõe autenticação, conversas, chat, histórico, consultas compartilhadas, administração e sincronização do schema.
 3.  **Interface legada (`app.py` e `components.py`):** Frontend Streamlit mantido durante a migração. Ele continua disponível, mas não é necessário para executar o frontend web.
-4.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" que será enviado ao modelo de linguagem, unindo regras de negócio, o esquema do banco de dados e a pergunta do usuário.
-5.  **Motor de Tradução (`core/translator.py`):** Comunica-se com a API do Ollama, enviando o prompt e tratando a resposta para extrair a consulta SQL do JSON retornado.
-6.  **Banco de Dados (`database/postgres.py`):** Implementa a lógica de conexão com o PostgreSQL usando SQLAlchemy, executa a consulta e retorna os resultados como um DataFrame do pandas.
+4.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" com estratégias analíticas genéricas, data de referência, regras de negócio, DDLs, tabelas, colunas e relacionamentos atuais. O código não contém SQL de um domínio específico.
+5.  **Motor de Tradução (`core/translator.py`):** Comunica-se com a API do Ollama em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio.
+6.  **Banco de Dados (`database/postgres.py`):** Implementa a conexão com o PostgreSQL usando SQLAlchemy e entrega ao planejador tabelas, colunas, comentários e chaves estrangeiras do schema público.
 
 ## 🚀 Instalação e Configuração
 

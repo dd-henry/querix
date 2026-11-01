@@ -1,5 +1,9 @@
 # Managerial Analytical Planner Design
 
+> Historical design. The deterministic sales branch was replaced by the
+> schema-driven planner documented in
+> `.specs/features/schema-driven-query-planning/`.
+
 **Spec**: `.specs/features/managerial-analytical-planner/spec.md`
 **Status**: Approved
 
