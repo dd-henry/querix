@@ -67,6 +67,8 @@ interface ActiveRequest {
   promise: Promise<boolean>;
 }
 
+const STATUS_RECOVERY_GRACE_MS = 5_000;
+
 function createId(): string {
   if (typeof crypto === "undefined" || !crypto.randomUUID) {
     throw new Error("The browser does not support stable request IDs.");
@@ -326,17 +328,18 @@ export function useChat({
       };
       let readStatus = client.chat.status;
       void (async () => {
-        const startedAt = performance.now();
+        const startedAt = Date.now();
         let lastProgress: ChatProgressResponse = {
           status: "running",
           phase: "starting",
           message: "A consulta está em andamento.",
           elapsed_seconds: 0,
         };
+        let statusUnavailableAt: number | null = null;
         const updateLocalProgress = () => {
           const elapsedSeconds = Math.max(
             lastProgress.elapsed_seconds,
-            (performance.now() - startedAt) / 1000,
+            (Date.now() - startedAt) / 1000,
           );
           updateAssistant(requestId, (current) => ({
             ...current,
@@ -345,6 +348,38 @@ export function useChat({
               elapsed_seconds: elapsedSeconds,
             },
           }));
+        };
+        const markRequestLost = () => {
+          updateAssistant(requestId, (current) => ({
+            ...current,
+            content: "A conexão com o servidor foi perdida durante a consulta.",
+            status: "error",
+            error: "request_lost",
+            retryable: true,
+            retryKind,
+            progress: undefined,
+          }));
+          if (activeRequestRef.current?.requestId === requestId) {
+            activeRequestRef.current = null;
+          }
+          controller.abort();
+          void client.chat
+            .cancel({
+              conversation_id: conversationId,
+              request_id: requestId,
+            })
+            .catch((cancelError: unknown) => {
+              if (
+                cancelError instanceof ApiError &&
+                (cancelError.status === 404 || cancelError.status === 409)
+              ) {
+                return;
+              }
+              setError(
+                "A conexão com o servidor foi perdida e não foi possível "
+                  + "confirmar o cancelamento.",
+              );
+            });
         };
         while (!controller.signal.aborted) {
           if (readStatus) {
@@ -368,10 +403,24 @@ export function useChat({
                 progressError.status === 404
               ) {
                 readStatus = undefined;
+                statusUnavailableAt ??= Date.now();
+                lastProgress = {
+                  ...lastProgress,
+                  phase: "server_status_unavailable",
+                  message: "O servidor não confirmou esta consulta.",
+                };
               }
             }
           }
           if (controller.signal.aborted) {
+            return;
+          }
+          if (
+            statusUnavailableAt !== null &&
+            Date.now() - statusUnavailableAt >=
+              STATUS_RECOVERY_GRACE_MS
+          ) {
+            markRequestLost();
             return;
           }
           updateLocalProgress();
@@ -382,7 +431,7 @@ export function useChat({
       })();
       return promise;
     },
-    [client.chat.status, updateAssistant],
+    [client.chat, updateAssistant],
   );
 
   const send = useCallback(

@@ -284,7 +284,7 @@ describe("useChat", () => {
     );
   });
 
-  it("falls back to a local heartbeat after a missing status endpoint", async () => {
+  it("stops a request after the status endpoint stays unavailable", async () => {
     vi.useFakeTimers();
     try {
       const request = deferred<ChatResponse>();
@@ -320,10 +320,19 @@ describe("useChat", () => {
         }),
       );
 
-      request.resolve(reviewResponse);
       await act(async () => {
-        await Promise.resolve();
+        await vi.advanceTimersByTimeAsync(4_000);
       });
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          content: "A conexão com o servidor foi perdida durante a consulta.",
+          status: "error",
+          error: "request_lost",
+          retryable: true,
+        }),
+      );
+
+      request.resolve(reviewResponse);
     } finally {
       vi.useRealTimers();
     }
