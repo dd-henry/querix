@@ -105,3 +105,13 @@ def test_unknown_text_month_falls_back_to_llm():
         )
         is None
     )
+
+
+def test_explicit_year_without_month_falls_back_to_llm():
+    assert (
+        build_known_query(
+            "Quais foram as vendas de 2025?",
+            reference_date=date(2026, 10, 31),
+        )
+        is None
+    )

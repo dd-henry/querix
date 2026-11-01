@@ -106,6 +106,9 @@ cannot be calculated, with a visible explanation of the missing insight.
   fabricated metric.
 - A result exceeding the row limit marks its own summary as bounded.
 - A primary database failure remains a retryable request failure.
+- An empty supporting result has `row_count = 0`, no rows, and a zero-row
+  summary; a truncated support retains its original row count, caps displayed
+  rows at 5,000, and marks `truncated = true`.
 
 ## Requirement Traceability
 

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 13,
+  "next_id": 17,
   "lessons": [
     {
       "id": "L-001",
@@ -220,6 +220,78 @@
       ],
       "created": "2026-10-25T05:15:56Z",
       "last_seen": "2026-10-25T05:15:56Z"
+    },
+    {
+      "id": "L-013",
+      "key": "ac_gap::when a period parser sees an explicit year without a month test or define the year intent before applying a current month fallback",
+      "text": "When a period parser sees an explicit year without a month, test or define the year intent before applying a current-month fallback.",
+      "signal": "ac_gap",
+      "scope": "analytics",
+      "status": "candidate",
+      "features": [
+        "managerial-analytical-planner"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "core/analytical_queries.py:102 | explicit-year edge (analytics)"
+      ],
+      "created": "2026-11-01T02:09:42Z",
+      "last_seen": "2026-11-01T02:09:42Z"
+    },
+    {
+      "id": "L-014",
+      "key": "ac_gap::assert every safety clause in structured llm prompts including named parameters and schema relations rather than only the json shape",
+      "text": "Assert every safety clause in structured LLM prompts, including named parameters and schema relations, rather than only the JSON shape.",
+      "signal": "ac_gap",
+      "scope": "prompt",
+      "status": "candidate",
+      "features": [
+        "managerial-analytical-planner"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "test_prompter.py:30-32 | AC-09 (prompt)"
+      ],
+      "created": "2026-11-01T02:09:42Z",
+      "last_seen": "2026-11-01T02:09:42Z"
+    },
+    {
+      "id": "L-015",
+      "key": "ac_gap::exercise each read only safety branch including multi statement rejection with an assertion that the adapter is not called",
+      "text": "Exercise each read-only safety branch, including multi-statement rejection, with an assertion that the adapter is not called.",
+      "signal": "ac_gap",
+      "scope": "api",
+      "status": "candidate",
+      "features": [
+        "managerial-analytical-planner"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "api/tests/test_chat_service.py:431-463 | AC-10 (api)"
+      ],
+      "created": "2026-11-01T02:09:42Z",
+      "last_seen": "2026-11-01T02:09:42Z"
+    },
+    {
+      "id": "L-016",
+      "key": "spec_precision_gap::specify observable response equality and execution semantics before claiming idempotency for compound primary and insight requests",
+      "text": "Specify observable response equality and execution semantics before claiming idempotency for compound primary-and-insight requests.",
+      "signal": "spec_precision_gap",
+      "scope": "idempotency",
+      "status": "candidate",
+      "features": [
+        "managerial-analytical-planner"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "api/tests/test_chat_translate_routes.py:213-228 | AC-12 (idempotency)"
+      ],
+      "created": "2026-11-01T02:09:42Z",
+      "last_seen": "2026-11-01T02:09:42Z"
     }
   ]
 }

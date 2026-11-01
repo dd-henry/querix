@@ -30,6 +30,11 @@ def test_build_system_prompt_inclui_regras_analiticas_de_vendas(tmp_path):
     assert "supporting_queries" in prompt
     assert "Use no máximo três supporting_queries" in prompt
     assert "não invente tabelas, colunas ou valores" in prompt
+    assert (
+        "Cada uma deve usar somente tabelas e colunas presentes no esquema atual"
+        in prompt
+    )
+    assert "Use parâmetros nomeados para períodos e filtros" in prompt
 
 
 def test_build_system_prompt_com_schema(tmp_path):

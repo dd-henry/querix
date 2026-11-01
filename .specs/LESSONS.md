@@ -86,6 +86,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: MUT-1 (validation.md) (chat)
 - last seen: 2026-10-25T05:15:56Z
 
+### L-013 - When a period parser sees an explicit year without a month, test or define the year intent before applying a current-month fallback.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `analytics` · harmful: 0
+- features: managerial-analytical-planner
+- evidence: core/analytical_queries.py:102 | explicit-year edge (analytics)
+- last seen: 2026-11-01T02:09:42Z
+
+### L-014 - Assert every safety clause in structured LLM prompts, including named parameters and schema relations, rather than only the JSON shape.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `prompt` · harmful: 0
+- features: managerial-analytical-planner
+- evidence: test_prompter.py:30-32 | AC-09 (prompt)
+- last seen: 2026-11-01T02:09:42Z
+
+### L-015 - Exercise each read-only safety branch, including multi-statement rejection, with an assertion that the adapter is not called.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `api` · harmful: 0
+- features: managerial-analytical-planner
+- evidence: api/tests/test_chat_service.py:431-463 | AC-10 (api)
+- last seen: 2026-11-01T02:09:42Z
+
+### L-016 - Specify observable response equality and execution semantics before claiming idempotency for compound primary-and-insight requests.
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `idempotency` · harmful: 0
+- features: managerial-analytical-planner
+- evidence: api/tests/test_chat_translate_routes.py:213-228 | AC-12 (idempotency)
+- last seen: 2026-11-01T02:09:42Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

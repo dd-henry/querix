@@ -91,6 +91,8 @@ def _period(question: str, reference_date: date) -> Optional[Tuple[str, str]]:
         return None
 
     if month_number is None:
+        if year_match:
+            return None
         explicit_month_match = re.search(
             r"\b(?:mes|month)\s+(?:de\s+)?([a-z]+|\d{1,2})\b",
             normalized,

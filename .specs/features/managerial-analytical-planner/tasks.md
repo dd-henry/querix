@@ -49,6 +49,12 @@ T2 → T3 → T4
 T4 → T5 → T6
 ```
 
+### Phase 4: Verification fixes
+
+```
+T6 → T7
+```
+
 ## Task Breakdown
 
 ### T1: Extend deterministic period and sales intent planning
@@ -179,3 +185,29 @@ partial support warning, and explicit review compatibility.
 
 **Tests**: e2e
 **Gate**: build
+
+### T7: Close verifier gaps in period fallback and plan evidence
+
+**Status**: Done
+
+**What**: Prevent year-only questions from receiving an invented month and
+strengthen evidence for prompt safety, multi-statement rejection, truthful
+empty/truncated insights, and repeated plan execution.
+**Where**: `core/analytical_queries.py`, `test_analytical_queries.py`,
+`test_prompter.py`, `api/tests/test_chat_service.py`, `spec.md`
+**Depends on**: T6
+**Requirement**: MANAGER-01, MANAGER-03, MANAGER-04, MANAGER-05, MANAGER-06
+
+**Done when**:
+
+- [x] A recognized year without a month remains an LLM fallback.
+- [x] Prompt grounding and named-parameter requirements have exact test
+      assertions.
+- [x] Primary and supporting multi-statement SQL are rejected before database
+      execution.
+- [x] Empty and truncated support results preserve truthful bounded metadata.
+- [x] Repeated request execution preserves the stored primary/support plan and
+      does not add timeline messages.
+
+**Tests**: unit
+**Gate**: quick
