@@ -71,7 +71,7 @@ updates, retry failure behavior, and no-SQL messages.
 
 ### T2: Covering conversation resume end to end
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Extend the conversation-resume browser scenario to execute the
 restored query and verify current results and stable message count. Document
@@ -82,11 +82,11 @@ the restored-query action in the architecture guide.
 
 **Done when**:
 
-- [ ] The E2E scenario opens a saved conversation and sees the
+- [x] The E2E scenario opens a saved conversation and sees the
       `Reexecutar consulta` action.
-- [ ] The E2E scenario mocks execution, sees the fresh result, and confirms
+- [x] The E2E scenario mocks execution, sees the fresh result, and confirms
       one user and one assistant message remain.
-- [ ] Documentation states that reopened SQL can be reexecuted.
+- [x] Documentation states that reopened SQL can be reexecuted.
 
 **Tests**: e2e
 **Gate**: build

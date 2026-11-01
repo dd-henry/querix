@@ -99,6 +99,32 @@ async function mockAdminApi(
       }),
     });
   });
+  await page.route("**/api/chat/execute", async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      conversation_id: "conversation-1",
+      request_id: "request-1",
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        conversation_id: "conversation-1",
+        request_id: "request-1",
+        status: "executed",
+        content: "Resultado atualizado.",
+        sql: "SELECT * FROM orders",
+        summary: "A consulta retornou dados atuais.",
+        retryable: false,
+        warnings: [],
+        result: {
+          columns: ["total"],
+          rows: [{ total: 3 }],
+          row_count: 1,
+          truncated: false,
+        },
+      }),
+    });
+  });
   await page.route("**/api/history", async (route) => {
     await route.fulfill({
       status: 200,
@@ -284,6 +310,12 @@ test("covers conversation resume, parity panels, sync, and mobile navigation", a
     .getByRole("button", { name: "Abrir conversa Pedidos em aberto" })
     .click();
   await expect(page.getByText("Consulta carregada.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Reexecutar consulta" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Reexecutar consulta" }).click();
+  await expect(page.getByText("Resultado atualizado.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Resultados" })).toBeVisible();
   await expect(page.locator("[data-message-id$=':user']")).toHaveCount(1);
   await expect(page.locator("[data-message-id$=':assistant']")).toHaveCount(1);
 
