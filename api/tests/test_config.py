@@ -46,12 +46,14 @@ def test_settings_support_google_provider_without_exposing_the_key():
             LLM_PROVIDER="google",
             GEMINI_API_KEY="test-key",
             GEMINI_MODEL="gemini-test",
+            GEMINI_MAX_RETRIES="4",
         )
     )
 
     assert settings.llm.provider == "google"
     assert settings.llm.model_name == "gemini-test"
     assert settings.llm.gemini_api_key == "test-key"
+    assert settings.llm.gemini_max_retries == 4
 
 
 def test_settings_require_google_api_key_when_cloud_provider_is_selected():

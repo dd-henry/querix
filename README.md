@@ -73,6 +73,7 @@ Siga os passos abaixo para configurar o ambiente de desenvolvimento.
     LLM_PROVIDER=local
     OLLAMA_MODEL=qwen2.5-coder:7b
     GEMINI_MODEL=gemini-flash-latest
+    GEMINI_MAX_RETRIES=2
     GEMINI_API_KEY=
     ASK_SQL_USER=nome.do.usuario
     ASK_SQL_ROLE=viewer
@@ -81,6 +82,9 @@ Siga os passos abaixo para configurar o ambiente de desenvolvimento.
 `LLM_PROVIDER=local` mantém o fluxo atual com Ollama. Para testar o Gemini, use
 `LLM_PROVIDER=google`, informe `GEMINI_API_KEY` e reinicie a API. A chave deve
 permanecer somente no ambiente do backend, nunca no frontend ou em commits.
+Falhas transitórias do Gemini recebem até `GEMINI_MAX_RETRIES` novas tentativas
+com backoff; erros permanentes continuam sendo apresentados como falha do
+provedor.
 
 Configure também o Supabase Auth:
 
@@ -109,6 +113,7 @@ OLLAMA_API_URL=http://127.0.0.1:11434
 LLM_PROVIDER=local
 OLLAMA_MODEL=qwen2.5-coder:7b
 GEMINI_MODEL=gemini-flash-latest
+GEMINI_MAX_RETRIES=2
 GEMINI_API_KEY=
 ```
 

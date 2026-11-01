@@ -1,5 +1,8 @@
 import json
+import logging
 import os
+import random
+import time
 from dataclasses import dataclass, field
 from typing import Mapping, Optional, Sequence
 from urllib.error import HTTPError, URLError
@@ -8,9 +11,28 @@ from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
+
 
 class LLMConfigurationError(ValueError):
     """Raised when the selected language-model provider is not configured."""
+
+
+def _non_negative_integer(
+    environ: Mapping[str, str],
+    name: str,
+    default: int,
+) -> int:
+    value = environ.get(name)
+    if value is None or not value.strip():
+        return default
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise LLMConfigurationError(f"{name} must be an integer.") from exc
+    if parsed < 0:
+        raise LLMConfigurationError(f"{name} must not be negative.")
+    return parsed
 
 
 @dataclass(frozen=True)
@@ -22,6 +44,7 @@ class LLMConfig:
     gemini_model: str = "gemini-flash-latest"
     gemini_api_key: Optional[str] = field(default=None, repr=False)
     request_timeout_seconds: int = 120
+    gemini_max_retries: int = 2
 
     @property
     def model_name(self) -> str:
@@ -58,28 +81,43 @@ class LLMConfig:
             raise LLMConfigurationError(
                 "GEMINI_API_KEY must be configured when LLM_PROVIDER is 'google'."
             )
+        gemini_max_retries = _non_negative_integer(
+            environ,
+            "GEMINI_MAX_RETRIES",
+            2,
+        )
 
         return cls(
             provider=provider,
             ollama_model=ollama_model,
             gemini_model=gemini_model,
             gemini_api_key=gemini_api_key,
+            gemini_max_retries=gemini_max_retries,
         )
 
 
 class GeminiChatClient:
     """Small REST client that adapts Gemini responses to the Ollama shape."""
 
+    _retryable_statuses = frozenset({408, 429, 500, 502, 503, 504})
     _endpoint = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         "{model}:generateContent"
     )
 
-    def __init__(self, api_key: str, timeout_seconds: int = 120):
+    def __init__(
+        self,
+        api_key: str,
+        timeout_seconds: int = 120,
+        max_retries: int = 2,
+    ):
         if not api_key.strip():
             raise LLMConfigurationError("GEMINI_API_KEY must not be empty.")
+        if max_retries < 0:
+            raise LLMConfigurationError("GEMINI_MAX_RETRIES must not be negative.")
         self._api_key = api_key
         self._timeout_seconds = timeout_seconds
+        self._max_retries = max_retries
 
     def __call__(
         self,
@@ -104,26 +142,42 @@ class GeminiChatClient:
         if system_parts:
             payload["systemInstruction"] = {"parts": system_parts}
 
-        request = Request(
-            self._endpoint.format(model=quote(model, safe="")),
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "X-goog-api-key": self._api_key,
-            },
-            method="POST",
-        )
+        request_data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        body = ""
+        for attempt in range(self._max_retries + 1):
+            request = Request(
+                self._endpoint.format(model=quote(model, safe="")),
+                data=request_data,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-goog-api-key": self._api_key,
+                },
+                method="POST",
+            )
+            try:
+                with urlopen(request, timeout=self._timeout_seconds) as response:
+                    body = response.read().decode("utf-8")
+                break
+            except HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace").strip()
+                if (
+                    exc.code not in self._retryable_statuses
+                    or attempt >= self._max_retries
+                ):
+                    raise RuntimeError(
+                        f"Gemini request failed with HTTP "
+                        f"{exc.code}: {detail or exc.reason}"
+                    ) from exc
+                self._wait_before_retry(attempt, exc.code)
+            except URLError as exc:
+                if attempt >= self._max_retries:
+                    raise RuntimeError(
+                        f"Gemini request failed: {exc.reason}"
+                    ) from exc
+                self._wait_before_retry(attempt, "network")
 
-        try:
-            with urlopen(request, timeout=self._timeout_seconds) as response:
-                body = response.read().decode("utf-8")
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace").strip()
-            raise RuntimeError(
-                f"Gemini request failed with HTTP {exc.code}: {detail or exc.reason}"
-            ) from exc
-        except URLError as exc:
-            raise RuntimeError(f"Gemini request failed: {exc.reason}") from exc
+        if not body:
+            raise RuntimeError("Gemini returned an empty response.")
 
         try:
             response_payload = json.loads(body)
@@ -137,6 +191,18 @@ class GeminiChatClient:
             raise RuntimeError("Gemini returned an empty response.")
         return {"message": {"content": text}}
 
+    @staticmethod
+    def _wait_before_retry(attempt: int, failure: object) -> None:
+        delay = (2**attempt) + random.uniform(0, 0.25)
+        logger.warning(
+            "Gemini request temporarily unavailable failure=%s attempt=%s "
+            "retry_in_seconds=%.2f",
+            failure,
+            attempt + 1,
+            delay,
+        )
+        time.sleep(delay)
+
 
 def create_chat_client(config: LLMConfig):
     """Create the configured cloud client, or keep the native Ollama path."""
@@ -145,5 +211,6 @@ def create_chat_client(config: LLMConfig):
         return GeminiChatClient(
             config.gemini_api_key or "",
             timeout_seconds=config.request_timeout_seconds,
+            max_retries=config.gemini_max_retries,
         )
     return None

@@ -1,4 +1,6 @@
 import json
+from io import BytesIO
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 import pytest
@@ -73,6 +75,39 @@ def test_gemini_client_maps_messages_and_response_to_translator_contract():
     ]
     assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
     assert request.call_args.kwargs["timeout"] == 7
+
+
+def test_gemini_client_retries_transient_503_with_backoff():
+    client = GeminiChatClient("test-key", max_retries=1)
+    transient_error = HTTPError(
+        "https://example.test",
+        503,
+        "Unavailable",
+        {},
+        BytesIO(b'{"error":{"message":"busy"}}'),
+    )
+    response = _Response(
+        {
+            "candidates": [
+                {"content": {"parts": [{"text": '{"sql":"SELECT 1"}'}]}}
+            ]
+        }
+    )
+
+    with patch(
+        "core.llm.urlopen",
+        side_effect=[transient_error, response],
+    ) as request:
+        with patch("core.llm.random.uniform", return_value=0):
+            with patch("core.llm.time.sleep") as sleep:
+                result = client(
+                    model="gemini-test",
+                    messages=[{"role": "user", "content": "Question"}],
+                )
+
+    assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
+    assert request.call_count == 2
+    sleep.assert_called_once_with(1)
 
 
 def test_translator_can_use_a_non_ollama_client():
