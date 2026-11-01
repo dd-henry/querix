@@ -273,7 +273,7 @@ assistant response without adding chat messages or disrupting review/execute.
 
 ### T8: Measuring query quality
 
-**Status**: Pending
+**Status**: Complete
 
 **What**: Add a domain-neutral benchmark harness, sample case contract, tests,
 and documentation for comparing query quality.

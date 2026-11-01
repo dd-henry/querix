@@ -172,6 +172,15 @@ Valida a lógica interna dos componentes de forma isolada, usando *mocks* para s
 ### Testes de Integração
 Valida o fluxo completo, envolvendo a comunicação real com a API do Ollama.
 
+### Benchmark de qualidade
+
+O benchmark de consultas é genérico e trabalha apenas com perguntas, colunas
+esperadas, restrições opcionais de linhas e resultados registrados. Ele mede
+taxa de consultas executáveis, cobertura de colunas esperadas, taxa de
+resultados vazios e latência sem embutir SQL ou depender de um banco de
+produção. Consulte [`docs/avaliacao_consultas.md`](docs/avaliacao_consultas.md)
+para o contrato e um exemplo.
+
 
 ### Executando os Testes
 
