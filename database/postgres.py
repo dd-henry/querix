@@ -163,3 +163,117 @@ class PostgresAdapter(DatabaseAdapter):
             return "\n".join(schema_text)
         except Exception as e:
             return f"Erro ao obter esquema: {e}"
+
+    def get_schema_metadata(self):
+        """Consulta metadados estruturados sem retornar linhas de negócio."""
+        columns = self.execute_query(
+            """
+            SELECT
+                cols.table_name,
+                (SELECT pg_catalog.obj_description(c.oid, 'pg_class')
+                 FROM pg_catalog.pg_class c
+                 WHERE c.relname = cols.table_name
+                   AND c.relnamespace = (
+                       SELECT oid FROM pg_catalog.pg_namespace
+                       WHERE nspname = 'public'
+                   )
+                ) AS table_comment,
+                cols.column_name,
+                cols.data_type,
+                cols.is_nullable,
+                (SELECT pg_catalog.col_description(
+                    c.oid, cols.ordinal_position::int
+                )
+                 FROM pg_catalog.pg_class c
+                 WHERE c.relname = cols.table_name
+                   AND c.relnamespace = (
+                       SELECT oid FROM pg_catalog.pg_namespace
+                       WHERE nspname = 'public'
+                   )
+                ) AS column_comment
+            FROM information_schema.columns cols
+            WHERE cols.table_schema = 'public'
+            ORDER BY cols.table_name, cols.ordinal_position;
+            """
+        )
+        constraints = self.execute_query(
+            """
+            SELECT
+                tc.table_name,
+                kcu.column_name,
+                tc.constraint_type
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+              ON tc.constraint_name = kcu.constraint_name
+             AND tc.table_schema = kcu.table_schema
+            WHERE tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE')
+              AND tc.table_schema = 'public'
+            ORDER BY tc.table_name, kcu.column_name;
+            """
+        )
+        relationships = self.execute_query(
+            """
+            SELECT
+                tc.table_name,
+                kcu.column_name,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name
+            FROM information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+              ON tc.constraint_name = kcu.constraint_name
+             AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage AS ccu
+              ON tc.constraint_name = ccu.constraint_name
+             AND tc.table_schema = ccu.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+              AND tc.table_schema = 'public'
+            ORDER BY
+                tc.table_name,
+                kcu.column_name,
+                ccu.table_name,
+                ccu.column_name;
+            """
+        )
+
+        constraint_types = {
+            (row["table_name"], row["column_name"]): row["constraint_type"]
+            for _, row in constraints.iterrows()
+        }
+        tables = []
+        for table_name, group in columns.groupby("table_name"):
+            table_columns = []
+            for _, row in group.iterrows():
+                constraint_type = constraint_types.get(
+                    (row["table_name"], row["column_name"])
+                )
+                table_columns.append(
+                    {
+                        "name": row["column_name"],
+                        "data_type": row["data_type"],
+                        "is_nullable": row["is_nullable"],
+                        "is_primary_key": constraint_type == "PRIMARY KEY",
+                        "is_unique": constraint_type in {"PRIMARY KEY", "UNIQUE"},
+                        "comment": row["column_comment"],
+                    }
+                )
+            table_comment = group["table_comment"].iloc[0]
+            tables.append(
+                {
+                    "name": table_name,
+                    "comment": table_comment,
+                    "columns": table_columns,
+                }
+            )
+
+        return {
+            "tables": tables,
+            "relationships": [
+                {
+                    "table": row["table_name"],
+                    "column": row["column_name"],
+                    "foreign_table": row["foreign_table_name"],
+                    "foreign_column": row["foreign_column_name"],
+                }
+                for _, row in relationships.iterrows()
+            ],
+        }

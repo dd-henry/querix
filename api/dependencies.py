@@ -7,6 +7,7 @@ from api.auth.session import SessionClaims, SessionError, require_session
 from api.config import Settings
 from api.services.chat import ChatService
 from core.prompter import Prompter
+from core.semantic_context import SemanticContextService
 from core.translator import Translator
 from database.conversations import ConversationRepository
 from database.postgres import PostgresAdapter
@@ -48,6 +49,11 @@ def get_query_history_repository() -> QueryHistoryRepository:
 @lru_cache(maxsize=1)
 def get_predefined_query_repository() -> PredefinedQueryRepository:
     return PredefinedQueryRepository(get_db_adapter())
+
+
+@lru_cache(maxsize=1)
+def get_semantic_context() -> SemanticContextService:
+    return SemanticContextService(get_db_adapter())
 
 
 @lru_cache(maxsize=1)

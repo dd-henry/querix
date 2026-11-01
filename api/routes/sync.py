@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from api.app import APIError
 from api.dependencies import (
     get_predefined_query_repository,
+    get_semantic_context,
     get_translator,
     require_approved_user,
 )
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/schema", tags=["schema"])
 def synchronize_schema(
     _profile: Dict[str, object] = Depends(require_approved_user),
 ) -> SchemaSyncResponse:
+    get_semantic_context.cache_clear()
     get_translator.cache_clear()
     get_predefined_query_repository.cache_clear()
     try:

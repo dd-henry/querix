@@ -1,4 +1,6 @@
 import abc
+from typing import Mapping, Optional
+
 import pandas as pd
 
 class DatabaseAdapter(abc.ABC):
@@ -26,3 +28,7 @@ class DatabaseAdapter(abc.ABC):
     def get_schema_info(self) -> str:
         """Consulta as informações de esquema (tabelas, colunas e comentários) do banco real."""
         pass
+
+    def get_schema_metadata(self) -> Optional[Mapping[str, object]]:
+        """Retorna metadados estruturados quando o adaptador os disponibiliza."""
+        return None
