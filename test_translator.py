@@ -247,6 +247,23 @@ def test_plan_question_ignores_empty_optional_plan_entries():
     assert plan.metrics == ()
 
 
+def test_plan_question_normalizes_single_assumption_text():
+    payload = (
+        '{"intent":"list","tables":["events"],"relationships":[],'
+        '"dimensions":[],"metrics":[],"filters":[],"grain":null,'
+        '"assumptions":"no aggregation requested"}'
+    )
+
+    translator = _staged_translator()
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={"message": {"content": payload}},
+    ):
+        plan = translator.plan_question("Liste eventos")
+
+    assert plan.assumptions == ("no aggregation requested",)
+
+
 def test_plan_question_retries_malformed_planner_response():
     translator = _staged_translator()
     valid_payload = (

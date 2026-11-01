@@ -149,6 +149,8 @@ class Prompter:
             "grain e assumptions. Use arrays vazios quando uma categoria não "
             "for necessária. Não use strings vazias dentro dos arrays; use "
             "[] quando não houver relacionamentos, dimensões ou métricas. "
+            "Todos esses campos devem ser arrays JSON de strings; mesmo uma "
+            "única suposição deve ser representada como [\"texto\"]. "
             "intent deve ser uma descrição curta e não vazia. "
             "assumptions deve conter pelo menos uma frase, "
             "mesmo quando a conclusão for que não há suposições adicionais.\n"

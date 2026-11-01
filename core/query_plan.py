@@ -40,7 +40,12 @@ class QueryPlan:
             "metrics",
             allow_empty_items=True,
         )
-        assumptions = _text_sequence(payload, "assumptions", required=True)
+        assumptions = _text_sequence(
+            payload,
+            "assumptions",
+            required=True,
+            allow_single_text=True,
+        )
         filters = _filters(payload.get("filters"))
         grain = payload.get("grain")
         if grain is not None and (
@@ -84,8 +89,11 @@ def _text_sequence(
     field: str,
     required: bool = False,
     allow_empty_items: bool = False,
+    allow_single_text: bool = False,
 ) -> tuple[str, ...]:
     value = payload.get(field)
+    if isinstance(value, str) and allow_single_text:
+        value = [value]
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         raise QueryPlanError(f"The planner field '{field}' must be an array.")
 
