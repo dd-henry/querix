@@ -42,6 +42,16 @@ class ChatResponse(BaseModel):
     chart: Optional[Dict[str, Any]] = None
     summary: Optional[str] = None
     result: Optional[Dict[str, Any]] = None
+    insights: List["ChatInsight"] = Field(default_factory=list)
     retryable: bool = False
     retry_kind: Optional[RetryKind] = None
     warnings: List[str] = Field(default_factory=list)
+
+
+class ChatInsight(BaseModel):
+    key: str
+    title: str
+    summary: Optional[str] = None
+    sql: Optional[str] = None
+    result: Optional[Dict[str, Any]] = None
+    warning: Optional[str] = None

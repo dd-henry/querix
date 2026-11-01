@@ -136,6 +136,37 @@ def test_execute_ignores_client_sql_and_returns_bounded_results_and_chart():
     )
 
 
+def test_execute_exposes_supporting_insights_alongside_primary_result():
+    repository = StoredConversationRepository(
+        _stored_messages(
+            metadata={
+                "supporting_queries": [
+                    {
+                        "key": "kpi",
+                        "title": "Indicadores do período",
+                        "sql": "SELECT 2",
+                        "parameters": {},
+                    }
+                ]
+            }
+        )
+    )
+    database = Mock()
+    database.execute_read_only_query.side_effect = [
+        pd.DataFrame([{"total": 12}]),
+        pd.DataFrame([{"revenue": 12}]),
+    ]
+    client = _client(_service(repository, database))
+
+    response = client.post("/api/chat/execute", json=_payload())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["result"]["rows"] == [{"total": 12}]
+    assert body["insights"][0]["key"] == "kpi"
+    assert body["insights"][0]["result"]["rows"] == [{"revenue": 12}]
+
+
 def test_missing_or_foreign_stored_query_is_rejected_before_adapter_call():
     database = Mock()
     client = _client(

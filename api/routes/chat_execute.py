@@ -1,4 +1,5 @@
-from typing import Dict, Callable
+from dataclasses import asdict
+from typing import Callable, Dict
 
 from fastapi import APIRouter, Depends
 
@@ -6,6 +7,7 @@ from api.app import APIError
 from api.dependencies import get_chat_service, require_approved_user
 from api.schemas.chat import (
     ChatExecuteRequest,
+    ChatInsight as ChatInsightResponse,
     ChatResponse,
     ChatRetryRequest,
 )
@@ -35,6 +37,10 @@ def _response(result: ChatResult) -> ChatResponse:
         chart=result.chart,
         summary=result.summary,
         result=result.result,
+        insights=[
+            ChatInsightResponse.model_validate(asdict(insight))
+            for insight in result.insights
+        ],
         retryable=result.retryable,
         retry_kind=result.retry_kind,
         warnings=result.warnings,

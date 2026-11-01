@@ -9,7 +9,7 @@ from api.dependencies import (
     get_chat_service,
     require_approved_user,
 )
-from api.services.chat import ChatResult, ChatServiceError
+from api.services.chat import ChatInsight, ChatResult, ChatServiceError
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
 CONVERSATION_ID = UUID("00000000-0000-0000-0000-000000000002")
@@ -109,6 +109,44 @@ def test_review_mode_off_executes_the_stored_request():
         USER_ID,
         CONVERSATION_ID,
         REQUEST_ID,
+    )
+
+
+def test_insights_are_exposed_without_changing_primary_result():
+    service = Mock()
+    service.translate_prompt.return_value = _result(
+        status="translated",
+        insights=[
+            ChatInsight(
+                key="kpi",
+                title="Indicadores do período",
+                summary="A consulta retornou 1 linha(s).",
+                sql="SELECT 2",
+                result={
+                    "columns": ["total"],
+                    "rows": [{"total": 12}],
+                    "row_count": 1,
+                    "truncated": False,
+                },
+            ),
+            ChatInsight(
+                key="payments",
+                title="Formas de pagamento",
+                warning="Não foi possível calcular esta análise complementar.",
+            ),
+        ],
+    )
+    client = _client(service)
+
+    response = client.post("/api/chat/translate", json=_payload())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["result"] is None
+    assert body["insights"][0]["title"] == "Indicadores do período"
+    assert body["insights"][0]["result"]["rows"] == [{"total": 12}]
+    assert body["insights"][1]["warning"].startswith(
+        "Não foi possível calcular"
     )
 
 
