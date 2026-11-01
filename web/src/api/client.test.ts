@@ -148,4 +148,28 @@ describe("createApiClient", () => {
       }),
     );
   });
+
+  it("sends cancellation requests without an abort signal", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      response({ status: "cancelled" }),
+    );
+    const client = createApiClient({ fetchImpl });
+
+    await client.chat.cancel({
+      conversation_id: "conversation-1",
+      request_id: "request-1",
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/chat/cancel",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({
+          conversation_id: "conversation-1",
+          request_id: "request-1",
+        }),
+      }),
+    );
+  });
 });

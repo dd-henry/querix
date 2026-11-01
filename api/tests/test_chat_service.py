@@ -4,7 +4,11 @@ from uuid import UUID
 import pandas as pd
 import pytest
 
-from api.services.chat import ChatService, ChatServiceError
+from api.services.chat import (
+    ChatCancellationRegistry,
+    ChatService,
+    ChatServiceError,
+)
 from core.semantic_context import SemanticContextService
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
@@ -145,6 +149,7 @@ def _service(
     database=None,
     history=None,
     semantic_context=None,
+    cancellation_registry=None,
 ):
     return ChatService(
         repository,
@@ -152,6 +157,7 @@ def _service(
         database or Mock(),
         query_history_repository=history,
         semantic_context=semantic_context,
+        cancellation_registry=cancellation_registry,
     )
 
 
@@ -203,6 +209,61 @@ def test_prompt_bounds_are_rejected_before_persistence(prompt):
     assert error.value.code == "validation_error"
     assert repository.create_calls == []
     assert repository.append_calls == []
+    assert translator.calls == []
+
+
+def test_cancelled_request_stops_before_translation():
+    repository = MemoryConversationRepository([_user_message()])
+    translator = FakeTranslator(
+        response={"sql": "SELECT 1", "grafico": None},
+    )
+    registry = ChatCancellationRegistry()
+    registry.start(REQUEST_ID)
+    service = _service(
+        repository,
+        translator,
+        cancellation_registry=registry,
+    )
+
+    service.cancel_request(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    with pytest.raises(ChatServiceError) as error:
+        service.translate_prompt(
+            USER_ID,
+            CONVERSATION_ID,
+            REQUEST_ID,
+            "Show revenue",
+        )
+
+    assert error.value.code == "request_cancelled"
+    assert translator.calls == []
+
+
+def test_cancellation_can_win_before_the_user_turn_is_persisted():
+    repository = MemoryConversationRepository()
+    translator = FakeTranslator(
+        response={"sql": "SELECT 1", "grafico": None},
+    )
+    registry = ChatCancellationRegistry()
+    registry.start(REQUEST_ID)
+    service = _service(
+        repository,
+        translator,
+        cancellation_registry=registry,
+    )
+
+    service.cancel_request(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    with pytest.raises(ChatServiceError) as error:
+        service.translate_prompt(
+            USER_ID,
+            CONVERSATION_ID,
+            REQUEST_ID,
+            "Show revenue",
+        )
+
+    assert error.value.code == "request_cancelled"
+    assert repository.create_calls == []
     assert translator.calls == []
 
 

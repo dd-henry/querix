@@ -60,6 +60,7 @@ export interface UseChatResult {
 
 interface ActiveRequest {
   requestId: string;
+  conversationId: string;
   controller: AbortController;
   promise: Promise<boolean>;
 }
@@ -252,6 +253,7 @@ export function useChat({
   const startRequest = useCallback(
     (
       requestId: string,
+      conversationId: string,
       operation: (signal: AbortSignal) => Promise<ChatResponse>,
       retryKind: ChatRetryKind,
     ): Promise<boolean> => {
@@ -293,6 +295,7 @@ export function useChat({
       })();
       activeRequestRef.current = {
         requestId,
+        conversationId,
         controller,
         promise,
       };
@@ -343,6 +346,7 @@ export function useChat({
 
       return startRequest(
         requestId,
+        nextConversationId,
         (signal) =>
           client.chat.translate(
             {
@@ -368,6 +372,18 @@ export function useChat({
     activeRequest.controller.abort();
     activeRequestRef.current = null;
     setError(null);
+    void client.chat
+      .cancel({
+        conversation_id: activeRequest.conversationId,
+        request_id: activeRequest.requestId,
+      })
+      .catch((cancelError: unknown) => {
+        const described = describeError(cancelError);
+        setError(
+          `A solicitação foi interrompida no navegador, mas não foi possível `
+            + `confirmar o cancelamento no servidor: ${described.message}`,
+        );
+      });
     updateAssistant(activeRequest.requestId, (message) => ({
       ...message,
       content: "Consulta cancelada.",
@@ -378,7 +394,7 @@ export function useChat({
       reviewState: "cancelled",
     }));
     return true;
-  }, [updateAssistant]);
+  }, [client, updateAssistant]);
 
   const confirmExecution = useCallback(
     (requestId: string) => {
@@ -407,6 +423,7 @@ export function useChat({
       }));
       return startRequest(
         requestId,
+        activeConversationId,
         (signal) =>
           client.chat.execute(
             {
@@ -463,6 +480,7 @@ export function useChat({
       }));
       return startRequest(
         requestId,
+        activeConversationId,
         (signal) =>
           client.chat.retry(
             {

@@ -37,6 +37,7 @@ function createClient(
     chat: {
       translate: vi.fn(),
       execute: vi.fn(),
+      cancel: vi.fn(),
       retry: vi.fn(),
     },
     history: {

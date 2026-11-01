@@ -50,6 +50,7 @@ function createClient(
           truncated: false,
         },
       }),
+      cancel: vi.fn().mockResolvedValue({ status: "cancelled" }),
       retry: vi.fn().mockResolvedValue(reviewResponse),
       ...overrides,
     },
@@ -282,7 +283,8 @@ describe("useChat", () => {
   it("cancels an active request and ignores a late response", async () => {
     const request = deferred<ChatResponse>();
     const translate = vi.fn().mockReturnValue(request.promise);
-    const client = createClient({ translate });
+    const cancel = vi.fn().mockResolvedValue({ status: "cancelled" });
+    const client = createClient({ translate, cancel });
     render(<Harness client={client} />);
 
     fireEvent.click(screen.getByRole("button", { name: "send" }));
@@ -297,6 +299,10 @@ describe("useChat", () => {
       }),
     );
     expect(translate.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(cancel).toHaveBeenCalledWith({
+      conversation_id: "generated-1",
+      request_id: "generated-2",
+    });
 
     request.resolve(reviewResponse);
     await waitFor(() =>

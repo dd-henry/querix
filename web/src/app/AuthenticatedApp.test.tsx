@@ -30,6 +30,7 @@ function createClient(): ApiClient {
     chat: {
       translate: vi.fn(),
       execute: vi.fn(),
+      cancel: vi.fn().mockResolvedValue({ status: "cancelled" }),
       retry: vi.fn(),
     },
     history: {

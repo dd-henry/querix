@@ -163,6 +163,10 @@ export interface ChatRequestOptions {
   signal?: AbortSignal;
 }
 
+export interface ChatCancelResponse {
+  status: "cancelled";
+}
+
 export interface ChatResultPayload {
   columns: string[];
   rows: Array<Record<string, unknown>>;
@@ -406,6 +410,14 @@ export function createApiClient({
             signal: options.signal,
           }),
           "chat execution",
+        ),
+      cancel: async (input: ChatRequestInput) =>
+        requireResponse(
+          await request<ChatCancelResponse>("/api/chat/cancel", {
+            method: "POST",
+            body: input,
+          }),
+          "chat cancellation",
         ),
       retry: async (
         input: ChatRequestInput,

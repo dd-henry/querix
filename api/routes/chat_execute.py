@@ -7,6 +7,7 @@ from api.app import APIError
 from api.dependencies import get_chat_service, require_approved_user
 from api.schemas.chat import (
     ChatExecuteRequest,
+    ChatCancelResponse,
     ChatInsight as ChatInsightResponse,
     ChatResponse,
     ChatRetryRequest,
@@ -70,6 +71,23 @@ def execute_chat(
             payload.request_id,
         )
     )
+
+
+@router.post("/cancel", response_model=ChatCancelResponse)
+def cancel_chat(
+    payload: ChatRetryRequest,
+    profile: Dict[str, object] = Depends(require_approved_user),
+    service: ChatService = Depends(get_chat_service),
+) -> ChatCancelResponse:
+    try:
+        service.cancel_request(
+            _owner_id(profile),
+            payload.conversation_id,
+            payload.request_id,
+        )
+    except ChatServiceError as exc:
+        raise APIError(exc.status_code, exc.code, exc.message) from exc
+    return ChatCancelResponse(status="cancelled")
 
 
 @router.post("/retry", response_model=ChatResponse)

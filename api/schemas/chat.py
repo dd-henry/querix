@@ -31,6 +31,10 @@ class ChatRetryRequest(BaseModel):
     request_id: UUID
 
 
+class ChatCancelResponse(BaseModel):
+    status: Literal["cancelled"]
+
+
 class ChatInterpretation(BaseModel):
     intent: str
     dimensions: List[str] = Field(default_factory=list)

@@ -279,3 +279,30 @@ def test_retry_errors_use_the_documented_error_envelope():
             "message": "This request cannot be retried.",
         }
     }
+
+
+def test_cancel_route_marks_the_authenticated_request():
+    service = Mock()
+    client = _client(service)
+
+    response = client.post("/api/chat/cancel", json=_payload())
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "cancelled"}
+    service.cancel_request.assert_called_once_with(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+
+def test_cancel_route_rejects_an_unknown_request():
+    database = Mock()
+    client = _client(
+        _service(StoredConversationRepository([]), database)
+    )
+
+    response = client.post("/api/chat/cancel", json=_payload())
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "request_not_found"

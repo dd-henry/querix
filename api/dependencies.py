@@ -5,7 +5,7 @@ from fastapi import Depends, Request
 
 from api.auth.session import SessionClaims, SessionError, require_session
 from api.config import Settings
-from api.services.chat import ChatService
+from api.services.chat import ChatCancellationRegistry, ChatService
 from core.llm import create_chat_client
 from core.prompter import Prompter
 from core.query_plan import QueryPlan
@@ -59,6 +59,11 @@ def get_semantic_context() -> SemanticContextService:
     return SemanticContextService(get_db_adapter())
 
 
+@lru_cache(maxsize=1)
+def get_chat_cancellation_registry() -> ChatCancellationRegistry:
+    return ChatCancellationRegistry()
+
+
 def validate_translation_plan(plan: QueryPlan) -> None:
     PlanValidator.validate_plan(
         plan,
@@ -96,6 +101,9 @@ def get_chat_service(
         get_query_history_repository
     ),
     semantic_context: SemanticContextService = Depends(get_semantic_context),
+    cancellation_registry: ChatCancellationRegistry = Depends(
+        get_chat_cancellation_registry
+    ),
 ) -> ChatService:
     return ChatService(
         conversation_repository,
@@ -105,6 +113,7 @@ def get_chat_service(
         prompt_limit=settings.prompt_limit,
         result_limit=settings.result_limit,
         semantic_context=semantic_context,
+        cancellation_registry=cancellation_registry,
     )
 
 

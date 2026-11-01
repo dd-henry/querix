@@ -30,6 +30,7 @@ describe("App", () => {
       chat: {
         translate: () => Promise.reject(new Error("not used")),
         execute: () => Promise.reject(new Error("not used")),
+        cancel: () => Promise.resolve({ status: "cancelled" }),
         retry: () => Promise.reject(new Error("not used")),
       },
       history: {
