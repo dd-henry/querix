@@ -67,6 +67,7 @@ def test_llm_config_supports_openrouter_without_exposing_the_key():
             "OPENROUTER_API_KEY": "test-key",
             "OPENROUTER_MODEL": "openai/test-model",
             "OPENROUTER_MAX_RETRIES": "4",
+            "LLM_REQUEST_TIMEOUT_SECONDS": "240",
         }
     )
 
@@ -74,8 +75,17 @@ def test_llm_config_supports_openrouter_without_exposing_the_key():
     assert config.model_name == "openai/test-model"
     assert config.openrouter_api_key == "test-key"
     assert config.openrouter_max_retries == 4
+    assert config.request_timeout_seconds == 240
     assert "test-key" not in repr(config)
     assert isinstance(create_chat_client(config), OpenRouterChatClient)
+
+
+def test_llm_config_rejects_non_positive_request_timeout():
+    with pytest.raises(
+        LLMConfigurationError,
+        match="LLM_REQUEST_TIMEOUT_SECONDS must be greater than zero",
+    ):
+        LLMConfig.from_env({"LLM_REQUEST_TIMEOUT_SECONDS": "0"})
 
 
 def test_llm_config_requires_openrouter_api_key():
@@ -181,6 +191,64 @@ def test_gemini_client_retries_transient_503_with_backoff():
             with patch("core.llm.time.sleep") as sleep:
                 result = client(
                     model="gemini-test",
+                    messages=[{"role": "user", "content": "Question"}],
+                )
+
+    assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
+    assert request.call_count == 2
+    sleep.assert_called_once_with(1)
+
+
+def test_openrouter_client_retries_rate_limit_using_retry_after():
+    client = OpenRouterChatClient("test-key", max_retries=1)
+    transient_error = HTTPError(
+        "https://example.test",
+        429,
+        "Too Many Requests",
+        {"Retry-After": "7"},
+        BytesIO(b'{"error":{"message":"busy"}}'),
+    )
+    response = _Response(
+        {
+            "choices": [
+                {"message": {"content": '{"sql":"SELECT 1"}'}}
+            ]
+        }
+    )
+
+    with patch(
+        "core.llm.urlopen",
+        side_effect=[transient_error, response],
+    ) as request:
+        with patch("core.llm.time.sleep") as sleep:
+            result = client(
+                model="openai/test-model",
+                messages=[{"role": "user", "content": "Question"}],
+            )
+
+    assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
+    assert request.call_count == 2
+    sleep.assert_called_once_with(7.0)
+
+
+def test_openrouter_client_retries_timeout_during_response_read():
+    client = OpenRouterChatClient("test-key", max_retries=1)
+    response = _Response(
+        {
+            "choices": [
+                {"message": {"content": '{"sql":"SELECT 1"}'}}
+            ]
+        }
+    )
+
+    with patch(
+        "core.llm.urlopen",
+        side_effect=[_ReadTimeoutResponse(), response],
+    ) as request:
+        with patch("core.llm.random.uniform", return_value=0):
+            with patch("core.llm.time.sleep") as sleep:
+                result = client(
+                    model="openai/test-model",
                     messages=[{"role": "user", "content": "Question"}],
                 )
 

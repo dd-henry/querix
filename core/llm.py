@@ -35,6 +35,34 @@ def _non_negative_integer(
     return parsed
 
 
+def _positive_integer(
+    environ: Mapping[str, str],
+    name: str,
+    default: int,
+) -> int:
+    value = environ.get(name)
+    if value is None or not value.strip():
+        return default
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise LLMConfigurationError(f"{name} must be an integer.") from exc
+    if parsed <= 0:
+        raise LLMConfigurationError(f"{name} must be greater than zero.")
+    return parsed
+
+
+def _retry_delay(attempt: int, retry_after: Optional[str] = None) -> float:
+    if retry_after is not None:
+        try:
+            parsed = float(retry_after)
+        except ValueError:
+            parsed = -1
+        if parsed >= 0:
+            return parsed
+    return (2**attempt) + random.uniform(0, 0.25)
+
+
 @dataclass(frozen=True)
 class LLMConfig:
     """Runtime configuration used by the API LLM integration."""
@@ -45,7 +73,7 @@ class LLMConfig:
     openrouter_model: str = "openai/gpt-4o-mini"
     gemini_api_key: Optional[str] = field(default=None, repr=False)
     openrouter_api_key: Optional[str] = field(default=None, repr=False)
-    request_timeout_seconds: int = 120
+    request_timeout_seconds: int = 180
     gemini_max_retries: int = 2
     openrouter_max_retries: int = 2
 
@@ -108,6 +136,11 @@ class LLMConfig:
             "OPENROUTER_MAX_RETRIES",
             2,
         )
+        request_timeout_seconds = _positive_integer(
+            environ,
+            "LLM_REQUEST_TIMEOUT_SECONDS",
+            cls.request_timeout_seconds,
+        )
 
         return cls(
             provider=provider,
@@ -116,6 +149,7 @@ class LLMConfig:
             openrouter_model=openrouter_model,
             gemini_api_key=gemini_api_key,
             openrouter_api_key=openrouter_api_key,
+            request_timeout_seconds=request_timeout_seconds,
             gemini_max_retries=gemini_max_retries,
             openrouter_max_retries=openrouter_max_retries,
         )
@@ -188,11 +222,20 @@ class GeminiChatClient:
                     exc.code in self._retryable_statuses
                     and attempt < self._max_retries
                 )
+                retry_after = (
+                    exc.headers.get("Retry-After")
+                    if exc.headers is not None
+                    else None
+                )
                 try:
                     detail = exc.read().decode("utf-8", errors="replace").strip()
                 except (URLError, TimeoutError, ConnectionError) as read_exc:
                     if should_retry:
-                        self._wait_before_retry(attempt, exc.code)
+                        self._wait_before_retry(
+                            attempt,
+                            exc.code,
+                            retry_after,
+                        )
                         continue
                     detail = f"unable to read error response: {read_exc}"
                 if not should_retry:
@@ -200,7 +243,7 @@ class GeminiChatClient:
                         f"Gemini request failed with HTTP "
                         f"{exc.code}: {detail or exc.reason}"
                     ) from exc
-                self._wait_before_retry(attempt, exc.code)
+                self._wait_before_retry(attempt, exc.code, retry_after)
             except (URLError, TimeoutError, ConnectionError) as exc:
                 if attempt >= self._max_retries:
                     reason = getattr(exc, "reason", str(exc))
@@ -225,8 +268,12 @@ class GeminiChatClient:
         return {"message": {"content": text}}
 
     @staticmethod
-    def _wait_before_retry(attempt: int, failure: object) -> None:
-        delay = (2**attempt) + random.uniform(0, 0.25)
+    def _wait_before_retry(
+        attempt: int,
+        failure: object,
+        retry_after: Optional[str] = None,
+    ) -> None:
+        delay = _retry_delay(attempt, retry_after)
         logger.warning(
             "Gemini request temporarily unavailable failure=%s attempt=%s "
             "retry_in_seconds=%.2f",
@@ -290,11 +337,20 @@ class OpenRouterChatClient:
                     exc.code in self._retryable_statuses
                     and attempt < self._max_retries
                 )
+                retry_after = (
+                    exc.headers.get("Retry-After")
+                    if exc.headers is not None
+                    else None
+                )
                 try:
                     detail = exc.read().decode("utf-8", errors="replace").strip()
                 except (URLError, TimeoutError, ConnectionError) as read_exc:
                     if should_retry:
-                        self._wait_before_retry(attempt, exc.code)
+                        self._wait_before_retry(
+                            attempt,
+                            exc.code,
+                            retry_after,
+                        )
                         continue
                     detail = f"unable to read error response: {read_exc}"
                 if not should_retry:
@@ -302,7 +358,7 @@ class OpenRouterChatClient:
                         f"OpenRouter request failed with HTTP "
                         f"{exc.code}: {detail or exc.reason}"
                     ) from exc
-                self._wait_before_retry(attempt, exc.code)
+                self._wait_before_retry(attempt, exc.code, retry_after)
             except (URLError, TimeoutError, ConnectionError) as exc:
                 if attempt >= self._max_retries:
                     reason = getattr(exc, "reason", str(exc))
@@ -325,8 +381,12 @@ class OpenRouterChatClient:
         return {"message": {"content": text}}
 
     @staticmethod
-    def _wait_before_retry(attempt: int, failure: object) -> None:
-        delay = (2**attempt) + random.uniform(0, 0.25)
+    def _wait_before_retry(
+        attempt: int,
+        failure: object,
+        retry_after: Optional[str] = None,
+    ) -> None:
+        delay = _retry_delay(attempt, retry_after)
         logger.warning(
             "OpenRouter request temporarily unavailable failure=%s attempt=%s "
             "retry_in_seconds=%.2f",

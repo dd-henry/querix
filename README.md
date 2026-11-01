@@ -78,6 +78,7 @@ Siga os passos abaixo para configurar o ambiente de desenvolvimento.
     OPENROUTER_MODEL=openai/gpt-4o-mini
     OPENROUTER_MAX_RETRIES=2
     OPENROUTER_API_KEY=
+    LLM_REQUEST_TIMEOUT_SECONDS=180
     ASK_SQL_USER=nome.do.usuario
     ASK_SQL_ROLE=viewer
     ```
@@ -93,6 +94,10 @@ Para testar um modelo do OpenRouter, use `LLM_PROVIDER=openrouter`, informe
 `OPENROUTER_API_KEY` e o identificador do modelo em `OPENROUTER_MODEL`. O
 identificador usa o formato publicado pelo OpenRouter, como
 `openai/gpt-4o-mini`. A chave permanece somente no ambiente do backend.
+Cada chamada ao provedor usa 180 segundos por padrão; ajuste
+`LLM_REQUEST_TIMEOUT_SECONDS` se o modelo ou a rede exigirem mais tempo.
+Falhas transitórias respeitam o cabeçalho `Retry-After` do OpenRouter antes de
+tentar novamente, evitando novas chamadas durante uma janela de rate limit.
 
 Configure também o Supabase Auth:
 
@@ -126,6 +131,7 @@ GEMINI_API_KEY=
 OPENROUTER_MODEL=openai/gpt-4o-mini
 OPENROUTER_MAX_RETRIES=2
 OPENROUTER_API_KEY=
+LLM_REQUEST_TIMEOUT_SECONDS=180
 ```
 
 `DATABASE_URL` pode ser substituída pelos campos `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DBNAME`. Em desenvolvimento local, mantenha `COOKIE_SECURE=false`; ative-o somente quando a aplicação estiver atrás de HTTPS. Nunca coloque `SESSION_SECRET`, credenciais do banco ou a chave `service_role` do Supabase no frontend.
