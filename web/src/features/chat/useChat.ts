@@ -324,10 +324,30 @@ export function useChat({
         controller,
         promise,
       };
-      const readStatus = client.chat.status;
-      if (readStatus) {
-        void (async () => {
-          while (!controller.signal.aborted) {
+      let readStatus = client.chat.status;
+      void (async () => {
+        const startedAt = performance.now();
+        let lastProgress: ChatProgressResponse = {
+          status: "running",
+          phase: "starting",
+          message: "A consulta está em andamento.",
+          elapsed_seconds: 0,
+        };
+        const updateLocalProgress = () => {
+          const elapsedSeconds = Math.max(
+            lastProgress.elapsed_seconds,
+            (performance.now() - startedAt) / 1000,
+          );
+          updateAssistant(requestId, (current) => ({
+            ...current,
+            progress: {
+              ...lastProgress,
+              elapsed_seconds: elapsedSeconds,
+            },
+          }));
+        };
+        while (!controller.signal.aborted) {
+          if (readStatus) {
             try {
               const progress = await readStatus(
                 {
@@ -336,24 +356,30 @@ export function useChat({
                 },
                 { signal: controller.signal },
               );
-              if (!controller.signal.aborted) {
-                updateAssistant(requestId, (current) => ({
-                  ...current,
-                  progress,
-                }));
+              if (progress) {
+                lastProgress = progress;
               }
             } catch (progressError: unknown) {
               if (controller.signal.aborted) {
                 return;
               }
-              void progressError;
-            }
-            if (!(await waitForProgress(controller.signal, 750))) {
-              return;
+              if (
+                progressError instanceof ApiError &&
+                progressError.status === 404
+              ) {
+                readStatus = undefined;
+              }
             }
           }
-        })();
-      }
+          if (controller.signal.aborted) {
+            return;
+          }
+          updateLocalProgress();
+          if (!(await waitForProgress(controller.signal, 750))) {
+            return;
+          }
+        }
+      })();
       return promise;
     },
     [client.chat.status, updateAssistant],

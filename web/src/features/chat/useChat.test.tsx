@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -276,6 +282,51 @@ describe("useChat", () => {
         expect.objectContaining({ status: "review" }),
       ),
     );
+  });
+
+  it("falls back to a local heartbeat after a missing status endpoint", async () => {
+    vi.useFakeTimers();
+    try {
+      const request = deferred<ChatResponse>();
+      const status = vi.fn().mockRejectedValue(
+        new ApiError(
+          "request_not_active",
+          "The chat request is no longer active.",
+          404,
+        ),
+      );
+      const client = createClient({
+        translate: vi.fn().mockReturnValue(request.promise),
+        status,
+      });
+      render(<Harness client={client} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "send" }));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(status).toHaveBeenCalledOnce();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_500);
+      });
+
+      expect(status).toHaveBeenCalledOnce();
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          progress: expect.objectContaining({
+            elapsed_seconds: expect.any(Number),
+          }),
+        }),
+      );
+
+      request.resolve(reviewResponse);
+      await act(async () => {
+        await Promise.resolve();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("stores interpretation and diagnostics on the same assistant message", async () => {
