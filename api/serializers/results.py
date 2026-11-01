@@ -69,7 +69,7 @@ def summarize_result(result: ResultPayload) -> str:
     if "total_vendas" in columns:
         values = _decimal_values(rows, "total_vendas")
         if values:
-            return f"O faturamento retornado foi {_format_currency(values[0])}.{suffix}"
+            return f"O faturamento retornado foi {_format_currency(sum(values))}.{suffix}"
 
     return f"A consulta retornou {row_count} linha(s).{suffix}"
 

@@ -119,6 +119,21 @@ def test_summarize_revenue_result_uses_returned_total():
     assert summarize_result(result) == "O faturamento retornado foi R$ 1.498,00."
 
 
+def test_summarize_revenue_result_sums_all_returned_rows():
+    result = {
+        "columns": ["total_vendas"],
+        "rows": [
+            {"total_vendas": "15.50"},
+            {"total_vendas": "59.90"},
+            {"total_vendas": "152.00"},
+        ],
+        "row_count": 3,
+        "truncated": False,
+    }
+
+    assert summarize_result(result) == "O faturamento retornado foi R$ 227,40."
+
+
 def test_summarize_result_ignores_invalid_metrics_and_marks_truncation():
     result = {
         "columns": ["produto", "quantidade", "valor"],
