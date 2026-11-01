@@ -279,6 +279,9 @@ describe("ChatWorkspace", () => {
     const interpretation = screen.getByRole("region", {
       name: "Interpretação da pergunta",
     });
+    expect(
+      within(interpretation).getByText("Comparar receita por região"),
+    ).toBeInTheDocument();
     expect(interpretation.querySelector("details")).not.toHaveAttribute("open");
     fireEvent.click(
       within(interpretation).getByRole("button", {
@@ -343,6 +346,11 @@ describe("ChatWorkspace", () => {
     );
     expect(insights).toHaveTextContent("SELECT 2");
     expect(within(insights).getAllByRole("article")).toHaveLength(2);
+    expect(
+      within(insights).getByRole("table", {
+        name: "Resultado da análise Indicadores do período",
+      }),
+    ).toHaveClass("chat-result__table");
   });
 
   it.each(["bar", "line"] as const)(

@@ -164,7 +164,7 @@ function ResultView({ message }: { message: ChatMessage }) {
         </p>
       ) : null}
       <div className="chat-result__table-wrapper">
-        <table>
+        <table className="chat-result__table">
           <caption className="sr-only">Linhas retornadas pela consulta</caption>
           <thead>
             <tr>
@@ -227,15 +227,17 @@ function InterpretationView({
     >
       <details className="chat-collapsible">
         <summary className="chat-collapsible__summary" role="button">
-          <span className="chat-collapsible__title">
-            Como entendi sua pergunta
+          <span className="chat-collapsible__label">
+            <span className="chat-collapsible__title">
+              Como entendi sua pergunta
+            </span>
+            <span className="chat-collapsible__summary-text">
+              {interpretation.intent}
+            </span>
           </span>
           <span className="chat-collapsible__hint">Ver detalhes</span>
         </summary>
         <div className="chat-collapsible__content">
-          <p className="chat-interpretation__intent">
-            {interpretation.intent}
-          </p>
           <dl>
             <div>
               <dt>Dimensões</dt>
@@ -326,7 +328,7 @@ function InsightView({
           ) : null}
           {result.columns.length > 0 ? (
             <div className="chat-result__table-wrapper">
-              <table>
+              <table className="chat-result__table">
                 <caption className="sr-only">
                   Resultado da análise {insight.title}
                 </caption>
