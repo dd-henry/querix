@@ -11,10 +11,23 @@ def test_build_system_prompt_vazio(tmp_path):
     assert "Você é um Engenheiro de Dados Sênior" in prompt
     assert "intervalo inclusivo no início e exclusivo no fim" in prompt
     assert "Use somente tabelas, colunas e relacionamentos declarados" in prompt
-    
+
     # Não deve ter as seções de contexto, pois passamos pastas vazias e schema vazio
     assert "=== CONTEXTO: ESQUEMA ATUAL" not in prompt
     assert "=== CONTEXTO: REGRAS DE NEGÓCIO ===" not in prompt
+
+
+def test_build_system_prompt_nao_inventa_filtros_de_identificacao(tmp_path):
+    prompter = Prompter(context_dir=str(tmp_path))
+
+    prompt = prompter.build_system_prompt()
+
+    assert "Não crie filtros por identificador" in prompt
+    assert "quando o usuário não informar esse valor" in prompt
+    assert (
+        "Sem esse valor, não transforme a pergunta em busca de um registro individual"
+        in prompt
+    )
 
 
 def test_build_system_prompt_inclui_estrategias_analiticas_genericas(tmp_path):
@@ -89,5 +102,10 @@ def test_build_stage_prompts_define_planning_and_sql_contracts(tmp_path):
     assert "intent deve ser uma descrição curta e não vazia" in planner_prompt
     assert "ETAPA 2: GERAÇÃO SQL" in sql_prompt
     assert "supporting_queries e grafico" in sql_prompt
+    assert (
+        "Todo placeholder nomeado usado no SQL deve ter uma chave correspondente"
+        in sql_prompt
+    )
+    assert "nunca gere placeholders sem valor" in sql_prompt
     assert "Tabela: events" in planner_prompt
     assert "Tabela: events" in sql_prompt
