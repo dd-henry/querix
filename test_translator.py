@@ -84,6 +84,35 @@ def test_clean_sql_response_discards_malformed_supporting_queries(
     assert resultado["supporting_queries"] == []
 
 
+def test_summarize_result_returns_model_generated_summary(translator):
+    result = {
+        "columns": ["region", "metric"],
+        "rows": [{"region": "Sul", "metric": 12}],
+        "row_count": 1,
+        "truncated": False,
+    }
+
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={
+            "message": {
+                "content": '{"summary":"A região Sul apresentou 12 unidades."}'
+            }
+        },
+    ) as chat:
+        summary = translator.summarize_result(
+            "Quantas unidades existem na região Sul?",
+            result,
+        )
+
+    assert summary == "A região Sul apresentou 12 unidades."
+    assert chat.call_args.kwargs["messages"][0]["role"] == "system"
+    assert "Não presuma que uma coluna representa receita" in (
+        chat.call_args.kwargs["messages"][0]["content"]
+    )
+    assert '"region": "Sul"' in chat.call_args.kwargs["messages"][1]["content"]
+
+
 def test_translate_to_sql_passes_context_before_current_question(translator):
     context = [
         {"role": "user", "content": "Quantos clientes?"},

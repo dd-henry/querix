@@ -14,6 +14,7 @@ from core.query_plan import QueryPlan, QueryPlanError
 from core.query_validation import PlanValidator, QueryValidationError
 from core.result_quality import build_interpretation, critique_result
 from core.semantic_context import SemanticContextService
+from core.translator import TranslationStageError
 from database.conversations import ConversationRepository
 from database.postgres import PostgresAdapter
 from database.predefined_queries import PredefinedQueryRepository
@@ -630,7 +631,6 @@ class ChatService:
             )
             dataframe = self.database.execute_read_only_query(sql, parameters)
             result = serialize_dataframe(dataframe, max_rows=self.result_limit)
-            summary = summarize_result(result)
             logger.info(
                 "Chat database query finished request_id=%s conversation_id=%s "
                 "rows=%s elapsed_ms=%s",
@@ -681,7 +681,6 @@ class ChatService:
                     dataframe,
                     max_rows=self.result_limit,
                 )
-                summary = summarize_result(result)
                 logger.info(
                     "Chat repaired database query finished request_id=%s "
                     "conversation_id=%s rows=%s elapsed_ms=%s",
@@ -702,6 +701,25 @@ class ChatService:
                 )
 
         self._raise_if_cancelled(request_id)
+        user_message = self._find_message(messages, request_id, "user")
+        user_question = str((user_message or {}).get("content") or "")
+        interpretation = metadata.get("interpretation")
+        if not isinstance(interpretation, dict):
+            interpretation = build_interpretation(
+                metadata.get("plan"),
+                metadata.get("temporal"),
+            )
+        self._set_progress(
+            request_id,
+            "summarizing_result",
+            "Interpretando o resultado da consulta.",
+        )
+        summary = self._summarize_result(
+            user_question,
+            result,
+            interpretation,
+        )
+        self._raise_if_cancelled(request_id)
         self._set_progress(
             request_id,
             "calculating_insights",
@@ -712,23 +730,12 @@ class ChatService:
             request_id,
         )
         self._raise_if_cancelled(request_id)
-        interpretation = metadata.get("interpretation")
-        if not isinstance(interpretation, dict):
-            interpretation = build_interpretation(
-                metadata.get("plan"),
-                metadata.get("temporal"),
-            )
         diagnostics = critique_result(result, metadata.get("plan"))
 
         warnings = self._record_history(
             user_id,
             conversation_id,
-            str(
-                (
-                    self._find_message(messages, request_id, "user")
-                    or {}
-                ).get("content") or ""
-            ),
+            user_question,
             sql,
             parameters,
             metadata,
@@ -779,6 +786,35 @@ class ChatService:
                 diagnostics.to_dict() if diagnostics is not None else None
             ),
         )
+
+    def _summarize_result(
+        self,
+        user_question: str,
+        result: ResultPayload,
+        interpretation: Optional[Mapping[str, object]],
+    ) -> str:
+        summarize = getattr(self.translator, "summarize_result", None)
+        if not callable(summarize):
+            return summarize_result(result)
+        try:
+            generated = summarize(
+                user_question=user_question,
+                result=result,
+                interpretation=interpretation,
+            )
+        except (TranslationStageError, TypeError, ValueError) as exc:
+            logger.warning(
+                "AI result summarization failed; using neutral fallback: %s",
+                exc,
+            )
+            return summarize_result(result)
+        if not isinstance(generated, str) or not generated.strip():
+            logger.warning(
+                "AI result summarization returned an empty summary; "
+                "using neutral fallback."
+            )
+            return summarize_result(result)
+        return generated.strip()
 
     def _attempt_query_repair(
         self,

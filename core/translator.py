@@ -227,6 +227,55 @@ class Translator:
                 raise
             raise TranslationStageError("sql_generation", str(exc)) from exc
 
+    def summarize_result(
+        self,
+        user_question: str,
+        result: Mapping[str, object],
+        interpretation: Optional[Mapping[str, object]] = None,
+    ) -> str:
+        prompt = (
+            "Você é um analista de dados. Gere um resumo curto e útil do "
+            "resultado da consulta para a pessoa que fez a pergunta. Use "
+            "somente a pergunta, a interpretação e os dados fornecidos. "
+            "Explique os valores e padrões relevantes sem inventar dados. "
+            "Não presuma que uma coluna representa receita, vendas, produtos "
+            "ou qualquer outro conceito de negócio; deduza o significado "
+            "somente do contexto recebido. Se houver várias linhas, escolha "
+            "uma síntese adequada à pergunta. Retorne somente um objeto JSON "
+            'válido no formato {"summary":"texto"}; não inclua markdown ou '
+            "texto adicional."
+        )
+        request = {
+            "question": user_question,
+            "interpretation": dict(interpretation or {}),
+            "result": dict(result),
+        }
+        messages = [
+            {"role": "system", "content": prompt},
+            {
+                "role": "user",
+                "content": json.dumps(
+                    request,
+                    ensure_ascii=False,
+                    default=str,
+                ),
+            },
+        ]
+        try:
+            response = self._chat(messages)
+            raw_content = response.get("message", {}).get("content", "")
+            if not isinstance(raw_content, str):
+                raise ValueError("The summarizer returned no text.")
+            payload = self._extract_json_payload(raw_content)
+            summary = payload.get("summary")
+            if not isinstance(summary, str) or not summary.strip():
+                raise ValueError("The summarizer returned an empty summary.")
+            return summary.strip()
+        except Exception as exc:
+            if isinstance(exc, TranslationStageError):
+                raise
+            raise TranslationStageError("summarization", str(exc)) from exc
+
     def repair_query(
         self,
         sql: str,

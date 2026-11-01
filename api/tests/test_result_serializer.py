@@ -91,60 +91,40 @@ def test_serialize_dataframe_normalizes_special_values_deterministically():
     )
 
 
-def test_summarize_product_result_includes_rows_quantity_and_value():
+def test_summarize_result_is_domain_neutral():
     result = {
-        "columns": ["produto", "quantidade", "valor"],
+        "columns": ["total_vendas", "quantidade"],
         "rows": [
-            {"produto": "Picanha", "quantidade": "2", "valor": "10.00"},
-            {"produto": "Cerveja", "quantidade": "3", "valor": "5.50"},
+            {"total_vendas": "10.00", "quantidade": "2"},
+            {"total_vendas": "5.50", "quantidade": "3"},
         ],
         "row_count": 2,
         "truncated": False,
     }
 
-    assert summarize_result(result) == (
-        "Encontrei 2 produto(s), totalizando 5 unidade(s), "
-        "R$ 15,50 em valor dos itens."
-    )
+    assert summarize_result(result) == "A consulta retornou 2 linha(s)."
 
 
-def test_summarize_revenue_result_uses_returned_total():
+def test_summarize_result_does_not_assign_business_meaning_to_columns():
     result = {
         "columns": ["total_vendas"],
-        "rows": [{"total_vendas": "1498.00"}],
-        "row_count": 1,
+        "rows": [{"total_vendas": "1498.00"}, {"total_vendas": "10.00"}],
+        "row_count": 2,
         "truncated": False,
     }
 
-    assert summarize_result(result) == "O faturamento retornado foi R$ 1.498,00."
+    assert summarize_result(result) == "A consulta retornou 2 linha(s)."
 
 
-def test_summarize_revenue_result_sums_all_returned_rows():
+def test_summarize_result_marks_truncation_without_interpreting_data():
     result = {
-        "columns": ["total_vendas"],
-        "rows": [
-            {"total_vendas": "15.50"},
-            {"total_vendas": "59.90"},
-            {"total_vendas": "152.00"},
-        ],
-        "row_count": 3,
-        "truncated": False,
-    }
-
-    assert summarize_result(result) == "O faturamento retornado foi R$ 227,40."
-
-
-def test_summarize_result_ignores_invalid_metrics_and_marks_truncation():
-    result = {
-        "columns": ["produto", "quantidade", "valor"],
-        "rows": [
-            {"produto": "Picanha", "quantidade": None, "valor": "invalido"},
-        ],
+        "columns": ["metric"],
+        "rows": [{"metric": "value"}],
         "row_count": 5001,
         "truncated": True,
     }
 
     assert summarize_result(result) == (
-        "Encontrei 1 produto(s). O resumo considera apenas as linhas "
-        "retornadas porque o resultado foi limitado."
+        "A consulta retornou 5001 linha(s). O resumo considera apenas as "
+        "linhas retornadas porque o resultado foi limitado."
     )

@@ -132,6 +132,17 @@ class FakeTranslator:
         return self.response
 
 
+class SummaryTranslator(FakeTranslator):
+    def __init__(self, summary):
+        super().__init__()
+        self.summary = summary
+        self.summary_calls = []
+
+    def summarize_result(self, **kwargs):
+        self.summary_calls.append(kwargs)
+        return self.summary
+
+
 class RepairTranslator(FakeTranslator):
     def __init__(self, repair_response):
         super().__init__()
@@ -655,6 +666,29 @@ def test_stored_execution_is_read_only_bounded_and_records_history():
         session_id=CONVERSATION_ID,
     )
     assert repository.update_calls[-1][3] == "Aqui estão os resultados da consulta:"
+
+
+def test_stored_execution_uses_ai_summary_when_available():
+    repository = MemoryConversationRepository(
+        [_user_message(), _assistant_message()]
+    )
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame(
+        [{"region": "Sul", "metric": 12}]
+    )
+    translator = SummaryTranslator("A região Sul apresentou 12 unidades.")
+
+    result = _service(repository, translator, database).execute_stored_query(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.summary == "A região Sul apresentou 12 unidades."
+    assert translator.summary_calls[0]["user_question"] == "Show revenue"
+    assert translator.summary_calls[0]["result"]["rows"] == [
+        {"region": "Sul", "metric": 12}
+    ]
 
 
 def test_stored_execution_returns_supporting_insights_after_primary_result():
