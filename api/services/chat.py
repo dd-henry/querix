@@ -8,6 +8,9 @@ from api.serializers.results import (
     serialize_dataframe,
     summarize_result,
 )
+from core.query_plan import QueryPlan, QueryPlanError
+from core.query_validation import PlanValidator, QueryValidationError
+from core.semantic_context import SemanticContextService
 from database.conversations import ConversationRepository
 from database.postgres import PostgresAdapter
 from database.predefined_queries import PredefinedQueryRepository
@@ -63,6 +66,7 @@ class ChatService:
         query_history_repository: Optional[QueryHistoryRepository] = None,
         prompt_limit: int = 2_000,
         result_limit: int = 5_000,
+        semantic_context: Optional[SemanticContextService] = None,
     ):
         self.conversation_repository = conversation_repository
         self.translator = translator
@@ -70,6 +74,7 @@ class ChatService:
         self.query_history_repository = query_history_repository
         self.prompt_limit = prompt_limit
         self.result_limit = result_limit
+        self.semantic_context = semantic_context
 
     def translate_prompt(
         self,
@@ -152,6 +157,12 @@ class ChatService:
         supporting_queries = self._prepare_supporting_queries(
             translated.get("supporting_queries")
         )
+        plan = self._validate_plan(
+            translated.get("plan"),
+            user_id,
+            conversation_id,
+            request_id,
+        )
         if sql.startswith("AVISO:"):
             self._persist_assistant_turn(
                 user_id,
@@ -176,8 +187,8 @@ class ChatService:
             )
 
         try:
-            normalized_sql = PredefinedQueryRepository.validate_query(sql, [])
-        except (AttributeError, TypeError, ValueError) as exc:
+            normalized_sql = PlanValidator.validate_sql(sql)
+        except QueryValidationError as exc:
             self._persist_assistant_turn(
                 user_id,
                 conversation_id,
@@ -209,6 +220,7 @@ class ChatService:
                 "parameters": parameters,
                 "intent": intent,
                 "supporting_queries": supporting_queries,
+                "plan": plan.to_dict() if plan is not None else None,
             },
         )
         return ChatResult(
@@ -219,6 +231,38 @@ class ChatService:
             sql=normalized_sql,
             chart=chart,
         )
+
+    def _validate_plan(
+        self,
+        value: object,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+    ) -> Optional[QueryPlan]:
+        if value is None:
+            return None
+        try:
+            plan = value if isinstance(value, QueryPlan) else QueryPlan.from_payload(value)
+            if self.semantic_context is not None:
+                PlanValidator.validate_plan(
+                    plan,
+                    self.semantic_context.get_profile(),
+                )
+            return plan
+        except (QueryPlanError, QueryValidationError) as exc:
+            self._persist_assistant_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                "O plano analítico gerado não corresponde ao esquema atual.",
+                error="query_plan_invalid",
+                metadata={"validation_code": getattr(exc, "code", "invalid_plan")},
+            )
+            raise ChatServiceError(
+                422,
+                "query_plan_invalid",
+                str(exc),
+            ) from exc
 
     def execute_stored_query(
         self,

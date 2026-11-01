@@ -81,6 +81,7 @@ def get_chat_service(
     query_history_repository: QueryHistoryRepository = Depends(
         get_query_history_repository
     ),
+    semantic_context: SemanticContextService = Depends(get_semantic_context),
 ) -> ChatService:
     return ChatService(
         conversation_repository,
@@ -89,6 +90,7 @@ def get_chat_service(
         query_history_repository=query_history_repository,
         prompt_limit=settings.prompt_limit,
         result_limit=settings.result_limit,
+        semantic_context=semantic_context,
     )
 
 

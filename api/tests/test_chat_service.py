@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from api.services.chat import ChatService, ChatServiceError
+from core.semantic_context import SemanticContextService
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
 CONVERSATION_ID = UUID("00000000-0000-0000-0000-000000000002")
@@ -132,12 +133,14 @@ def _service(
     translator,
     database=None,
     history=None,
+    semantic_context=None,
 ):
     return ChatService(
         repository,
         translator,
         database or Mock(),
         query_history_repository=history,
+        semantic_context=semantic_context,
     )
 
 
@@ -307,6 +310,56 @@ def test_multi_statement_generated_sql_is_rejected_before_database_call():
 
     assert error.value.code == "sql_not_read_only"
     database.execute_read_only_query.assert_not_called()
+
+
+def test_unknown_plan_identifier_is_rejected_before_database_call():
+    repository = MemoryConversationRepository()
+    translator = FakeTranslator(
+        response={
+            "sql": "SELECT missing FROM orders",
+            "plan": {
+                "intent": "list",
+                "tables": ["orders"],
+                "relationships": [],
+                "dimensions": ["orders.missing"],
+                "metrics": [],
+                "filters": [],
+                "grain": None,
+                "assumptions": ["the requested column is available"],
+            },
+        }
+    )
+    database = Mock()
+    metadata_source = Mock()
+    metadata_source.get_schema_metadata.return_value = {
+        "tables": [
+            {
+                "name": "orders",
+                "columns": [{"name": "id", "data_type": "integer"}],
+            }
+        ],
+        "relationships": [],
+    }
+    semantic_context = SemanticContextService(metadata_source)
+    service = _service(
+        repository,
+        translator,
+        database,
+        semantic_context=semantic_context,
+    )
+
+    with pytest.raises(ChatServiceError) as error:
+        service.translate_prompt(
+            USER_ID,
+            CONVERSATION_ID,
+            REQUEST_ID,
+            "List orders",
+        )
+
+    assert error.value.status_code == 422
+    assert error.value.code == "query_plan_invalid"
+    assert repository.messages[-1]["error"] == "query_plan_invalid"
+    assert database.execute_read_only_query.call_count == 0
 
 
 def test_invalid_stored_sql_is_rejected_before_database_call():

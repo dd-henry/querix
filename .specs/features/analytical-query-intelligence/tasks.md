@@ -156,7 +156,7 @@ response shape.
 
 ### T4: Validating plans and SQL
 
-**Status**: Pending
+**Status**: Complete
 
 **What**: Reject unknown plan identifiers and preserve the existing read-only
 SQL guard before any database execution.

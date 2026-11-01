@@ -230,12 +230,14 @@ class Translator:
                 conversation_context=conversation_context,
                 temporal_interpretation=temporal,
             )
-            return self.translate_plan_to_sql(
+            translated = self.translate_plan_to_sql(
                 plan,
                 user_question,
                 conversation_context=conversation_context,
                 temporal_interpretation=temporal,
             )
+            translated["plan"] = plan.to_dict()
+            return translated
 
         return self._translate_legacy(
             user_question,
