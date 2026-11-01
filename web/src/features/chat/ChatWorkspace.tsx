@@ -33,6 +33,7 @@ export interface ChatWorkspaceProps {
   messages: ChatMessage[];
   error?: string | null;
   onSend: (prompt: string) => Promise<boolean>;
+  onCancelRequest?: () => boolean;
   onRetry: (requestId: string) => Promise<boolean>;
   onConfirmExecution: (requestId: string) => Promise<boolean>;
   onCancelReview: (requestId: string) => void;
@@ -383,6 +384,7 @@ export function ChatWorkspace({
   messages,
   error,
   onSend,
+  onCancelRequest,
   onRetry,
   onConfirmExecution,
   onCancelReview,
@@ -398,10 +400,9 @@ export function ChatWorkspace({
   );
   const submitPrompt = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const sent = await onSend(prompt);
-    if (sent) {
-      setPrompt("");
-    }
+    const promptToSend = prompt;
+    setPrompt("");
+    await onSend(promptToSend);
   };
 
   const handlePromptKeyDown = (
@@ -430,6 +431,7 @@ export function ChatWorkspace({
       <MessageList
         messages={messages}
         pendingRequestId={pendingRequestId}
+        onCancelRequest={onCancelRequest}
         onRetry={(requestId) => {
           void onRetry(requestId);
         }}

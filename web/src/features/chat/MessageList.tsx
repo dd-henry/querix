@@ -5,6 +5,7 @@ import type { ChatMessage } from "./useChat";
 export interface MessageListProps {
   messages: ChatMessage[];
   onRetry: (requestId: string) => void;
+  onCancelRequest?: () => void;
   pendingRequestId?: string;
   renderAfterMessage?: (message: ChatMessage) => ReactNode;
 }
@@ -21,6 +22,7 @@ function liveStatus(messages: ChatMessage[]): string {
 export function MessageList({
   messages,
   onRetry,
+  onCancelRequest,
   pendingRequestId,
   renderAfterMessage,
 }: MessageListProps) {
@@ -84,7 +86,16 @@ export function MessageList({
         })}
       </div>
       <div className="message-list__live-status" role="status" aria-live="polite">
-        {liveStatus(messages)}
+        {!pendingRequestId ? liveStatus(messages) : null}
+        {pendingRequestId && onCancelRequest ? (
+          <button
+            type="button"
+            onClick={onCancelRequest}
+            aria-label="Cancelar consulta em andamento"
+          >
+            Cancelar consulta
+          </button>
+        ) : null}
       </div>
     </section>
   );

@@ -95,6 +95,7 @@ function Harness({
       <output data-testid="conversation">{chat.conversationId ?? ""}</output>
       <output data-testid="error">{chat.error ?? ""}</output>
       <button onClick={() => void chat.send("Show revenue")}>send</button>
+      <button onClick={() => chat.cancelActiveRequest()}>cancel-request</button>
       <button
         onClick={() => {
           if (assistant) {
@@ -214,7 +215,7 @@ describe("useChat", () => {
       request_id: "generated-2",
       prompt: "Show revenue",
       review_mode: true,
-    });
+    }, { signal: expect.any(AbortSignal) });
 
     request.resolve(reviewResponse);
     await waitFor(() =>
@@ -278,6 +279,36 @@ describe("useChat", () => {
     expect(translate.mock.calls[0][0].request_id).toBe("generated-2");
   });
 
+  it("cancels an active request and ignores a late response", async () => {
+    const request = deferred<ChatResponse>();
+    const translate = vi.fn().mockReturnValue(request.promise);
+    const client = createClient({ translate });
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "send" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "cancel-request" }),
+    );
+
+    expect(readMessages()[1]).toEqual(
+      expect.objectContaining({
+        status: "cancelled",
+        content: "Consulta cancelada.",
+      }),
+    );
+    expect(translate.mock.calls[0][1].signal.aborted).toBe(true);
+
+    request.resolve(reviewResponse);
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          status: "cancelled",
+          content: "Consulta cancelada.",
+        }),
+      ),
+    );
+  });
+
   it("executes only after review confirmation and updates the target", async () => {
     const execute = vi.fn().mockResolvedValue({
       ...reviewResponse,
@@ -306,7 +337,7 @@ describe("useChat", () => {
     expect(execute).toHaveBeenCalledWith({
       conversation_id: "generated-1",
       request_id: "generated-2",
-    });
+    }, { signal: expect.any(AbortSignal) });
     expect(readMessages()).toHaveLength(2);
   });
 
@@ -351,7 +382,7 @@ describe("useChat", () => {
     expect(execute).toHaveBeenCalledWith({
       conversation_id: "conversation-1",
       request_id: "request-1",
-    });
+    }, { signal: expect.any(AbortSignal) });
     expect(execute.mock.calls[0][0]).not.toHaveProperty("sql");
     expect(readMessages()).toHaveLength(2);
   });
@@ -509,6 +540,7 @@ describe("useChat", () => {
     expect(readMessages()).toHaveLength(2);
     expect(translate).toHaveBeenCalledWith(
       expect.objectContaining({ review_mode: false }),
+      { signal: expect.any(AbortSignal) },
     );
     expect(client.chat.execute).not.toHaveBeenCalled();
   });
@@ -573,7 +605,7 @@ describe("useChat", () => {
     expect(retry).toHaveBeenCalledWith({
       conversation_id: "generated-1",
       request_id: "generated-2",
-    });
+    }, { signal: expect.any(AbortSignal) });
     expect(readMessages()).toHaveLength(2);
   });
 
@@ -614,7 +646,7 @@ describe("useChat", () => {
     expect(retry).toHaveBeenCalledWith({
       conversation_id: "generated-1",
       request_id: "generated-2",
-    });
+    }, { signal: expect.any(AbortSignal) });
     expect(readMessages()).toHaveLength(2);
   });
 });

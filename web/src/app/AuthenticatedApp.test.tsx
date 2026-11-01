@@ -84,6 +84,7 @@ describe("AuthenticatedApp", () => {
     await waitFor(() =>
       expect(client.chat.translate).toHaveBeenCalledWith(
         expect.objectContaining({ review_mode: false }),
+        { signal: expect.any(AbortSignal) },
       ),
     );
   });

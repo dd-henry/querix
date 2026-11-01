@@ -14,7 +14,7 @@ import {
   type PredefinedExecutionResponse,
 } from "../../api/client";
 
-export type ChatMessageStatus = ChatStatus | "pending" | "error";
+export type ChatMessageStatus = ChatStatus | "pending" | "error" | "cancelled";
 export type ChatReviewState = "open" | "cancelled" | "confirmed";
 
 export interface ChatMessage {
@@ -48,6 +48,7 @@ export interface UseChatResult {
   messages: ChatMessage[];
   error: string | null;
   send: (prompt: string) => Promise<boolean>;
+  cancelActiveRequest: () => boolean;
   confirmExecution: (requestId: string) => Promise<boolean>;
   cancelReview: (requestId: string) => void;
   retry: (requestId: string) => Promise<boolean>;
@@ -59,6 +60,7 @@ export interface UseChatResult {
 
 interface ActiveRequest {
   requestId: string;
+  controller: AbortController;
   promise: Promise<boolean>;
 }
 
@@ -250,7 +252,7 @@ export function useChat({
   const startRequest = useCallback(
     (
       requestId: string,
-      operation: () => Promise<ChatResponse>,
+      operation: (signal: AbortSignal) => Promise<ChatResponse>,
       retryKind: ChatRetryKind,
     ): Promise<boolean> => {
       const activeRequest = activeRequestRef.current;
@@ -258,14 +260,21 @@ export function useChat({
         return activeRequest.promise;
       }
 
+      const controller = new AbortController();
       const promise = (async () => {
         try {
-          const response = await operation();
+          const response = await operation(controller.signal);
+          if (controller.signal.aborted) {
+            return false;
+          }
           updateAssistant(requestId, (current) =>
             responseMessage(current, response),
           );
           return true;
         } catch (requestError: unknown) {
+          if (controller.signal.aborted) {
+            return false;
+          }
           const described = describeError(requestError);
           updateAssistant(requestId, (current) => ({
             ...current,
@@ -282,7 +291,11 @@ export function useChat({
           }
         }
       })();
-      activeRequestRef.current = { requestId, promise };
+      activeRequestRef.current = {
+        requestId,
+        controller,
+        promise,
+      };
       return promise;
     },
     [updateAssistant],
@@ -330,18 +343,42 @@ export function useChat({
 
       return startRequest(
         requestId,
-        () =>
-          client.chat.translate({
-            conversation_id: nextConversationId,
-            request_id: requestId,
-            prompt: normalizedPrompt,
-            review_mode: reviewMode,
-          }),
+        (signal) =>
+          client.chat.translate(
+            {
+              conversation_id: nextConversationId,
+              request_id: requestId,
+              prompt: normalizedPrompt,
+              review_mode: reviewMode,
+            },
+            { signal },
+          ),
         "translate",
       );
     },
     [client, reviewMode, startRequest],
   );
+
+  const cancelActiveRequest = useCallback(() => {
+    const activeRequest = activeRequestRef.current;
+    if (!activeRequest) {
+      return false;
+    }
+
+    activeRequest.controller.abort();
+    activeRequestRef.current = null;
+    setError(null);
+    updateAssistant(activeRequest.requestId, (message) => ({
+      ...message,
+      content: "Consulta cancelada.",
+      status: "cancelled",
+      error: undefined,
+      retryable: false,
+      retryKind: undefined,
+      reviewState: "cancelled",
+    }));
+    return true;
+  }, [updateAssistant]);
 
   const confirmExecution = useCallback(
     (requestId: string) => {
@@ -370,11 +407,14 @@ export function useChat({
       }));
       return startRequest(
         requestId,
-        () =>
-          client.chat.execute({
-            conversation_id: activeConversationId,
-            request_id: requestId,
-          }),
+        (signal) =>
+          client.chat.execute(
+            {
+              conversation_id: activeConversationId,
+              request_id: requestId,
+            },
+            { signal },
+          ),
         "execute",
       );
     },
@@ -423,11 +463,14 @@ export function useChat({
       }));
       return startRequest(
         requestId,
-        () =>
-          client.chat.retry({
-            conversation_id: activeConversationId,
-            request_id: requestId,
-          }),
+        (signal) =>
+          client.chat.retry(
+            {
+              conversation_id: activeConversationId,
+              request_id: requestId,
+            },
+            { signal },
+          ),
         current.retryKind ?? "translate",
       );
     },
@@ -518,5 +561,6 @@ export function useChat({
     newConversation,
     appendChatResponse,
     appendPredefinedResult,
+    cancelActiveRequest,
   };
 }

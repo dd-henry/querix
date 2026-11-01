@@ -76,6 +76,7 @@ export function AuthenticatedApp({
       messages={chat.messages}
       error={chat.error}
       onSend={chat.send}
+      onCancelRequest={chat.cancelActiveRequest}
       onRetry={chat.retry}
       onConfirmExecution={chat.confirmExecution}
       onCancelReview={chat.cancelReview}

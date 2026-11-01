@@ -159,6 +159,10 @@ export interface ChatRequestInput {
   request_id: string;
 }
 
+export interface ChatRequestOptions {
+  signal?: AbortSignal;
+}
+
 export interface ChatResultPayload {
   columns: string[];
   rows: Array<Record<string, unknown>>;
@@ -379,27 +383,39 @@ export function createApiClient({
         ),
     },
     chat: {
-      translate: async (input: ChatTranslateInput) =>
+      translate: async (
+        input: ChatTranslateInput,
+        options: ChatRequestOptions = {},
+      ) =>
         requireResponse(
           await request<ChatResponse>("/api/chat/translate", {
             method: "POST",
             body: input,
+            signal: options.signal,
           }),
           "chat translation",
         ),
-      execute: async (input: ChatRequestInput) =>
+      execute: async (
+        input: ChatRequestInput,
+        options: ChatRequestOptions = {},
+      ) =>
         requireResponse(
           await request<ChatResponse>("/api/chat/execute", {
             method: "POST",
             body: input,
+            signal: options.signal,
           }),
           "chat execution",
         ),
-      retry: async (input: ChatRequestInput) =>
+      retry: async (
+        input: ChatRequestInput,
+        options: ChatRequestOptions = {},
+      ) =>
         requireResponse(
           await request<ChatResponse>("/api/chat/retry", {
             method: "POST",
             body: input,
+            signal: options.signal,
           }),
           "chat retry",
         ),

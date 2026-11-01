@@ -71,6 +71,35 @@ describe("MessageList", () => {
     );
   });
 
+  it("shows cancellation without duplicating pending status text", () => {
+    const onCancelRequest = vi.fn();
+    render(
+      <MessageList
+        messages={[
+          userMessage,
+          {
+            ...assistantMessage,
+            status: "pending",
+            content: "Processando sua pergunta...",
+          },
+        ]}
+        onRetry={vi.fn()}
+        pendingRequestId="request-1"
+        onCancelRequest={onCancelRequest}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Cancelar consulta em andamento" }))
+      .toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent(
+      "Processando sua pergunta...",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Cancelar consulta em andamento" }),
+    );
+    expect(onCancelRequest).toHaveBeenCalledOnce();
+  });
+
   it("places attachments immediately after their assistant message", () => {
     const { container } = render(
       <MessageList

@@ -57,6 +57,7 @@ function renderWorkspace(
   const props: React.ComponentProps<typeof ChatWorkspace> = {
     messages,
     onSend: vi.fn().mockResolvedValue(true),
+    onCancelRequest: vi.fn().mockReturnValue(true),
     onRetry: vi.fn().mockResolvedValue(true),
     onConfirmExecution: vi.fn().mockResolvedValue(true),
     onCancelReview: vi.fn(),
@@ -88,6 +89,22 @@ describe("ChatWorkspace", () => {
     );
   });
 
+  it("clears the composer before the request resolves", () => {
+    let resolveRequest!: (value: boolean) => void;
+    const request = new Promise<boolean>((resolve) => {
+      resolveRequest = resolve;
+    });
+    const onSend = vi.fn().mockReturnValue(request);
+    renderWorkspace([], { onSend });
+    const composer = screen.getByLabelText("Pergunte sobre seus dados");
+
+    fireEvent.change(composer, { target: { value: "Show revenue" } });
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    expect(composer).toHaveValue("");
+    resolveRequest(true);
+  });
+
   it("disables the composer while a request is pending", () => {
     renderWorkspace([
       userMessage,
@@ -100,6 +117,27 @@ describe("ChatWorkspace", () => {
 
     expect(screen.getByLabelText("Pergunte sobre seus dados")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Enviar pergunta" })).toBeDisabled();
+  });
+
+  it("offers cancellation for a pending request", () => {
+    const onCancelRequest = vi.fn().mockReturnValue(true);
+    renderWorkspace(
+      [
+        userMessage,
+        {
+          ...reviewMessage,
+          status: "pending",
+          reviewState: undefined,
+        },
+      ],
+      { onCancelRequest },
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Cancelar consulta em andamento" }),
+    );
+
+    expect(onCancelRequest).toHaveBeenCalledOnce();
   });
 
   it("requires explicit review confirmation and exposes cancellation", async () => {
