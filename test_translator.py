@@ -102,19 +102,25 @@ def test_translate_to_sql_passes_context_before_current_question(translator):
     ]
 
 
-def test_translate_to_sql_uses_deterministic_product_query_before_ollama(translator):
-    with patch("core.translator.ollama.chat") as chat:
+def test_translate_to_sql_dispatches_former_domain_question_to_ollama(translator):
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={
+            "message": {
+                "content": (
+                    '{"sql":"SELECT product_name, SUM(quantity) AS total '
+                    'FROM inventory GROUP BY product_name"}'
+                )
+            }
+        },
+    ) as chat:
         resultado = translator.translate_to_sql(
-            "Quais foram os produtos vendidos em agosto de 2026?"
+            "Quais produtos foram vendidos em agosto de 2026?"
         )
 
-    assert resultado["intent"] == "product_sales"
-    assert "SUM(iv.quantidade) AS quantidade" in resultado["sql"]
-    assert "SUM(iv.subtotal) AS valor" in resultado["sql"]
-    assert resultado["parameters"]["period_start"] == (
-        "2026-08-01T00:00:00+00:00"
-    )
-    chat.assert_not_called()
+    assert resultado["sql"].startswith("SELECT product_name")
+    assert "intent" not in resultado
+    assert chat.call_count == 1
 
 
 def test_translate_to_sql_preserves_two_message_request_without_context(translator):
