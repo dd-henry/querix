@@ -38,6 +38,36 @@ def test_builds_grouped_product_query_with_quantity_and_value():
     assert "v.status = 'concluida'" in result.sql
     assert result.parameters["period_start"] == "2026-08-01T00:00:00+00:00"
     assert result.parameters["period_end"] == "2026-09-01T00:00:00+00:00"
+    assert len(result.supporting_queries) == 3
+
+
+def test_builds_sales_list_with_managerial_support_queries():
+    result = build_known_query(
+        "Quais foram as vendas do mês de agosto?",
+        reference_date=date(2026, 10, 31),
+    )
+
+    assert result is not None
+    assert result.intent == "sales_list"
+    assert "SELECT v.id" in result.sql
+    assert "v.data_hora >= :period_start" in result.sql
+    assert "v.data_hora < :period_end" in result.sql
+    assert "v.status = 'concluida'" in result.sql
+    assert result.parameters == {
+        "period_start": "2026-08-01T00:00:00+00:00",
+        "period_end": "2026-09-01T00:00:00+00:00",
+    }
+    assert [query.key for query in result.supporting_queries] == [
+        "sales_kpis",
+        "top_products",
+        "payment_methods",
+    ]
+    assert all(
+        query.parameters == result.parameters
+        for query in result.supporting_queries
+    )
+    assert "JOIN itens_venda iv" in result.supporting_queries[1].sql
+    assert "JOIN produtos p" in result.supporting_queries[1].sql
 
 
 def test_uses_reference_month_when_period_is_omitted():

@@ -53,7 +53,7 @@ T4 → T5 → T6
 
 ### T1: Extend deterministic period and sales intent planning
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Resolve current-year/current-month defaults and recognize detailed
 sales-period questions, returning a primary query plus bounded supporting query

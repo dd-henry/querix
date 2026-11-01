@@ -1,6 +1,6 @@
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, time, timezone
 from typing import Dict, Optional, Tuple
 
@@ -22,10 +22,29 @@ _MONTHS = {
 
 
 @dataclass(frozen=True)
+class SupportingQuery:
+    key: str
+    title: str
+    sql: str
+    parameters: Dict[str, str]
+
+    def as_translation(self) -> dict:
+        return {
+            "key": self.key,
+            "title": self.title,
+            "sql": self.sql,
+            "parameters": self.parameters,
+        }
+
+
+@dataclass(frozen=True)
 class AnalyticalQuery:
     sql: str
     parameters: Dict[str, str]
     intent: str
+    supporting_queries: Tuple[SupportingQuery, ...] = field(
+        default_factory=tuple
+    )
 
     def as_translation(self) -> dict:
         return {
@@ -33,6 +52,10 @@ class AnalyticalQuery:
             "grafico": None,
             "parameters": self.parameters,
             "intent": self.intent,
+            "supporting_queries": [
+                query.as_translation()
+                for query in self.supporting_queries
+            ],
         }
 
 
@@ -133,6 +156,79 @@ def _is_revenue_question(question: str) -> bool:
     ) and not _is_product_question(question)
 
 
+def _is_sales_list_question(question: str) -> bool:
+    normalized = _normalize(question)
+    return any(
+        phrase in normalized
+        for phrase in (
+            "quais foram as vendas",
+            "quais sao as vendas",
+            "listar vendas",
+            "liste as vendas",
+            "vendas realizadas",
+            "vendas do periodo",
+            "vendas deste mes",
+            "vendas desse mes",
+        )
+    )
+
+
+def _supporting_sales_queries(
+    parameters: Dict[str, str],
+) -> Tuple[SupportingQuery, ...]:
+    return (
+        SupportingQuery(
+            key="sales_kpis",
+            title="Indicadores do período",
+            sql=(
+                "SELECT COUNT(*) AS quantidade_vendas, "
+                "COALESCE(SUM(v.valor_total), 0) AS faturamento, "
+                "COALESCE(AVG(v.valor_total), 0) AS ticket_medio "
+                "FROM vendas v "
+                "WHERE v.status = 'concluida' "
+                "AND v.data_hora >= :period_start "
+                "AND v.data_hora < :period_end"
+            ),
+            parameters=parameters,
+        ),
+        SupportingQuery(
+            key="top_products",
+            title="Produtos mais vendidos",
+            sql=(
+                "SELECT p.nome AS produto, "
+                "SUM(iv.quantidade) AS quantidade, "
+                "SUM(iv.subtotal) AS valor "
+                "FROM vendas v "
+                "JOIN itens_venda iv ON iv.venda_id = v.id "
+                "JOIN produtos p ON p.id = iv.produto_id "
+                "WHERE v.status = 'concluida' "
+                "AND v.data_hora >= :period_start "
+                "AND v.data_hora < :period_end "
+                "GROUP BY p.id, p.nome "
+                "ORDER BY quantidade DESC, valor DESC, produto "
+                "LIMIT 5"
+            ),
+            parameters=parameters,
+        ),
+        SupportingQuery(
+            key="payment_methods",
+            title="Vendas por forma de pagamento",
+            sql=(
+                "SELECT v.forma_pagamento, "
+                "COUNT(*) AS quantidade_vendas, "
+                "COALESCE(SUM(v.valor_total), 0) AS faturamento "
+                "FROM vendas v "
+                "WHERE v.status = 'concluida' "
+                "AND v.data_hora >= :period_start "
+                "AND v.data_hora < :period_end "
+                "GROUP BY v.forma_pagamento "
+                "ORDER BY faturamento DESC, v.forma_pagamento"
+            ),
+            parameters=parameters,
+        ),
+    )
+
+
 def build_known_query(
     question: str,
     reference_date: Optional[date] = None,
@@ -161,6 +257,7 @@ def build_known_query(
             ),
             parameters=parameters,
             intent="product_sales",
+            supporting_queries=_supporting_sales_queries(parameters),
         )
 
     if _is_revenue_question(question):
@@ -174,6 +271,24 @@ def build_known_query(
             ),
             parameters=parameters,
             intent="revenue_total",
+            supporting_queries=_supporting_sales_queries(parameters),
+        )
+
+    if _is_sales_list_question(question):
+        return AnalyticalQuery(
+            sql=(
+                "SELECT v.id, v.cliente_id, v.funcionario_id, "
+                "v.data_hora, v.status, v.forma_pagamento, "
+                "v.valor_total, v.desconto "
+                "FROM vendas v "
+                "WHERE v.status = 'concluida' "
+                "AND v.data_hora >= :period_start "
+                "AND v.data_hora < :period_end "
+                "ORDER BY v.data_hora, v.id"
+            ),
+            parameters=parameters,
+            intent="sales_list",
+            supporting_queries=_supporting_sales_queries(parameters),
         )
 
     return None
