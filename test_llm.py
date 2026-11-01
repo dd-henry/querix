@@ -177,7 +177,7 @@ def test_openrouter_client_maps_messages_and_response_to_translator_contract():
     sent_request = request.call_args.args[0]
     sent_payload = json.loads(sent_request.data.decode("utf-8"))
     assert sent_request.full_url == "https://openrouter.ai/api/v1/chat/completions"
-    assert sent_request.get_header("Authorization").startswith("Bearer ")
+    assert sent_request.get_header("Authorization") == "Bearer " + "test-" + "key"
     assert sent_payload == {
         "model": "openai/test-model",
         "messages": [
