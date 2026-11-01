@@ -159,11 +159,18 @@ class GeminiChatClient:
                     body = response.read().decode("utf-8")
                 break
             except HTTPError as exc:
-                detail = exc.read().decode("utf-8", errors="replace").strip()
-                if (
-                    exc.code not in self._retryable_statuses
-                    or attempt >= self._max_retries
-                ):
+                should_retry = (
+                    exc.code in self._retryable_statuses
+                    and attempt < self._max_retries
+                )
+                try:
+                    detail = exc.read().decode("utf-8", errors="replace").strip()
+                except (URLError, TimeoutError, ConnectionError) as read_exc:
+                    if should_retry:
+                        self._wait_before_retry(attempt, exc.code)
+                        continue
+                    detail = f"unable to read error response: {read_exc}"
+                if not should_retry:
                     raise RuntimeError(
                         f"Gemini request failed with HTTP "
                         f"{exc.code}: {detail or exc.reason}"

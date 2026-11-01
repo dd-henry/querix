@@ -38,6 +38,14 @@ class _ReadTimeoutResponse:
         raise TimeoutError("response read timed out")
 
 
+class _FailingErrorBody:
+    def read(self):
+        raise ConnectionError("error response read failed")
+
+    def close(self):
+        return None
+
+
 def test_llm_config_defaults_to_local_ollama():
     config = LLMConfig.from_env({})
 
@@ -134,6 +142,39 @@ def test_gemini_client_retries_timeout_during_response_read():
     with patch(
         "core.llm.urlopen",
         side_effect=[_ReadTimeoutResponse(), response],
+    ) as request:
+        with patch("core.llm.random.uniform", return_value=0):
+            with patch("core.llm.time.sleep") as sleep:
+                result = client(
+                    model="gemini-test",
+                    messages=[{"role": "user", "content": "Question"}],
+                )
+
+    assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
+    assert request.call_count == 2
+    sleep.assert_called_once_with(1)
+
+
+def test_gemini_client_retries_when_transient_error_body_read_fails():
+    client = GeminiChatClient("test-key", max_retries=1)
+    transient_error = HTTPError(
+        "https://example.test",
+        503,
+        "Unavailable",
+        {},
+        _FailingErrorBody(),
+    )
+    response = _Response(
+        {
+            "candidates": [
+                {"content": {"parts": [{"text": '{"sql":"SELECT 1"}'}]}}
+            ]
+        }
+    )
+
+    with patch(
+        "core.llm.urlopen",
+        side_effect=[transient_error, response],
     ) as request:
         with patch("core.llm.random.uniform", return_value=0):
             with patch("core.llm.time.sleep") as sleep:
