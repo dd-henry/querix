@@ -119,9 +119,12 @@ test("keeps one user and assistant message during a double-clicked send", async 
   await expect(
     page.getByText("O faturamento retornado foi R$ 12,00."),
   ).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: "Leitura gerencial" }),
-  ).toBeVisible();
+  const insights = page.getByRole("region", { name: "Leitura gerencial" });
+  const insightsDetails = insights.locator("details.chat-collapsible");
+  await expect(insightsDetails).not.toHaveAttribute("open", "");
+  await insights
+    .getByRole("button", { name: /Leitura gerencial/ })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Indicadores do período" }),
   ).toBeVisible();
@@ -239,9 +242,12 @@ test("keeps the primary answer visible when a managerial insight fails", async (
   await page.getByRole("button", { name: "Enviar pergunta" }).click();
 
   await expect(page.getByRole("heading", { name: "Resultados" })).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: "Leitura gerencial" }),
-  ).toBeVisible();
+  const insights = page.getByRole("region", { name: "Leitura gerencial" });
+  const insightsDetails = insights.locator("details.chat-collapsible");
+  await expect(insightsDetails).not.toHaveAttribute("open", "");
+  await insights
+    .getByRole("button", { name: /Leitura gerencial/ })
+    .click();
   await expect(
     page.getByText("Não foi possível calcular esta análise complementar."),
   ).toBeVisible();
