@@ -153,3 +153,25 @@ def test_schema_sync_invalidates_semantic_context_cache(monkeypatch):
 
     semantic_context.cache_clear.assert_called_once_with()
     semantic_context.get_profile.assert_called_once_with()
+
+
+def test_schema_sync_builds_profile_after_cache_invalidation(monkeypatch):
+    events = []
+    semantic_context = Mock()
+
+    def get_semantic_context():
+        events.append("build")
+        return semantic_context
+
+    get_semantic_context.cache_clear = lambda: events.append("invalidate")
+    monkeypatch.setattr(sync_route, "get_semantic_context", get_semantic_context)
+    monkeypatch.setattr(sync_route, "get_translator", Mock(return_value=object()))
+    monkeypatch.setattr(
+        sync_route,
+        "get_predefined_query_repository",
+        Mock(),
+    )
+
+    sync_route.synchronize_schema({"id": "profile"})
+
+    assert events == ["invalidate", "build"]

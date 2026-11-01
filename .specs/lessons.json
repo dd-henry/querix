@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 17,
+  "next_id": 22,
   "lessons": [
     {
       "id": "L-001",
@@ -292,6 +292,96 @@
       ],
       "created": "2026-11-01T02:09:42Z",
       "last_seen": "2026-11-01T02:09:42Z"
+    },
+    {
+      "id": "L-017",
+      "key": "surviving_mutant::assert terminal retryable metadata on every repair failure branch including validation rejection",
+      "text": "Assert terminal retryable metadata on every repair-failure branch, including validation rejection.",
+      "signal": "surviving_mutant",
+      "scope": "repair",
+      "status": "candidate",
+      "features": [
+        "analytical-query-intelligence"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "AQI-12 / invalid repair retryability (repair)"
+      ],
+      "created": "2026-11-01T04:03:24Z",
+      "last_seen": "2026-11-01T04:03:24Z"
+    },
+    {
+      "id": "L-018",
+      "key": "surviving_mutant::assert every required typed plan field by exact value including the intent field",
+      "text": "Assert every required typed-plan field by exact value, including the intent field.",
+      "signal": "surviving_mutant",
+      "scope": "planner",
+      "status": "candidate",
+      "features": [
+        "analytical-query-intelligence"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "AQI-07 / planner intent mutant (planner)"
+      ],
+      "created": "2026-11-01T04:03:24Z",
+      "last_seen": "2026-11-01T04:03:24Z"
+    },
+    {
+      "id": "L-019",
+      "key": "surviving_mutant::assert complete numeric summaries derive only from values present in the returned result",
+      "text": "Assert complete numeric summaries derive only from values present in the returned result.",
+      "signal": "surviving_mutant",
+      "scope": "result-quality",
+      "status": "candidate",
+      "features": [
+        "analytical-query-intelligence"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "AQI-14 / arbitrary numeric conclusion (result-quality)"
+      ],
+      "created": "2026-11-01T04:03:24Z",
+      "last_seen": "2026-11-01T04:03:24Z"
+    },
+    {
+      "id": "L-020",
+      "key": "surviving_mutant::assert that cache invalidation completes before rebuilding any derived schema profile",
+      "text": "Assert that cache invalidation completes before rebuilding any derived schema profile.",
+      "signal": "surviving_mutant",
+      "scope": "semantic-profile",
+      "status": "candidate",
+      "features": [
+        "analytical-query-intelligence"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "AQI-03 / schema refresh ordering (semantic-profile)"
+      ],
+      "created": "2026-11-01T04:03:24Z",
+      "last_seen": "2026-11-01T04:03:24Z"
+    },
+    {
+      "id": "L-021",
+      "key": "surviving_mutant::test critical validation hooks through the application dependency boundary not only through injected unit collaborators",
+      "text": "Test critical validation hooks through the application dependency boundary, not only through injected unit collaborators.",
+      "signal": "surviving_mutant",
+      "scope": "api-wiring",
+      "status": "candidate",
+      "features": [
+        "analytical-query-intelligence"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "AQI-08 / dependency validator wiring (api-wiring)"
+      ],
+      "created": "2026-11-01T04:03:24Z",
+      "last_seen": "2026-11-01T04:03:24Z"
     }
   ]
 }

@@ -8,6 +8,7 @@ from starlette.responses import Response
 from api.app import create_app
 from api.auth.session import issue_session
 from api.config import Settings
+import api.dependencies as dependencies
 from api.dependencies import (
     get_conversation_repository,
     get_current_profile,
@@ -167,3 +168,21 @@ def test_repository_factories_reuse_the_lazy_database_adapter():
         get_predefined_query_repository(),
         PredefinedQueryRepository,
     )
+
+
+def test_translator_factory_wires_live_plan_validation():
+    database = Mock()
+    database.get_schema_info.return_value = "schema"
+    semantic_context = Mock()
+    original_db_factory = dependencies.get_db_adapter
+    original_context_factory = dependencies.get_semantic_context
+    dependencies.get_translator.cache_clear()
+    dependencies.get_db_adapter = lambda: database
+    dependencies.get_semantic_context = lambda: semantic_context
+    try:
+        translator = dependencies.get_translator()
+        assert translator.plan_validator is dependencies.validate_translation_plan
+    finally:
+        dependencies.get_translator.cache_clear()
+        dependencies.get_db_adapter = original_db_factory
+        dependencies.get_semantic_context = original_context_factory

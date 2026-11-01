@@ -551,6 +551,7 @@ def test_stored_execution_reports_missing_expected_metric_without_fabricating_it
     assert result.result["rows"] == [{"region": "Sul"}]
     assert result.diagnostics["kind"] == "missing_expected_columns"
     assert result.diagnostics["expected_columns"] == ["revenue"]
+    assert result.summary == "A consulta retornou 1 linha(s)."
     assert "revenue" not in result.summary
     assert "999" not in result.summary
 
@@ -870,6 +871,9 @@ def test_invalid_repair_is_not_executed_and_remains_retryable():
     assert database.execute_read_only_query.call_count == 1
     assert len(translator.repair_calls) == 1
     assert repository.update_calls[-1][4] == "SELECT 1"
+    assert repository.update_calls[-1][2] == REQUEST_ID
+    assert repository.update_calls[-1][6]["retryable"] is True
+    assert repository.update_calls[-1][6]["retry_kind"] == "execute"
     assert repository.update_calls[-1][6]["repair_attempted"] is True
 
 

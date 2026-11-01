@@ -216,6 +216,7 @@ def test_plan_question_normalizes_typed_plan():
         )
 
     assert isinstance(plan, QueryPlan)
+    assert plan.intent == "ranking"
     assert plan.tables == ("orders",)
     assert plan.relationships == ("orders.customer_id -> customers.id",)
     assert plan.dimensions == ("customers.name",)

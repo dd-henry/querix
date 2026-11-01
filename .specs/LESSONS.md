@@ -110,6 +110,36 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: api/tests/test_chat_translate_routes.py:213-228 | AC-12 (idempotency)
 - last seen: 2026-11-01T02:09:42Z
 
+### L-017 - Assert terminal retryable metadata on every repair-failure branch, including validation rejection.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `repair` · harmful: 0
+- features: analytical-query-intelligence
+- evidence: AQI-12 / invalid repair retryability (repair)
+- last seen: 2026-11-01T04:03:24Z
+
+### L-018 - Assert every required typed-plan field by exact value, including the intent field.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `planner` · harmful: 0
+- features: analytical-query-intelligence
+- evidence: AQI-07 / planner intent mutant (planner)
+- last seen: 2026-11-01T04:03:24Z
+
+### L-019 - Assert complete numeric summaries derive only from values present in the returned result.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `result-quality` · harmful: 0
+- features: analytical-query-intelligence
+- evidence: AQI-14 / arbitrary numeric conclusion (result-quality)
+- last seen: 2026-11-01T04:03:24Z
+
+### L-020 - Assert that cache invalidation completes before rebuilding any derived schema profile.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `semantic-profile` · harmful: 0
+- features: analytical-query-intelligence
+- evidence: AQI-03 / schema refresh ordering (semantic-profile)
+- last seen: 2026-11-01T04:03:24Z
+
+### L-021 - Test critical validation hooks through the application dependency boundary, not only through injected unit collaborators.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `api-wiring` · harmful: 0
+- features: analytical-query-intelligence
+- evidence: AQI-08 / dependency validator wiring (api-wiring)
+- last seen: 2026-11-01T04:03:24Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
