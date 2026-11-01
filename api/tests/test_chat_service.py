@@ -218,7 +218,7 @@ def test_cancelled_request_stops_before_translation():
         response={"sql": "SELECT 1", "grafico": None},
     )
     registry = ChatCancellationRegistry()
-    registry.start(REQUEST_ID)
+    registry.start(REQUEST_ID, USER_ID, CONVERSATION_ID)
     service = _service(
         repository,
         translator,
@@ -240,19 +240,23 @@ def test_cancelled_request_stops_before_translation():
 
 
 def test_cancellation_can_win_before_the_user_turn_is_persisted():
-    repository = MemoryConversationRepository()
+    registry = ChatCancellationRegistry()
+
+    class CancellingRepository(MemoryConversationRepository):
+        def get_messages(self, user_id, conversation_id):
+            messages = super().get_messages(user_id, conversation_id)
+            registry.cancel(REQUEST_ID, user_id, conversation_id)
+            return messages
+
+    repository = CancellingRepository()
     translator = FakeTranslator(
         response={"sql": "SELECT 1", "grafico": None},
     )
-    registry = ChatCancellationRegistry()
-    registry.start(REQUEST_ID)
     service = _service(
         repository,
         translator,
         cancellation_registry=registry,
     )
-
-    service.cancel_request(USER_ID, CONVERSATION_ID, REQUEST_ID)
 
     with pytest.raises(ChatServiceError) as error:
         service.translate_prompt(
@@ -265,6 +269,74 @@ def test_cancellation_can_win_before_the_user_turn_is_persisted():
     assert error.value.code == "request_cancelled"
     assert repository.create_calls == []
     assert translator.calls == []
+
+
+def test_cancellation_is_scoped_to_the_active_request_owner():
+    repository = MemoryConversationRepository([_user_message()])
+    registry = ChatCancellationRegistry()
+    registry.start(REQUEST_ID, USER_ID, CONVERSATION_ID)
+    service = _service(
+        repository,
+        FakeTranslator(response={"sql": "SELECT 1", "grafico": None}),
+        cancellation_registry=registry,
+    )
+
+    with pytest.raises(ChatServiceError) as error:
+        service.cancel_request(
+            "00000000-0000-0000-0000-000000000009",
+            CONVERSATION_ID,
+            REQUEST_ID,
+        )
+
+    assert error.value.status_code == 409
+    assert error.value.code == "request_not_active"
+    assert not registry.is_cancelled(REQUEST_ID)
+
+
+def test_completed_request_cannot_be_cancelled():
+    repository = MemoryConversationRepository([_user_message()])
+    service = _service(
+        repository,
+        FakeTranslator(response={"sql": "SELECT 1", "grafico": None}),
+        cancellation_registry=ChatCancellationRegistry(),
+    )
+
+    with pytest.raises(ChatServiceError) as error:
+        service.cancel_request(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    assert error.value.status_code == 409
+    assert error.value.code == "request_not_active"
+
+
+def test_cancellation_after_database_response_skips_result_persistence():
+    repository = MemoryConversationRepository(
+        [_user_message(), _assistant_message()]
+    )
+    registry = ChatCancellationRegistry()
+    database = Mock()
+
+    def execute_and_cancel(_sql, _parameters):
+        registry.cancel(REQUEST_ID, USER_ID, CONVERSATION_ID)
+        return pd.DataFrame([{"total": 1}])
+
+    database.execute_read_only_query.side_effect = execute_and_cancel
+    service = _service(
+        repository,
+        FakeTranslator(),
+        database=database,
+        cancellation_registry=registry,
+    )
+    registry.start(REQUEST_ID, USER_ID, CONVERSATION_ID)
+
+    with pytest.raises(ChatServiceError) as error:
+        service.execute_stored_query(
+            USER_ID,
+            CONVERSATION_ID,
+            REQUEST_ID,
+        )
+
+    assert error.value.code == "request_cancelled"
+    assert repository.update_calls == []
 
 
 def test_translation_success_persists_once_and_limits_context():

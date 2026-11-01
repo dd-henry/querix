@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass, field
 from threading import Lock
-from typing import Any, Dict, List, Mapping, NoReturn, Optional
+from typing import Any, Callable, Dict, List, Mapping, NoReturn, Optional
 from uuid import UUID
 
 from api.serializers.results import (
@@ -36,22 +36,41 @@ class ChatCancellationRegistry:
 
     def __init__(self):
         self._lock = Lock()
-        self._active: set[UUID] = set()
+        self._active: Dict[UUID, tuple[str, UUID]] = {}
         self._cancelled: set[UUID] = set()
 
-    def start(self, request_id: UUID) -> None:
+    def start(
+        self,
+        request_id: UUID,
+        user_id: str,
+        conversation_id: UUID,
+    ) -> None:
         with self._lock:
             if request_id not in self._active:
-                self._active.add(request_id)
+                self._active[request_id] = (user_id, conversation_id)
                 self._cancelled.discard(request_id)
 
-    def is_active(self, request_id: UUID) -> bool:
+    def is_active(
+        self,
+        request_id: UUID,
+        user_id: str,
+        conversation_id: UUID,
+    ) -> bool:
+        with self._lock:
+            return self._active.get(request_id) == (user_id, conversation_id)
+
+    def has_active(self, request_id: UUID) -> bool:
         with self._lock:
             return request_id in self._active
 
-    def cancel(self, request_id: UUID) -> bool:
+    def cancel(
+        self,
+        request_id: UUID,
+        user_id: str,
+        conversation_id: UUID,
+    ) -> bool:
         with self._lock:
-            if request_id not in self._active:
+            if self._active.get(request_id) != (user_id, conversation_id):
                 return False
             self._cancelled.add(request_id)
             return True
@@ -62,8 +81,19 @@ class ChatCancellationRegistry:
 
     def finish(self, request_id: UUID) -> None:
         with self._lock:
-            self._active.discard(request_id)
+            self._active.pop(request_id, None)
             self._cancelled.discard(request_id)
+
+    def run_if_not_cancelled(
+        self,
+        request_id: UUID,
+        action: Callable[[], None],
+    ) -> bool:
+        with self._lock:
+            if request_id not in self._active or request_id in self._cancelled:
+                return False
+            action()
+            return True
 
 
 @dataclass
@@ -126,7 +156,11 @@ class ChatService:
         review_mode: bool = True,
         retry: bool = False,
     ) -> ChatResult:
-        self._start_cancellable_request(request_id)
+        self._start_cancellable_request(
+            request_id,
+            user_id,
+            conversation_id,
+        )
         try:
             result = self._translate_prompt(
                 user_id,
@@ -360,7 +394,11 @@ class ChatService:
         conversation_id: UUID,
         request_id: UUID,
     ) -> ChatResult:
-        started_here = self._start_cancellable_request(request_id)
+        started_here = self._start_cancellable_request(
+            request_id,
+            user_id,
+            conversation_id,
+        )
         try:
             return self._execute_stored_query(
                 user_id,
@@ -486,7 +524,9 @@ class ChatService:
             sql,
             parameters,
             metadata,
+            request_id,
         )
+        self._raise_if_cancelled(request_id)
         self._persist_assistant_turn(
             user_id,
             conversation_id,
@@ -504,6 +544,7 @@ class ChatService:
                 ),
             },
         )
+        self._raise_if_cancelled(request_id)
         return ChatResult(
             conversation_id=conversation_id,
             request_id=request_id,
@@ -729,7 +770,16 @@ class ChatService:
                 "No active request is available for cancellation.",
             )
         if self.cancellation_registry is not None:
-            self.cancellation_registry.cancel(request_id)
+            if not self.cancellation_registry.cancel(
+                request_id,
+                user_id,
+                conversation_id,
+            ):
+                raise ChatServiceError(
+                    409,
+                    "request_not_active",
+                    "The chat request is no longer active.",
+                )
 
     def _validate_prompt(self, prompt: str) -> str:
         normalized = (prompt or "").strip()
@@ -741,17 +791,30 @@ class ChatService:
             )
         return normalized
 
-    def _start_cancellable_request(self, request_id: UUID) -> bool:
+    def _start_cancellable_request(
+        self,
+        request_id: UUID,
+        user_id: str,
+        conversation_id: UUID,
+    ) -> bool:
         if self.cancellation_registry is None:
             return False
-        was_active = self.cancellation_registry.is_active(request_id)
-        self.cancellation_registry.start(request_id)
+        was_active = self.cancellation_registry.is_active(
+            request_id,
+            user_id,
+            conversation_id,
+        )
+        self.cancellation_registry.start(
+            request_id,
+            user_id,
+            conversation_id,
+        )
         return not was_active
 
     def _is_cancellable_request_active(self, request_id: UUID) -> bool:
         return (
             self.cancellation_registry is not None
-            and self.cancellation_registry.is_active(request_id)
+            and self.cancellation_registry.has_active(request_id)
         )
 
     def _finish_cancellable_request(self, request_id: UUID) -> None:
@@ -779,21 +842,32 @@ class ChatService:
     ) -> None:
         if self._find_message(messages, request_id, "user") is not None:
             return
-        if messages:
-            self.conversation_repository.append_message(
-                user_id,
-                conversation_id,
+
+        def persist() -> None:
+            if messages:
+                self.conversation_repository.append_message(
+                    user_id,
+                    conversation_id,
+                    request_id,
+                    "user",
+                    prompt,
+                )
+            else:
+                self.conversation_repository.create_with_user_message(
+                    user_id,
+                    conversation_id,
+                    request_id,
+                    prompt,
+                )
+
+        if self._is_cancellable_request_active(request_id):
+            if not self.cancellation_registry.run_if_not_cancelled(
                 request_id,
-                "user",
-                prompt,
-            )
-        else:
-            self.conversation_repository.create_with_user_message(
-                user_id,
-                conversation_id,
-                request_id,
-                prompt,
-            )
+                persist,
+            ):
+                self._raise_if_cancelled(request_id)
+            return
+        persist()
 
     def _persist_assistant_turn(
         self,
@@ -805,32 +879,42 @@ class ChatService:
         error: Optional[str] = None,
         metadata: Optional[Mapping[str, object]] = None,
     ) -> None:
-        existing = self.conversation_repository.get_messages(
-            user_id,
-            conversation_id,
-        )
-        values = dict(metadata or {})
-        if self._find_message(existing, request_id, "assistant") is not None:
-            self.conversation_repository.update_assistant_message(
+        def persist() -> None:
+            existing = self.conversation_repository.get_messages(
                 user_id,
                 conversation_id,
-                request_id,
-                content,
-                sql=sql,
-                error=error,
-                metadata=values,
             )
-        else:
-            self.conversation_repository.append_message(
-                user_id,
-                conversation_id,
+            values = dict(metadata or {})
+            if self._find_message(existing, request_id, "assistant") is not None:
+                self.conversation_repository.update_assistant_message(
+                    user_id,
+                    conversation_id,
+                    request_id,
+                    content,
+                    sql=sql,
+                    error=error,
+                    metadata=values,
+                )
+            else:
+                self.conversation_repository.append_message(
+                    user_id,
+                    conversation_id,
+                    request_id,
+                    "assistant",
+                    content,
+                    sql=sql,
+                    error=error,
+                    metadata=values,
+                )
+
+        if self._is_cancellable_request_active(request_id):
+            if not self.cancellation_registry.run_if_not_cancelled(
                 request_id,
-                "assistant",
-                content,
-                sql=sql,
-                error=error,
-                metadata=values,
-            )
+                persist,
+            ):
+                self._raise_if_cancelled(request_id)
+            return
+        persist()
 
     def _handle_translation_failure(
         self,
@@ -865,24 +949,40 @@ class ChatService:
         sql: str,
         parameters: Dict[str, object],
         metadata: Mapping[str, object],
+        request_id: UUID,
     ) -> List[str]:
         if self.query_history_repository is None:
             return []
 
-        try:
-            self.query_history_repository.record(
-                user_id,
-                prompt,
-                sql,
-                metadata.get("source", "chat"),
-                parameters,
-                session_id=conversation_id,
-            )
-        except Exception as exc:
-            logger.exception("Could not save query history.")
-            return [
-                f"A consulta foi executada, mas não foi salva no histórico. ({exc})"
-            ]
+        warnings: List[str] = []
+
+        def record() -> None:
+            try:
+                self.query_history_repository.record(
+                    user_id,
+                    prompt,
+                    sql,
+                    metadata.get("source", "chat"),
+                    parameters,
+                    session_id=conversation_id,
+                )
+            except Exception as exc:
+                logger.exception("Could not save query history.")
+                warnings.append(
+                    "A consulta foi executada, mas não foi salva no histórico. "
+                    f"({exc})"
+                )
+
+        if self._is_cancellable_request_active(request_id):
+            if not self.cancellation_registry.run_if_not_cancelled(
+                request_id,
+                record,
+            ):
+                self._raise_if_cancelled(request_id)
+            return warnings
+        record()
+        if warnings:
+            return warnings
         return []
 
     @staticmethod
