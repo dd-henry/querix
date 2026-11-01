@@ -369,6 +369,30 @@ describe("ChatWorkspace", () => {
     },
   );
 
+  it("resolves qualified chart columns against result aliases", () => {
+    const message: ChatMessage = {
+      ...executedMessage,
+      chart: {
+        ...executedMessage.chart,
+        eixo_x: "funcionarios.nome",
+      },
+      result: {
+        columns: ["nome", "total"],
+        rows: [
+          { nome: "Jan", total: 10 },
+          { nome: "Feb", total: 12 },
+        ],
+        row_count: 2,
+        truncated: false,
+      },
+    };
+    renderWorkspace([userMessage, message]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar Gráfico" }));
+
+    expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
+  });
+
   it("shows the required warning when chart columns are missing", () => {
     const message: ChatMessage = {
       ...executedMessage,

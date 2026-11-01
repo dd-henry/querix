@@ -67,6 +67,39 @@ function chartSpec(message: ChatMessage): ChartSpec | null {
   return message.chart as ChartSpec;
 }
 
+function resolveChartColumn(
+  candidate: unknown,
+  columns: string[],
+): string | null {
+  if (typeof candidate !== "string") {
+    return null;
+  }
+  const trimmedCandidate = candidate.trim();
+  if (!trimmedCandidate) {
+    return null;
+  }
+  const exactMatch = columns.find((column) => column === trimmedCandidate);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const candidateParts = trimmedCandidate.split(".");
+  const leaf = candidateParts[candidateParts.length - 1]?.trim();
+  if (!leaf) {
+    return null;
+  }
+  const normalizedLeaf = leaf.toLowerCase();
+  const matches = columns.filter((column) => {
+    const columnParts = column.split(".");
+    const columnLeaf = columnParts[columnParts.length - 1]?.trim().toLowerCase();
+    return (
+      column.toLowerCase() === normalizedLeaf ||
+      columnLeaf === normalizedLeaf
+    );
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
 function ChartView({
   message,
   result,
@@ -79,8 +112,8 @@ function ChartView({
     return null;
   }
   const type = spec.tipo;
-  const x = spec.eixo_x;
-  const y = spec.eixo_y;
+  const x = resolveChartColumn(spec.eixo_x, result.columns);
+  const y = resolveChartColumn(spec.eixo_y, result.columns);
   if (type !== "bar" && type !== "line") {
     return (
       <p className="chat-result__chart-warning" role="alert">
@@ -89,10 +122,8 @@ function ChartView({
     );
   }
   if (
-    typeof x !== "string" ||
-    typeof y !== "string" ||
-    !result.columns.includes(x) ||
-    !result.columns.includes(y)
+    x === null ||
+    y === null
   ) {
     return (
       <p className="chat-result__chart-warning" role="alert">
