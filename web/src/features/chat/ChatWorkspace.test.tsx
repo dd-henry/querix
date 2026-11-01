@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ChatMessage } from "./useChat";
@@ -143,6 +149,49 @@ describe("ChatWorkspace", () => {
       "\uFEFF\"month\",\"total\"",
     );
     expect(download).toHaveAttribute("download", "relatorio-request-1.csv");
+  });
+
+  it("renders managerial insights after the primary result without another message", () => {
+    const message: ChatMessage = {
+      ...executedMessage,
+      insights: [
+        {
+          key: "kpi",
+          title: "Indicadores do período",
+          summary: "A consulta retornou 1 linha(s).",
+          sql: "SELECT 2",
+          result: {
+            columns: ["total"],
+            rows: [{ total: 12 }],
+            row_count: 1,
+            truncated: false,
+          },
+        },
+        {
+          key: "payments",
+          title: "Formas de pagamento",
+          warning: "Não foi possível calcular esta análise complementar.",
+        },
+      ],
+    };
+    renderWorkspace([userMessage, message]);
+
+    const primaryTable = screen.getByRole("table", {
+      name: "Linhas retornadas pela consulta",
+    });
+    const insights = screen.getByRole("region", {
+      name: "Leitura gerencial",
+    });
+    expect(primaryTable.compareDocumentPosition(insights)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(insights).toHaveTextContent("Indicadores do período");
+    expect(insights).toHaveTextContent("A consulta retornou 1 linha(s).");
+    expect(insights).toHaveTextContent(
+      "Não foi possível calcular esta análise complementar.",
+    );
+    expect(insights).toHaveTextContent("SELECT 2");
+    expect(within(insights).getAllByRole("article")).toHaveLength(2);
   });
 
   it.each(["bar", "line"] as const)(

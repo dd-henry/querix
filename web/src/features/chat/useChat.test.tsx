@@ -263,6 +263,19 @@ describe("useChat", () => {
       status: "executed",
       content: "Aqui estão os resultados da consulta:",
       summary: "O faturamento retornado foi R$ 1,00.",
+      insights: [
+        {
+          key: "kpi",
+          title: "Indicadores do período",
+          summary: "A consulta retornou 1 linha(s).",
+          result: {
+            columns: ["total"],
+            rows: [{ total: 1 }],
+            row_count: 1,
+            truncated: false,
+          },
+        },
+      ],
     });
     const client = createClient({ translate });
     render(<Harness client={client} reviewMode={false} />);
@@ -277,6 +290,10 @@ describe("useChat", () => {
     expect(readMessages()[1].summary).toBe(
       "O faturamento retornado foi R$ 1,00.",
     );
+    expect(readMessages()[1].insights).toEqual([
+      expect.objectContaining({ key: "kpi" }),
+    ]);
+    expect(readMessages()).toHaveLength(2);
     expect(translate).toHaveBeenCalledWith(
       expect.objectContaining({ review_mode: false }),
     );

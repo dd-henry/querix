@@ -166,6 +166,15 @@ export interface ChatResultPayload {
   truncated: boolean;
 }
 
+export interface ChatInsight {
+  key: string;
+  title: string;
+  summary?: string | null;
+  sql?: string | null;
+  result?: ChatResultPayload | null;
+  warning?: string | null;
+}
+
 export interface ChatResponse {
   conversation_id: string;
   request_id: string;
@@ -175,6 +184,7 @@ export interface ChatResponse {
   chart?: Record<string, unknown> | null;
   summary?: string | null;
   result?: ChatResultPayload | null;
+  insights?: ChatInsight[];
   retryable: boolean;
   retry_kind?: ChatRetryKind | null;
   warnings: string[];

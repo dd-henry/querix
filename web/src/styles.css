@@ -604,7 +604,8 @@ select:disabled {
 }
 
 .chat-review,
-.chat-result-actions {
+.chat-result-actions,
+.chat-insights {
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
@@ -614,7 +615,9 @@ select:disabled {
 }
 
 .chat-review h2,
-.chat-result h3 {
+.chat-result h3,
+.chat-insights h2,
+.chat-insight h3 {
   margin: 0;
   color: #f9fafb;
   font-size: 1rem;
@@ -640,6 +643,42 @@ select:disabled {
   justify-content: space-between;
   gap: 1rem;
   color: #cbd5e1;
+}
+
+.chat-insights {
+  border-color: #2563eb;
+  background: #172554;
+}
+
+.chat-insights__header,
+.chat-insight__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #cbd5e1;
+}
+
+.chat-insights__header span {
+  font-size: 0.85rem;
+}
+
+.chat-insight {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.9rem;
+  border: 1px solid #3b82f6;
+  border-radius: 0.65rem;
+  background: #1e3a5f;
+}
+
+.chat-insight__summary {
+  margin: 0;
+  color: #e0f2fe;
+}
+
+.chat-insight__warning {
+  margin: 0;
+  color: #fde68a;
 }
 
 .chat-result__table-wrapper {

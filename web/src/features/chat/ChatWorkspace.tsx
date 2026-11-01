@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
+import type { ChatInsight } from "../../api/client";
 import type { ChatMessage } from "./useChat";
 import { MessageList } from "./MessageList";
 
@@ -196,6 +197,111 @@ function ResultView({ message }: { message: ChatMessage }) {
   );
 }
 
+function InsightView({
+  insight,
+  requestId,
+  index,
+}: {
+  insight: ChatInsight;
+  requestId: string;
+  index: number;
+}) {
+  const result = insight.result;
+  return (
+    <article className="chat-insight">
+      <div className="chat-insight__header">
+        <h3>{insight.title}</h3>
+        {result ? <span>{result.row_count} linha(s)</span> : null}
+      </div>
+      {insight.summary ? (
+        <p className="chat-insight__summary">{insight.summary}</p>
+      ) : null}
+      {insight.warning ? (
+        <p className="chat-insight__warning" role="alert">
+          {insight.warning}
+        </p>
+      ) : null}
+      {insight.sql ? (
+        <details className="chat-result__sql">
+          <summary>Ver SQL da análise</summary>
+          <pre>{insight.sql}</pre>
+        </details>
+      ) : null}
+      {result ? (
+        <>
+          {result.truncated ? (
+            <p className="chat-result__notice">
+              Os resultados foram limitados às primeiras 5.000 linhas.
+            </p>
+          ) : null}
+          {result.columns.length > 0 ? (
+            <div className="chat-result__table-wrapper">
+              <table>
+                <caption className="sr-only">
+                  Resultado da análise {insight.title}
+                </caption>
+                <thead>
+                  <tr>
+                    {result.columns.map((column) => (
+                      <th key={column} scope="col">
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.rows.map((row, rowIndex) => (
+                    <tr key={`${requestId}-${insight.key}-${rowIndex}`}>
+                      {result.columns.map((column) => (
+                        <td key={column}>{String(row[column] ?? "")}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          <a
+            className="chat-result__download"
+            download={`analise-${requestId}-${index + 1}.csv`}
+            href={`data:text/csv;charset=utf-8,${encodeURIComponent(
+              resultCsv(result),
+            )}`}
+          >
+            Download Análise (CSV)
+          </a>
+        </>
+      ) : null}
+    </article>
+  );
+}
+
+function InsightsView({
+  message,
+}: {
+  message: ChatMessage;
+}) {
+  if (!message.insights || message.insights.length === 0) {
+    return null;
+  }
+  return (
+    <section className="chat-insights" aria-label="Leitura gerencial">
+      <div className="chat-insights__header">
+        <h2>Leitura gerencial</h2>
+        <span>Indicadores complementares para contextualizar a resposta</span>
+      </div>
+      {message.insights.map((insight, index) => (
+        <InsightView
+          key={insight.key}
+          insight={insight}
+          requestId={message.requestId}
+          index={index}
+        />
+      ))}
+    </section>
+  );
+}
+
 export function ChatWorkspace({
   messages,
   error,
@@ -310,6 +416,7 @@ export function ChatWorkspace({
                   <ResultView message={message} />
                 </section>
               ) : null}
+              <InsightsView message={message} />
             </>
           );
         }}

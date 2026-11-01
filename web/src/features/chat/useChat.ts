@@ -4,6 +4,7 @@ import {
   ApiError,
   type ApiClient,
   type ChatResponse,
+  type ChatInsight,
   type ChatRetryKind,
   type ChatStatus,
   type ChatResultPayload,
@@ -26,6 +27,7 @@ export interface ChatMessage {
   retryKind?: ChatRetryKind;
   chart?: Record<string, unknown>;
   result?: ChatResultPayload;
+  insights?: ChatInsight[];
   warnings: string[];
   reviewState?: ChatReviewState;
 }
@@ -87,6 +89,7 @@ function responseMessage(
     chart: response.chart ?? undefined,
     summary: response.summary ?? undefined,
     result: response.result ?? undefined,
+    insights: response.insights ?? [],
     retryable: response.retryable,
     retryKind: response.retry_kind ?? undefined,
     error: undefined,
@@ -113,6 +116,7 @@ function assistantFromResponse(
     chart: response.chart ?? undefined,
     summary: response.summary ?? undefined,
     result: response.result ?? undefined,
+    insights: response.insights ?? [],
     retryable: response.retryable,
     retryKind: response.retry_kind ?? undefined,
     warnings: response.warnings ?? [],
@@ -140,6 +144,7 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
       content: message.content,
       sql: message.sql ?? undefined,
       summary: typeof summary === "string" ? summary : undefined,
+      insights: [],
       error: message.error ?? undefined,
       retryable: Boolean(message.metadata.retryable),
       retryKind,
@@ -263,6 +268,7 @@ export function useChat({
           content: "Processando sua pergunta...",
           status: "pending",
           retryable: false,
+          insights: [],
           warnings: [],
         },
       ]);
