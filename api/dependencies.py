@@ -6,6 +6,7 @@ from fastapi import Depends, Request
 from api.auth.session import SessionClaims, SessionError, require_session
 from api.config import Settings
 from api.services.chat import ChatService
+from core.llm import create_chat_client
 from core.prompter import Prompter
 from core.query_plan import QueryPlan
 from core.query_validation import PlanValidator
@@ -66,7 +67,9 @@ def validate_translation_plan(plan: QueryPlan) -> None:
 
 
 @lru_cache(maxsize=1)
-def get_translator() -> Translator:
+def get_translator(
+    settings: Settings = Depends(get_api_settings),
+) -> Translator:
     database = get_db_adapter()
     prompter = Prompter()
     live_schema = database.get_schema_info()
@@ -76,8 +79,9 @@ def get_translator() -> Translator:
         sql_generation_prompt=prompter.build_sql_generation_prompt(
             live_schema=live_schema
         ),
-        model_name="qwen2.5-coder:7b",
+        model_name=settings.llm.model_name,
         plan_validator=validate_translation_plan,
+        chat_client=create_chat_client(settings.llm),
     )
 
 

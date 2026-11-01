@@ -58,7 +58,7 @@ def test_approved_user_can_sync_without_receiving_schema_contents(
     assert "schema" not in response.json()
     translator.cache_clear.assert_called_once_with()
     catalog.cache_clear.assert_called_once_with()
-    translator.assert_called_once_with()
+    translator.assert_called_once()
 
 
 def test_non_approved_user_cannot_sync(monkeypatch):

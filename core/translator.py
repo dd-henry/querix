@@ -2,7 +2,7 @@ import re
 import json
 from collections.abc import Mapping
 from datetime import date
-from typing import Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import ollama
 
@@ -12,7 +12,7 @@ from core.temporal import TemporalInterpretation, TemporalInterpreter
 
 class Translator:
     """
-    Motor de tradução que utiliza a API local do Ollama para converter
+    Motor de tradução que usa um cliente LLM configurável para converter
     linguagem natural em consultas SQL.
     """
 
@@ -23,19 +23,21 @@ class Translator:
         planner_prompt: Optional[str] = None,
         sql_generation_prompt: Optional[str] = None,
         plan_validator: Optional[Callable[[QueryPlan], None]] = None,
+        chat_client: Optional[Callable[..., Mapping[str, Any]]] = None,
     ):
         """
         Inicializa o tradutor com o prompt de sistema configurado e o modelo desejado.
         
         Args:
             system_prompt (str): O contexto consolidado de banco de dados e regras de negócio.
-            model_name (str): O nome do modelo LLM local gerenciado pelo Ollama (ex: llama3).
+            model_name (str): O nome do modelo configurado no provedor selecionado.
         """
         self.system_prompt = system_prompt
         self.model_name = model_name
         self.planner_prompt = planner_prompt
         self.sql_generation_prompt = sql_generation_prompt
         self.plan_validator = plan_validator
+        self.chat_client = chat_client
 
     def _clean_sql_response(self, text: str) -> dict:
         """
@@ -150,7 +152,7 @@ class Translator:
             conversation_context,
         )
         try:
-            response = ollama.chat(model=self.model_name, messages=messages)
+            response = self._chat(messages)
             raw_content = response.get("message", {}).get("content", "")
             return self._clean_plan_response(raw_content)
         except TranslationStageError:
@@ -200,7 +202,7 @@ class Translator:
             conversation_context,
         )
         try:
-            response = ollama.chat(model=self.model_name, messages=messages)
+            response = self._chat(messages)
             raw_content = response.get("message", {}).get("content", "")
             return self._clean_sql_response(raw_content)
         except Exception as exc:
@@ -239,7 +241,7 @@ class Translator:
             conversation_context,
         )
         try:
-            response = ollama.chat(model=self.model_name, messages=messages)
+            response = self._chat(messages)
             raw_content = response.get("message", {}).get("content", "")
             return self._clean_sql_response(raw_content)
         except Exception as exc:
@@ -305,11 +307,22 @@ class Translator:
         ]
         
         try:
-            response = ollama.chat(model=self.model_name, messages=messages)
+            response = self._chat(messages)
             raw_content = response.get('message', {}).get('content', '')
             return self._clean_sql_response(raw_content)
         except Exception as e:
             raise RuntimeError(f"Erro ao comunicar com o Ollama: {e}")
+
+    def _chat(
+        self,
+        messages: Sequence[Dict[str, str]],
+    ) -> Mapping[str, Any]:
+        if self.chat_client is not None:
+            return self.chat_client(
+                model=self.model_name,
+                messages=messages,
+            )
+        return ollama.chat(model=self.model_name, messages=messages)
 
     @staticmethod
     def _stage_messages(

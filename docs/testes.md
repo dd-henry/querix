@@ -16,7 +16,7 @@ Os fluxos de conversa usam serviços externos simulados para que os testes valid
 
 - **`test_conversations.py`:** verifica escopo por proprietário, gravação idempotente e ordenada, falhas de persistência, favoritos, expiração, exclusão e o limite de seis turnos, incluindo a exclusão do turno em retry do contexto.
 - **`test_query_history.py`:** verifica o vínculo anulável da conversa, exclusão em cascata, deduplicação dentro de cada sessão e compatibilidade com registros legados sem sessão.
-- **`test_translator.py`:** verifica contexto em ordem, limite de seis turnos, comportamento com contexto ausente ou vazio e erros do Ollama.
+- **`test_translator.py` e `test_llm.py`:** verificam contexto em ordem, limite de seis turnos, comportamento com contexto ausente ou vazio, seleção do provedor, adaptação do payload do Gemini e erros do LLM.
 - **`test_chat_ui.py`:** verifica uma única renderização por mensagem, estabilidade em reruns, SQL e erro associados, revisão separada da transcrição e preservação de tabela, gráfico e download CSV.
 - **`test_app.py`:** verifica login, propriedade e retomada de sessões, grupos por recência, persistência única, ausência de resultados restaurados, favoritos, expiração, exclusão confirmada, estados de falha e retry explícito. Também protege os papéis e as ferramentas existentes da barra lateral.
 - **`test_postgres.py`:** verifica o uso de transações somente de leitura no retry e o retorno da contagem de linhas dos comandos.
@@ -47,12 +47,12 @@ Garante que a biblioteca do banco se comporta como esperado ao receber credencia
   - A camada de conexão e a camada do *pandas* (`pd.read_sql`) foram completamente "mockadas" (*patched*). Em vez de bater no banco, o teste injeta um DataFrame sintético que confirma se o adaptador devolve a estrutura desejada sem executar instruções SQL reais.
   - Fazer os "caminhos infelizes" falharem graciosamente (simulando falha do mock no `test_connection()` para garantir que retorne booleano `False` invés de derrubar o Streamlit com uma `Exception` fatal).
 
-### 2. Testes de Integração e do LLM (Ollama)
+### 2. Testes de Integração e do LLM
 
 O grande desafio de aplicações que envolvem IA Generativa é o seu não-determinismo. As strings devolvidas por modelos mudam sempre, impossibilitando verificações idênticas (`assert result == "..."`).
 
 #### O Teste do Ollama (`test_integration_ollama.py`)
-Este não é um teste mockado, ele realmente inicia a conexão com a API local do servidor **Ollama** chamando o modelo `qwen2.5-coder:7b`.
+Este não é um teste mockado, ele realmente inicia a conexão com a API local do servidor **Ollama** chamando o modelo configurado em `OLLAMA_MODEL` (por padrão, `qwen2.5-coder:7b`). Os testes unitários do Gemini usam a API simulada e não enviam a chave para serviços externos.
 
 - **Marcação e Isolamento:** Este teste é marcado intencionalmente com um decorador `@pytest.mark.integration`. Como a requisição para o LLM real pode demorar muitos segundos, ela pode ser ignorada no CI regular e disparada unicamente em *pipelines* específicas.
 - **A Estratégia de Asserção Comportamental:** Ao invés de avaliar se a *string* produzida é idêntica a um template predefinido, o teste avalia *comportamentos*. 

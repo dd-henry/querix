@@ -2,7 +2,7 @@
 
 > Converse com seu banco de dados usando linguagem natural.
 
-O **Ask-SQL** é uma ferramenta interativa que traduz perguntas em linguagem natural para consultas SQL, permitindo que você explore seus dados sem precisar escrever código SQL. A aplicação utiliza um modelo de linguagem local via **Ollama** para a tradução, se conecta a um banco de dados **PostgreSQL** para executar as consultas e exibe os resultados de forma amigável.
+O **Ask-SQL** é uma ferramenta interativa que traduz perguntas em linguagem natural para consultas SQL, permitindo que você explore seus dados sem precisar escrever código SQL. A aplicação pode utilizar um modelo local via **Ollama** ou o **Gemini** via Google AI Studio, conecta-se a um banco de dados **PostgreSQL** para executar as consultas e exibe os resultados de forma amigável.
 
 ## ✨ Recursos
 
@@ -27,7 +27,7 @@ graph TD
     N --> C{Prompter};
     D[Schema e relacionamentos do Banco] --> C;
     E[Regras de Negócio] --> C;
-    C --> F{Translator (Ollama)};
+    C --> F{Translator (Ollama ou Gemini)};
     F --> G[Consulta SQL Gerada];
     G --> H{Executor (Postgres)};
     H --> I[Resultados (DataFrame)];
@@ -39,7 +39,7 @@ graph TD
 2.  **API (`api/`):** Backend FastAPI que expõe autenticação, conversas, chat, histórico, consultas compartilhadas, administração e sincronização do schema.
 3.  **Interface legada (`app.py` e `components.py`):** Frontend Streamlit mantido durante a migração. Ele continua disponível, mas não é necessário para executar o frontend web.
 4.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" com estratégias analíticas genéricas, data de referência, regras de negócio, DDLs, tabelas, colunas e relacionamentos atuais. O código não contém SQL de um domínio específico.
-5.  **Motor de Tradução (`core/translator.py`):** Comunica-se com a API do Ollama em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio.
+5.  **Motor de Tradução (`core/translator.py`):** Comunica-se com o provedor LLM configurado em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio. O provedor é selecionado por `LLM_PROVIDER` (`local` para Ollama ou `google` para Gemini).
 6.  **Banco de Dados (`database/postgres.py`):** Implementa a conexão com o PostgreSQL usando SQLAlchemy e entrega ao planejador tabelas, colunas, comentários e chaves estrangeiras do schema público.
 
 ## 🚀 Instalação e Configuração
@@ -72,9 +72,17 @@ Siga os passos abaixo para configurar o ambiente de desenvolvimento.
     DB_PASSWORD=sua_senha
     DB_NAME=seu_banco
     OLLAMA_API_URL=http://localhost:11434
+    LLM_PROVIDER=local
+    OLLAMA_MODEL=qwen2.5-coder:7b
+    GEMINI_MODEL=gemini-flash-latest
+    GEMINI_API_KEY=
     ASK_SQL_USER=nome.do.usuario
     ASK_SQL_ROLE=viewer
     ```
+
+`LLM_PROVIDER=local` mantém o fluxo atual com Ollama. Para testar o Gemini, use
+`LLM_PROVIDER=google`, informe `GEMINI_API_KEY` e reinicie a API. A chave deve
+permanecer somente no ambiente do backend, nunca no frontend ou em commits.
 
 Configure também o Supabase Auth:
 
@@ -100,6 +108,10 @@ DATABASE_URL=postgresql+psycopg2://usuario@127.0.0.1:5432/banco
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_ANON_KEY=sua_chave_anon_publica
 OLLAMA_API_URL=http://127.0.0.1:11434
+LLM_PROVIDER=local
+OLLAMA_MODEL=qwen2.5-coder:7b
+GEMINI_MODEL=gemini-flash-latest
+GEMINI_API_KEY=
 ```
 
 `DATABASE_URL` pode ser substituída pelos campos `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DBNAME`. Em desenvolvimento local, mantenha `COOKIE_SECURE=false`; ative-o somente quando a aplicação estiver atrás de HTTPS. Nunca coloque `SESSION_SECRET`, credenciais do banco ou a chave `service_role` do Supabase no frontend.

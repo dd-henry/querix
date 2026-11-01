@@ -1,4 +1,5 @@
-from unittest.mock import Mock
+from dataclasses import replace
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import Depends
@@ -8,6 +9,7 @@ from starlette.responses import Response
 from api.app import create_app
 from api.auth.session import issue_session
 from api.config import Settings
+from core.llm import LLMConfig
 import api.dependencies as dependencies
 from api.dependencies import (
     get_conversation_repository,
@@ -180,9 +182,38 @@ def test_translator_factory_wires_live_plan_validation():
     dependencies.get_db_adapter = lambda: database
     dependencies.get_semantic_context = lambda: semantic_context
     try:
-        translator = dependencies.get_translator()
+        translator = dependencies.get_translator(_settings())
         assert translator.plan_validator is dependencies.validate_translation_plan
     finally:
         dependencies.get_translator.cache_clear()
         dependencies.get_db_adapter = original_db_factory
         dependencies.get_semantic_context = original_context_factory
+
+
+def test_translator_factory_uses_the_selected_cloud_provider():
+    database = Mock()
+    database.get_schema_info.return_value = "schema"
+    settings = replace(
+        _settings(),
+        llm=LLMConfig(
+            provider="google",
+            gemini_model="gemini-test",
+            gemini_api_key="test-key",
+        ),
+    )
+    dependencies.get_translator.cache_clear()
+    original_db_factory = dependencies.get_db_adapter
+    dependencies.get_db_adapter = lambda: database
+    try:
+        with patch(
+            "api.dependencies.create_chat_client",
+            return_value=Mock(),
+        ) as create_client:
+            translator = dependencies.get_translator(settings)
+
+        assert translator.model_name == "gemini-test"
+        assert translator.chat_client is create_client.return_value
+        create_client.assert_called_once_with(settings.llm)
+    finally:
+        dependencies.get_translator.cache_clear()
+        dependencies.get_db_adapter = original_db_factory

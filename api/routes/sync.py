@@ -4,7 +4,9 @@ from typing import Dict
 from fastapi import APIRouter, Depends
 
 from api.app import APIError
+from api.config import Settings
 from api.dependencies import (
+    get_api_settings,
     get_predefined_query_repository,
     get_semantic_context,
     get_translator,
@@ -20,13 +22,14 @@ router = APIRouter(prefix="/api/schema", tags=["schema"])
 @router.post("/sync", response_model=SchemaSyncResponse)
 def synchronize_schema(
     _profile: Dict[str, object] = Depends(require_approved_user),
+    settings: Settings = Depends(get_api_settings),
 ) -> SchemaSyncResponse:
     get_semantic_context.cache_clear()
     get_translator.cache_clear()
     get_predefined_query_repository.cache_clear()
     try:
         get_semantic_context().get_profile()
-        get_translator()
+        get_translator(settings)
     except Exception as exc:
         logger.exception("Schema synchronization failed.")
         raise APIError(

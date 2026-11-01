@@ -6,7 +6,7 @@ Este documento detalha como a aplicação **Ask SQL** funciona, sua arquitetura 
 
 O **Ask SQL** é uma aplicação web interativa que permite aos usuários conversar com um banco de dados relacional. Ele traduz perguntas em linguagem natural para consultas SQL nativas, executa essas consultas no banco de dados, exibe os resultados em formato tabular, fornece download em CSV e renderiza gráficos baseados nas recomendações da Inteligência Artificial.
 
-A aplicação usa React + TypeScript no frontend, FastAPI no backend, a API local do **Ollama** para processamento de linguagem natural, e **pandas** + **SQLAlchemy** para gestão dos dados.
+A aplicação usa React + TypeScript no frontend, FastAPI no backend, um provedor LLM configurável (Ollama local ou Gemini via Google AI Studio) para processamento de linguagem natural, e **pandas** + **SQLAlchemy** para gestão dos dados.
 
 ## Estrutura do Código e Componentes Principais
 
@@ -17,11 +17,11 @@ O código é modular e segue o princípio de separação de responsabilidades.
 - **`api/`:** Expõe autenticação, conversas, tradução, execução e histórico. `app.py` e `components.py` permanecem como interface Streamlit legada durante a migração.
 
 ### 2. Motor de Tradução (LLM): `core/translator.py`
-O **`Translator`** é responsável pela comunicação com o modelo de inteligência artificial via biblioteca `ollama`.
+O **`Translator`** é responsável pela comunicação com o modelo de inteligência artificial através do cliente configurado em `core/llm.py`.
 Ele não interage diretamente com o banco de dados nem reconhece entidades de negócio.
 - Ele recebe a instrução do usuário em linguagem natural e sempre a encaminha ao modelo.
 - Para uma conversa retomada, recebe também até seis turnos concluídos anteriores, com mensagens do usuário e do assistente, incluindo SQL e erros.
-- Envia isso junto ao contexto (System Prompt) ao LLM local (o modelo definido no projeto é o `qwen2.5-coder:7b`).
+- Envia isso junto ao contexto (System Prompt) ao provedor selecionado por `LLM_PROVIDER`. O padrão local usa `qwen2.5-coder:7b`; o modo `google` usa o modelo definido em `GEMINI_MODEL`.
 - Ele possui uma funcionalidade essencial de extração e limpeza: limpa as "tagarelices" comuns de respostas do LLM, extraindo apenas o JSON válido que deve conter a chave `sql` e, opcionalmente, as instruções do `grafico`.
 
 ### 3. Engenharia de Prompt: `core/prompter.py`
@@ -56,7 +56,7 @@ A comunicação com o banco de dados ocorre através do padrão *Adapter*.
 
 1. **Setup e autenticação:** A API coleta o esquema, monta o prompt e inicializa o tradutor com o contexto atual. Após autenticação, o frontend apresenta um rascunho vazio e as conversas do usuário na barra lateral.
 2. **Persistência do prompt:** Ao enviar a primeira pergunta, o app cria uma sessão titulada pelo prompt e salva a mensagem do usuário. Em sessões existentes, adiciona a mensagem à sessão ativa. A chave única por sessão, requisição e papel protege gravações contra duplicidade.
-3. **Contexto e tradução:** O `ConversationRepository` busca até seis turnos concluídos da sessão ativa, em ordem cronológica. O tradutor envia esses pares, o schema contextual e a nova pergunta ao Ollama. A resposta precisa usar apenas entidades declaradas nesse contexto.
+3. **Contexto e tradução:** O `ConversationRepository` busca até seis turnos concluídos da sessão ativa, em ordem cronológica. O tradutor envia esses pares, o schema contextual e a nova pergunta ao provedor LLM configurado. A resposta precisa usar apenas entidades declaradas nesse contexto.
 4. **Revisão de SQL:** A revisão começa ativada. Nesse modo, o SQL é persistido na mensagem do assistente e exibido com uma ação de execução separada. Se a revisão estiver desativada, o app encaminha o SQL para execução direta.
 5. **Execução e histórico:** O app consome a ação pendente uma vez, mostra o progresso e executa a consulta pelo `PostgresAdapter`. Em caso de sucesso, associa a consulta ao histórico e mantém o DataFrame no estado do Streamlit; não salva as linhas retornadas na conversa. Falhas persistem o SQL e o erro na mensagem do assistente.
 6. **Renderização:** `render_chat_messages` percorre a transcrição persistida e renderiza cada mensagem uma vez. Resultados disponíveis na sessão recebem tabela, gráfico e download CSV; erros e SQL permanecem associados à mensagem correspondente.

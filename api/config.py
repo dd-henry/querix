@@ -4,6 +4,8 @@ from typing import Mapping, Optional
 
 from dotenv import load_dotenv
 
+from core.llm import LLMConfig, LLMConfigurationError
+
 
 class SettingsError(RuntimeError):
     """Raised when required API configuration is missing or invalid."""
@@ -61,12 +63,18 @@ class Settings:
     cookie_secure: bool = False
     result_limit: int = 5_000
     prompt_limit: int = 2_000
+    llm: LLMConfig = field(default_factory=LLMConfig)
 
     @classmethod
     def from_env(cls, environ: Optional[Mapping[str, str]] = None) -> "Settings":
         if environ is None:
             load_dotenv()
             environ = os.environ
+
+        try:
+            llm = LLMConfig.from_env(environ)
+        except LLMConfigurationError as exc:
+            raise SettingsError(str(exc)) from exc
 
         return cls(
             web_origin=_required(environ, "WEB_ORIGIN"),
@@ -85,6 +93,7 @@ class Settings:
             cookie_secure=_boolean(environ, "COOKIE_SECURE", False),
             result_limit=_positive_integer(environ, "RESULT_LIMIT", 5_000),
             prompt_limit=_positive_integer(environ, "PROMPT_LIMIT", 2_000),
+            llm=llm,
         )
 
 

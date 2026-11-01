@@ -7,6 +7,7 @@ import streamlit as st
 
 from components import render_chat_messages
 from core.auth import AuthConfigurationError, SupabaseAuth
+from core.llm import LLMConfig, create_chat_client
 from core.prompter import Prompter
 from core.translator import Translator
 from database.conversations import ConversationRepository
@@ -63,12 +64,17 @@ def get_conversation_repository():
 
 @st.cache_resource(ttl=60)
 def get_translator():
-    """Cache do tradutor e do prompt de sistema."""
+    """Cache do tradutor, prompt de sistema e provedor LLM configurado."""
+    llm_config = LLMConfig.from_env()
     prompter = Prompter()
     system_prompt = prompter.build_system_prompt(
         live_schema=get_db_adapter().get_schema_info()
     )
-    return Translator(system_prompt=system_prompt, model_name="qwen2.5-coder:7b")
+    return Translator(
+        system_prompt=system_prompt,
+        model_name=llm_config.model_name,
+        chat_client=create_chat_client(llm_config),
+    )
 
 
 @st.cache_resource

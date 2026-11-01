@@ -23,6 +23,8 @@ def test_settings_load_typed_values_and_bounded_defaults():
     assert settings.result_limit == 5_000
     assert settings.prompt_limit == 2_000
     assert settings.cookie_secure is False
+    assert settings.llm.provider == "local"
+    assert settings.llm.model_name == "qwen2.5-coder:7b"
 
 
 def test_settings_require_session_secret_and_web_origin():
@@ -36,3 +38,22 @@ def test_settings_require_session_secret_and_web_origin():
 def test_settings_parse_production_cookie_security():
     assert Settings.from_env(_environment(COOKIE_SECURE="true")).cookie_secure is True
     assert Settings.from_env(_environment(COOKIE_SECURE="0")).cookie_secure is False
+
+
+def test_settings_support_google_provider_without_exposing_the_key():
+    settings = Settings.from_env(
+        _environment(
+            LLM_PROVIDER="google",
+            GEMINI_API_KEY="test-key",
+            GEMINI_MODEL="gemini-test",
+        )
+    )
+
+    assert settings.llm.provider == "google"
+    assert settings.llm.model_name == "gemini-test"
+    assert settings.llm.gemini_api_key == "test-key"
+
+
+def test_settings_require_google_api_key_when_cloud_provider_is_selected():
+    with pytest.raises(SettingsError, match="GEMINI_API_KEY"):
+        Settings.from_env(_environment(LLM_PROVIDER="google"))
