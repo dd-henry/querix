@@ -321,7 +321,18 @@ describe("useChat", () => {
       );
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(4_000);
+        await vi.advanceTimersByTimeAsync(28_000);
+      });
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          progress: expect.objectContaining({
+            elapsed_seconds: expect.any(Number),
+          }),
+        }),
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
       });
       expect(readMessages()[1]).toEqual(
         expect.objectContaining({

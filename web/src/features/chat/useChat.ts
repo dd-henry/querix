@@ -67,7 +67,7 @@ interface ActiveRequest {
   promise: Promise<boolean>;
 }
 
-const STATUS_RECOVERY_GRACE_MS = 5_000;
+const STATUS_RECOVERY_GRACE_MS = 30_000;
 
 function createId(): string {
   if (typeof crypto === "undefined" || !crypto.randomUUID) {
