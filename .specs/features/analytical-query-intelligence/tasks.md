@@ -99,7 +99,7 @@ safe candidates, process-local caching, and schema-sync invalidation.
 
 ### T2: Resolving temporal expressions
 
-**Status**: Pending
+**Status**: Complete
 
 **What**: Implement deterministic Portuguese temporal interpretation with
 explicit half-open date intervals and planning hints.
