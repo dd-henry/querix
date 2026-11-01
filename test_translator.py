@@ -282,6 +282,28 @@ def test_plan_question_normalizes_grain_array_from_cloud_model():
     assert plan.grain == "customer"
 
 
+def test_plan_question_normalizes_sql_aliases_in_plan_references():
+    payload = (
+        '{"intent":"ranking","tables":["orders","customers"],'
+        '"relationships":["o.customer_id -> c.id"],'
+        '"dimensions":["c.name"],"metrics":["SUM(o.amount)"],'
+        '"filters":[{"column":"o.amount","operator":">","value":0}],'
+        '"grain":"customer","assumptions":["amount is additive"]}'
+    )
+
+    translator = _staged_translator()
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={"message": {"content": payload}},
+    ):
+        plan = translator.plan_question("Ranking de clientes")
+
+    assert plan.relationships == ("orders.customer_id -> customers.id",)
+    assert plan.dimensions == ("customers.name",)
+    assert plan.metrics == ("SUM(orders.amount)",)
+    assert plan.filters[0]["column"] == "orders.amount"
+
+
 def test_plan_question_retries_malformed_planner_response():
     translator = _staged_translator()
     valid_payload = (

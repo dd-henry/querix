@@ -74,6 +74,10 @@ _QUALIFIED_IDENTIFIER = re.compile(
     r"\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b"
 )
 _IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
+_OUTPUT_ALIAS = re.compile(
+    r"\bas\s+[A-Za-z_][A-Za-z0-9_]*\s*$",
+    re.IGNORECASE,
+)
 _IGNORED_WORDS = {
     "and",
     "as",
@@ -151,14 +155,26 @@ def _validate_qualified_column(
             f"Unknown table in query plan: {table_name}.",
         )
     if not any(column.name == column_name for column in table.columns):
+        suggestions = [
+            f"{candidate_table.name}.{column_name}"
+            for candidate_table in profile.tables.values()
+            if any(column.name == column_name for column in candidate_table.columns)
+        ]
+        suggestion_text = (
+            f" Use one of: {', '.join(suggestions)}."
+            if suggestions
+            else ""
+        )
         raise QueryValidationError(
             "unknown_column",
-            f"Unknown column in query plan: {table_name}.{column_name}.",
+            f"Unknown column in query plan: {table_name}.{column_name}."
+            f"{suggestion_text}",
         )
 
 
 def _column_references(expression: str) -> Iterable[tuple[Optional[str], str]]:
     cleaned = re.sub(r"'[^']*'|\"[^\"]*\"", " ", expression)
+    cleaned = _OUTPUT_ALIAS.sub("", cleaned)
     qualified = list(_QUALIFIED_IDENTIFIER.finditer(cleaned))
     for match in qualified:
         yield match.group(1), match.group(2)

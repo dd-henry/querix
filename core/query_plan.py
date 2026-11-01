@@ -1,3 +1,4 @@
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Optional
@@ -25,6 +26,7 @@ class QueryPlan:
 
         intent = _required_text(payload, "intent")
         tables = _text_sequence(payload, "tables", required=True)
+        aliases = _table_aliases(tables)
         relationships = _text_sequence(
             payload,
             "relationships",
@@ -46,7 +48,19 @@ class QueryPlan:
             required=True,
             allow_single_text=True,
         )
-        filters = _filters(payload.get("filters"))
+        relationships = tuple(
+            _normalize_table_aliases(value, aliases)
+            for value in relationships
+        )
+        dimensions = tuple(
+            _normalize_table_aliases(value, aliases)
+            for value in dimensions
+        )
+        metrics = tuple(
+            _normalize_table_aliases(value, aliases)
+            for value in metrics
+        )
+        filters = _filters(payload.get("filters"), aliases)
         grain = payload.get("grain")
         if isinstance(grain, (list, tuple)):
             if not all(isinstance(item, str) for item in grain):
@@ -123,12 +137,49 @@ def _text_sequence(
     return tuple(normalized)
 
 
-def _filters(value: object) -> tuple[dict[str, object], ...]:
+def _filters(
+    value: object,
+    aliases: Mapping[str, str],
+) -> tuple[dict[str, object], ...]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         raise QueryPlanError("The planner field 'filters' must be an array.")
     normalized = []
     for item in value:
         if not isinstance(item, Mapping):
             raise QueryPlanError("The planner field 'filters' must contain objects.")
-        normalized.append(dict(item))
+        normalized_item = dict(item)
+        column = normalized_item.get("column")
+        if isinstance(column, str):
+            normalized_item["column"] = _normalize_table_aliases(
+                column,
+                aliases,
+            )
+        normalized.append(normalized_item)
     return tuple(normalized)
+
+
+def _table_aliases(tables: Sequence[str]) -> dict[str, str]:
+    candidates: dict[str, list[str]] = {}
+    for table in tables:
+        alias = table[:1].lower()
+        if len(table) > 1 and alias:
+            candidates.setdefault(alias, []).append(table)
+    return {
+        alias: matches[0]
+        for alias, matches in candidates.items()
+        if len(matches) == 1
+    }
+
+
+def _normalize_table_aliases(
+    value: str,
+    aliases: Mapping[str, str],
+) -> str:
+    normalized = value
+    for alias, table in aliases.items():
+        normalized = re.sub(
+            rf"(?<![A-Za-z0-9_]){re.escape(alias)}\.",
+            f"{table}.",
+            normalized,
+        )
+    return normalized

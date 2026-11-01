@@ -155,7 +155,12 @@ class Prompter:
             "ou métricas. Mesmo uma única suposição deve ser representada "
             "como [\"texto\"]. intent deve ser uma descrição curta e não vazia. "
             "assumptions deve conter pelo menos uma frase, "
-            "mesmo quando a conclusão for que não há suposições adicionais.\n"
+            "mesmo quando a conclusão for que não há suposições adicionais. "
+            "Antes de responder, confira cada tabela e coluna do plano "
+            "contra o ESQUEMA DO BANCO DE DADOS; use somente identificadores "
+            "com correspondência exata e não substitua nomes por sinônimos. "
+            "No plano, use os nomes completos das tabelas do schema; não use "
+            "aliases SQL de uma letra como v.valor_total ou f.nome.\n"
             "Não inclua SQL, markdown ou texto fora do JSON."
         )
 

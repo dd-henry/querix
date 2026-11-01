@@ -57,6 +57,24 @@ def test_valid_generic_plan_passes_against_profile(profile):
     PlanValidator.validate_plan(_plan(), profile)
 
 
+def test_metric_output_alias_is_not_validated_as_schema_column(profile):
+    PlanValidator.validate_plan(
+        _plan(metrics=("SUM(orders.amount) AS total_amount",)),
+        profile,
+    )
+
+
+def test_unknown_qualified_column_suggests_matching_schema_columns(profile):
+    with pytest.raises(QueryValidationError) as error:
+        PlanValidator.validate_plan(
+            _plan(dimensions=("orders.name",)),
+            profile,
+        )
+
+    assert error.value.code == "unknown_column"
+    assert "customers.name" in error.value.message
+
+
 @pytest.mark.parametrize(
     ("field", "value", "code"),
     [
