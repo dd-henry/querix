@@ -264,6 +264,24 @@ def test_plan_question_normalizes_single_assumption_text():
     assert plan.assumptions == ("no aggregation requested",)
 
 
+def test_plan_question_normalizes_grain_array_from_cloud_model():
+    payload = (
+        '{"intent":"ranking","tables":["orders"],"relationships":[],'
+        '"dimensions":["customers.name"],"metrics":["SUM(orders.amount)"],'
+        '"filters":[],"grain":["customer"],'
+        '"assumptions":["amount is additive"]}'
+    )
+
+    translator = _staged_translator()
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={"message": {"content": payload}},
+    ):
+        plan = translator.plan_question("Ranking de clientes")
+
+    assert plan.grain == "customer"
+
+
 def test_plan_question_retries_malformed_planner_response():
     translator = _staged_translator()
     valid_payload = (

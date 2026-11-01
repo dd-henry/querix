@@ -48,6 +48,13 @@ class QueryPlan:
         )
         filters = _filters(payload.get("filters"))
         grain = payload.get("grain")
+        if isinstance(grain, (list, tuple)):
+            if not all(isinstance(item, str) for item in grain):
+                raise QueryPlanError(
+                    "The planner field 'grain' must be a string or null."
+                )
+            grain = ", ".join(item.strip() for item in grain if item.strip())
+            grain = grain or None
         if grain is not None and (
             not isinstance(grain, str) or not grain.strip()
         ):
