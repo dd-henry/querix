@@ -213,7 +213,7 @@ and persist either the repaired result or a retryable terminal failure.
 
 ### T6: Critiquing result quality
 
-**Status**: Pending
+**Status**: Complete
 
 **What**: Add truthful result diagnostics for zero rows and missing expected
 columns, preserving valid results and prohibiting invented numeric claims.

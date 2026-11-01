@@ -31,6 +31,20 @@ class ChatRetryRequest(BaseModel):
     request_id: UUID
 
 
+class ChatInterpretation(BaseModel):
+    intent: str
+    dimensions: List[str] = Field(default_factory=list)
+    metrics: List[str] = Field(default_factory=list)
+    period: Optional[Dict[str, Any]] = None
+    assumptions: List[str] = Field(default_factory=list)
+
+
+class ChatDiagnostics(BaseModel):
+    kind: str
+    message: str
+    expected_columns: List[str] = Field(default_factory=list)
+
+
 class ChatResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -46,6 +60,8 @@ class ChatResponse(BaseModel):
     retryable: bool = False
     retry_kind: Optional[RetryKind] = None
     warnings: List[str] = Field(default_factory=list)
+    interpretation: Optional[ChatInterpretation] = None
+    diagnostics: Optional[ChatDiagnostics] = None
 
 
 class ChatInsight(BaseModel):

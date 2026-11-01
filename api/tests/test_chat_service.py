@@ -474,6 +474,86 @@ def test_stored_execution_returns_supporting_insights_after_primary_result():
     assert database.execute_read_only_query.call_count == 3
 
 
+def test_stored_execution_preserves_zero_rows_and_adds_truthful_diagnostic():
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(
+                metadata={
+                    "plan": {
+                        "intent": "Comparar receita por região",
+                        "tables": ["orders"],
+                        "relationships": [],
+                        "dimensions": ["region"],
+                        "metrics": ["revenue"],
+                        "filters": [],
+                        "grain": "region",
+                        "assumptions": ["revenue is the order total"],
+                    }
+                },
+            ),
+        ]
+    )
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame(
+        columns=["region", "revenue"]
+    )
+    result = _service(repository, FakeTranslator(), database).execute_stored_query(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.status == "executed"
+    assert result.result["row_count"] == 0
+    assert result.summary == "A consulta retornou 0 linha(s)."
+    assert result.diagnostics == {
+        "kind": "empty_result",
+        "message": (
+            "A consulta foi executada, mas não encontrou dados "
+            "compatíveis com os filtros informados."
+        ),
+        "expected_columns": [],
+    }
+    assert "revenue" not in result.summary
+
+
+def test_stored_execution_reports_missing_expected_metric_without_fabricating_it():
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(
+                metadata={
+                    "plan": {
+                        "intent": "Comparar receita por região",
+                        "tables": ["orders"],
+                        "relationships": [],
+                        "dimensions": ["region"],
+                        "metrics": ["revenue"],
+                        "filters": [],
+                        "grain": "region",
+                        "assumptions": ["revenue is the order total"],
+                    }
+                },
+            ),
+        ]
+    )
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame(
+        [{"region": "Sul"}]
+    )
+    result = _service(repository, FakeTranslator(), database).execute_stored_query(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.result["rows"] == [{"region": "Sul"}]
+    assert result.diagnostics["kind"] == "missing_expected_columns"
+    assert result.diagnostics["expected_columns"] == ["revenue"]
+    assert "revenue" not in result.summary
+
+
 def test_supporting_failure_preserves_primary_result_with_warning():
     repository = MemoryConversationRepository(
         [

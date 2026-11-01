@@ -44,6 +44,8 @@ def _response(result: ChatResult) -> ChatResponse:
         retryable=result.retryable,
         retry_kind=result.retry_kind,
         warnings=result.warnings,
+        interpretation=result.interpretation,
+        diagnostics=result.diagnostics,
     )
 
 

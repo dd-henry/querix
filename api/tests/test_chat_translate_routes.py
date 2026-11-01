@@ -150,6 +150,34 @@ def test_insights_are_exposed_without_changing_primary_result():
     )
 
 
+def test_interpretation_and_diagnostics_are_exposed_on_the_same_response():
+    service = Mock()
+    service.translate_prompt.return_value = _result(
+        interpretation={
+            "intent": "Comparar receita por região",
+            "dimensions": ["region"],
+            "metrics": ["revenue"],
+            "period": None,
+            "assumptions": ["revenue is the order total"],
+        },
+        diagnostics={
+            "kind": "empty_result",
+            "message": "A consulta não encontrou dados compatíveis.",
+            "expected_columns": [],
+        },
+    )
+    client = _client(service)
+
+    response = client.post("/api/chat/translate", json=_payload())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["interpretation"]["dimensions"] == ["region"]
+    assert body["interpretation"]["metrics"] == ["revenue"]
+    assert body["diagnostics"]["kind"] == "empty_result"
+    assert body["diagnostics"]["expected_columns"] == []
+
+
 def test_warning_response_has_no_execution_result():
     service = Mock()
     service.translate_prompt.return_value = _result(

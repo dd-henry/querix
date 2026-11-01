@@ -10,6 +10,7 @@ from api.serializers.results import (
 )
 from core.query_plan import QueryPlan, QueryPlanError
 from core.query_validation import PlanValidator, QueryValidationError
+from core.result_quality import build_interpretation, critique_result
 from core.semantic_context import SemanticContextService
 from database.conversations import ConversationRepository
 from database.postgres import PostgresAdapter
@@ -53,6 +54,8 @@ class ChatResult:
     retryable: bool = False
     retry_kind: Optional[str] = None
     warnings: List[str] = field(default_factory=list)
+    interpretation: Optional[Dict[str, Any]] = None
+    diagnostics: Optional[Dict[str, Any]] = None
 
 
 class ChatService:
@@ -157,6 +160,7 @@ class ChatService:
         supporting_queries = self._prepare_supporting_queries(
             translated.get("supporting_queries")
         )
+        temporal = translated.get("temporal")
         plan = self._validate_plan(
             translated.get("plan"),
             user_id,
@@ -177,6 +181,7 @@ class ChatService:
                 status="warning",
                 content=sql,
                 chart=chart,
+                interpretation=build_interpretation(plan, temporal),
             )
         if not sql:
             return self._handle_translation_failure(
@@ -221,6 +226,8 @@ class ChatService:
                 "intent": intent,
                 "supporting_queries": supporting_queries,
                 "plan": plan.to_dict() if plan is not None else None,
+                "temporal": temporal,
+                "interpretation": build_interpretation(plan, temporal),
             },
         )
         return ChatResult(
@@ -230,6 +237,7 @@ class ChatService:
             content=content,
             sql=normalized_sql,
             chart=chart,
+            interpretation=build_interpretation(plan, temporal),
         )
 
     def _validate_plan(
@@ -352,6 +360,13 @@ class ChatService:
         insights = self._execute_supporting_queries(
             metadata.get("supporting_queries"),
         )
+        interpretation = metadata.get("interpretation")
+        if not isinstance(interpretation, dict):
+            interpretation = build_interpretation(
+                metadata.get("plan"),
+                metadata.get("temporal"),
+            )
+        diagnostics = critique_result(result, metadata.get("plan"))
 
         warnings = self._record_history(
             user_id,
@@ -377,6 +392,10 @@ class ChatService:
                 "grafico": metadata.get("grafico"),
                 "source": metadata.get("source", "chat"),
                 "parameters": parameters,
+                "interpretation": interpretation,
+                "diagnostics": (
+                    diagnostics.to_dict() if diagnostics is not None else None
+                ),
             },
         )
         return ChatResult(
@@ -390,6 +409,10 @@ class ChatService:
             summary=summary,
             insights=insights,
             warnings=warnings,
+            interpretation=interpretation,
+            diagnostics=(
+                diagnostics.to_dict() if diagnostics is not None else None
+            ),
         )
 
     def _attempt_query_repair(
@@ -900,4 +923,14 @@ class ChatService:
             chart=metadata.get("grafico"),
             retryable=bool(metadata.get("retryable")),
             retry_kind=metadata.get("retry_kind"),
+            interpretation=(
+                metadata.get("interpretation")
+                if isinstance(metadata.get("interpretation"), dict)
+                else None
+            ),
+            diagnostics=(
+                metadata.get("diagnostics")
+                if isinstance(metadata.get("diagnostics"), dict)
+                else None
+            ),
         )

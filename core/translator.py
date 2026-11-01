@@ -276,6 +276,11 @@ class Translator:
                 temporal_interpretation=temporal,
             )
             translated["plan"] = plan.to_dict()
+            translated["temporal"] = (
+                temporal.planning_hint
+                if temporal.planning_hint is not None
+                else None
+            )
             return translated
 
         return self._translate_legacy(
