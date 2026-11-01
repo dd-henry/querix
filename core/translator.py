@@ -204,6 +204,45 @@ class Translator:
                 raise
             raise TranslationStageError("sql_generation", str(exc)) from exc
 
+    def repair_query(
+        self,
+        sql: str,
+        database_error: str,
+        plan: object = None,
+        user_question: str = "",
+        conversation_context: Optional[Sequence[Dict[str, str]]] = None,
+    ) -> dict:
+        prompt = self.sql_generation_prompt or self.system_prompt
+        plan_context = ""
+        if isinstance(plan, Mapping):
+            plan_context = json.dumps(
+                dict(plan),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        repair_prompt = (
+            f"{prompt}\n\n"
+            "=== REPARO ÚNICO DE SQL ===\n"
+            f"SQL original:\n{sql}\n"
+            f"Erro retornado pelo banco:\n{database_error}\n"
+            f"Plano analítico original:\n{plan_context or 'não disponível'}\n"
+            "Corrija somente o necessário, preserve a intenção e retorne "
+            "o contrato JSON existente. Não retorne explicações."
+        )
+        messages = self._stage_messages(
+            repair_prompt,
+            user_question or "Corrija a consulta conforme o erro do banco.",
+            conversation_context,
+        )
+        try:
+            response = ollama.chat(model=self.model_name, messages=messages)
+            raw_content = response.get("message", {}).get("content", "")
+            return self._clean_sql_response(raw_content)
+        except Exception as exc:
+            if isinstance(exc, TranslationStageError):
+                raise
+            raise TranslationStageError("repair", str(exc)) from exc
+
     def translate_to_sql(
         self,
         user_question: str,

@@ -184,7 +184,7 @@ SQL guard before any database execution.
 
 ### T5: Adding bounded execution repair
 
-**Status**: Pending
+**Status**: Complete
 
 **What**: Use database execution errors to attempt one validated SQL repair
 and persist either the repaired result or a retryable terminal failure.

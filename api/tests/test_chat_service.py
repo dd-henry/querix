@@ -128,6 +128,17 @@ class FakeTranslator:
         return self.response
 
 
+class RepairTranslator(FakeTranslator):
+    def __init__(self, repair_response):
+        super().__init__()
+        self.repair_response = repair_response
+        self.repair_calls = []
+
+    def repair_query(self, **kwargs):
+        self.repair_calls.append(kwargs)
+        return self.repair_response
+
+
 def _service(
     repository,
     translator,
@@ -718,6 +729,75 @@ def test_database_failure_stores_a_retryable_error():
     assert repository.update_calls[-1][5] == "database_unavailable"
     assert repository.update_calls[-1][6]["retryable"] is True
     assert repository.update_calls[-1][6]["retry_kind"] == "execute"
+
+
+def test_database_failure_is_repaired_once_and_updates_same_message():
+    repository = MemoryConversationRepository(
+        [_user_message(), _assistant_message()]
+    )
+    translator = RepairTranslator({"sql": "SELECT 2", "parameters": {}})
+    database = Mock()
+    database.execute_read_only_query.side_effect = [
+        ConnectionError("missing column"),
+        pd.DataFrame([{"total": 2}]),
+    ]
+    service = _service(repository, translator, database)
+
+    result = service.execute_stored_query(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    assert result.status == "executed"
+    assert result.sql == "SELECT 2"
+    assert result.result["rows"] == [{"total": 2}]
+    assert database.execute_read_only_query.call_count == 2
+    assert len(translator.repair_calls) == 1
+    assert len(repository.update_calls) == 1
+    assert repository.update_calls[-1][2] == REQUEST_ID
+    assert repository.update_calls[-1][4] == "SELECT 2"
+    assert repository.update_calls[-1][5] is None
+    assert repository.update_calls[-1][6]["repair_attempted"] is True
+    assert repository.update_calls[-1][6]["repaired_from"] == "SELECT 1"
+
+
+def test_invalid_repair_is_not_executed_and_remains_retryable():
+    repository = MemoryConversationRepository(
+        [_user_message(), _assistant_message()]
+    )
+    translator = RepairTranslator({"sql": "DELETE FROM orders"})
+    database = Mock()
+    database.execute_read_only_query.side_effect = ConnectionError("offline")
+    service = _service(repository, translator, database)
+
+    with pytest.raises(ChatServiceError) as error:
+        service.execute_stored_query(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    assert error.value.code == "database_unavailable"
+    assert database.execute_read_only_query.call_count == 1
+    assert len(translator.repair_calls) == 1
+    assert repository.update_calls[-1][4] == "SELECT 1"
+    assert repository.update_calls[-1][6]["repair_attempted"] is True
+
+
+def test_failed_repair_is_bounded_to_one_database_retry():
+    repository = MemoryConversationRepository(
+        [_user_message(), _assistant_message()]
+    )
+    translator = RepairTranslator({"sql": "SELECT 2"})
+    database = Mock()
+    database.execute_read_only_query.side_effect = [
+        ConnectionError("original failure"),
+        ConnectionError("repair failure"),
+    ]
+    service = _service(repository, translator, database)
+
+    with pytest.raises(ChatServiceError) as error:
+        service.execute_stored_query(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    assert error.value.code == "database_unavailable"
+    assert database.execute_read_only_query.call_count == 2
+    assert len(translator.repair_calls) == 1
+    assert repository.update_calls[-1][4] == "SELECT 2"
+    assert repository.update_calls[-1][5] == "database_unavailable"
+    assert repository.update_calls[-1][6]["repair_attempted"] is True
 
 
 def test_duplicate_request_returns_stored_message_without_translation_or_insert():

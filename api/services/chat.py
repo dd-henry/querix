@@ -311,24 +311,43 @@ class ChatService:
             summary = summarize_result(result)
         except Exception as exc:
             logger.exception("Stored query execution failed.")
-            self._persist_assistant_turn(
-                user_id,
-                conversation_id,
+            repaired = self._attempt_query_repair(
+                sql,
+                exc,
+                metadata,
+                messages,
                 request_id,
-                "Houve um problema ao executar a consulta.",
-                sql=sql,
-                error="database_unavailable",
-                metadata={
-                    **metadata,
-                    "retryable": True,
-                    "retry_kind": "execute",
-                },
             )
-            raise ChatServiceError(
-                503,
-                "database_unavailable",
-                "The database is unavailable.",
-            ) from exc
+            if repaired is None:
+                self._raise_database_failure(
+                    user_id,
+                    conversation_id,
+                    request_id,
+                    sql,
+                    metadata,
+                    exc,
+                )
+            sql, parameters, metadata = repaired
+            try:
+                dataframe = self.database.execute_read_only_query(
+                    sql,
+                    parameters,
+                )
+                result = serialize_dataframe(
+                    dataframe,
+                    max_rows=self.result_limit,
+                )
+                summary = summarize_result(result)
+            except Exception as repair_error:
+                logger.exception("Repaired query execution failed.")
+                self._raise_database_failure(
+                    user_id,
+                    conversation_id,
+                    request_id,
+                    sql,
+                    metadata,
+                    repair_error,
+                )
 
         insights = self._execute_supporting_queries(
             metadata.get("supporting_queries"),
@@ -372,6 +391,89 @@ class ChatService:
             insights=insights,
             warnings=warnings,
         )
+
+    def _attempt_query_repair(
+        self,
+        sql: str,
+        database_error: Exception,
+        metadata: Mapping[str, object],
+        messages: List[Dict[str, object]],
+        request_id: UUID,
+    ) -> Optional[tuple[str, Dict[str, object], Dict[str, object]]]:
+        if metadata.get("repair_attempted"):
+            return None
+        repair_query = getattr(self.translator, "repair_query", None)
+        if not callable(repair_query):
+            return None
+
+        user_message = self._find_message(
+            messages,
+            request_id,
+            "user",
+        )
+        user_question = str((user_message or {}).get("content") or "")
+        try:
+            repaired = repair_query(
+                sql=sql,
+                database_error=str(database_error),
+                plan=metadata.get("plan"),
+                user_question=user_question,
+                conversation_context=[],
+            )
+            if not isinstance(repaired, Mapping):
+                raise ValueError("The repair response must be an object.")
+            repaired_sql = repaired.get("sql")
+            if not isinstance(repaired_sql, str) or not repaired_sql.strip():
+                raise ValueError("The repair response did not contain SQL.")
+            normalized_sql = PlanValidator.validate_sql(repaired_sql)
+            raw_parameters = repaired.get("parameters", metadata.get("parameters", {}))
+            parameters = (
+                dict(raw_parameters)
+                if isinstance(raw_parameters, Mapping)
+                else {}
+            )
+            return (
+                normalized_sql,
+                parameters,
+                {
+                    **dict(metadata),
+                    "parameters": parameters,
+                    "repair_attempted": True,
+                    "repaired_from": sql,
+                },
+            )
+        except Exception as exc:
+            logger.warning("Stored query repair was not accepted: %s", exc)
+            return None
+
+    def _raise_database_failure(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+        sql: str,
+        metadata: Mapping[str, object],
+        error: Exception,
+    ) -> NoReturn:
+        self._persist_assistant_turn(
+            user_id,
+            conversation_id,
+            request_id,
+            "Houve um problema ao executar a consulta.",
+            sql=sql,
+            error="database_unavailable",
+            metadata={
+                **dict(metadata),
+                "repair_attempted": True,
+                "retryable": True,
+                "retry_kind": "execute",
+            },
+        )
+        raise ChatServiceError(
+            503,
+            "database_unavailable",
+            "The database is unavailable.",
+        ) from error
 
     def execute_history_query(
         self,
