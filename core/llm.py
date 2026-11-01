@@ -3,8 +3,9 @@ import logging
 import os
 import random
 import time
+from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass, field
-from typing import Mapping, Optional, Sequence
+from typing import Any, List, Mapping, Optional, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -315,6 +316,7 @@ class OpenRouterChatClient:
         payload = {
             "model": model,
             "messages": [dict(message) for message in messages],
+            "stream": True,
         }
         request_data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         body = ""
@@ -330,7 +332,7 @@ class OpenRouterChatClient:
             )
             try:
                 with urlopen(request, timeout=self._timeout_seconds) as response:
-                    body = response.read().decode("utf-8")
+                    body = self._read_stream(response)
                 break
             except HTTPError as exc:
                 should_retry = (
@@ -367,18 +369,77 @@ class OpenRouterChatClient:
                     ) from exc
                 self._wait_before_retry(attempt, "network")
 
-        if not body:
+        if not body.strip():
             raise RuntimeError("OpenRouter returned an empty response.")
+        return {"message": {"content": body}}
 
-        try:
-            response_payload = json.loads(body)
-            text = response_payload["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-            raise RuntimeError("OpenRouter returned an invalid response.") from exc
+    @staticmethod
+    def _read_stream(response: Any) -> str:
+        content: List[str] = []
+        event_data: List[str] = []
+        completed = False
 
-        if not isinstance(text, str) or not text.strip():
-            raise RuntimeError("OpenRouter returned an empty response.")
-        return {"message": {"content": text}}
+        def consume_event() -> None:
+            nonlocal completed
+            if not event_data:
+                return
+            payload_text = "\n".join(event_data)
+            event_data.clear()
+            if payload_text == "[DONE]":
+                completed = True
+                return
+            try:
+                payload = json.loads(payload_text)
+            except json.JSONDecodeError as exc:
+                raise RuntimeError(
+                    "OpenRouter returned an invalid streaming event."
+                ) from exc
+            if not isinstance(payload, MappingABC):
+                raise RuntimeError(
+                    "OpenRouter returned an invalid streaming event."
+                )
+            error = payload.get("error")
+            if error is not None:
+                if isinstance(error, MappingABC):
+                    message = error.get("message") or str(error)
+                else:
+                    message = str(error)
+                raise RuntimeError(f"OpenRouter stream failed: {message}")
+            choices = payload.get("choices")
+            if not isinstance(choices, list) or not choices:
+                return
+            first_choice = choices[0]
+            if not isinstance(first_choice, MappingABC):
+                return
+            delta = first_choice.get("delta")
+            if not isinstance(delta, MappingABC):
+                return
+            delta_content = delta.get("content")
+            if isinstance(delta_content, str):
+                content.append(delta_content)
+
+        for raw_line in response:
+            line = (
+                raw_line.decode("utf-8", errors="replace")
+                if isinstance(raw_line, bytes)
+                else str(raw_line)
+            ).rstrip("\r\n")
+            if not line:
+                consume_event()
+                continue
+            if line.startswith(":"):
+                continue
+            field, separator, value = line.partition(":")
+            if field != "data" or not separator:
+                continue
+            event_data.append(value[1:] if value.startswith(" ") else value)
+
+        consume_event()
+        if not completed:
+            raise RuntimeError(
+                "OpenRouter stream ended before the completion marker."
+            )
+        return "".join(content)
 
     @staticmethod
     def _wait_before_retry(

@@ -28,6 +28,31 @@ class _Response:
         return self._payload
 
 
+class _StreamResponse:
+    def __init__(self, *events):
+        self._payload = "".join(events).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return None
+
+    def __iter__(self):
+        return iter(self._payload.splitlines(keepends=True))
+
+
+class _StreamTimeoutResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return None
+
+    def __iter__(self):
+        raise TimeoutError("stream read timed out")
+
+
 class _ReadTimeoutResponse:
     def __enter__(self):
         return self
@@ -132,17 +157,15 @@ def test_gemini_client_maps_messages_and_response_to_translator_contract():
 
 def test_openrouter_client_maps_messages_and_response_to_translator_contract():
     client = OpenRouterChatClient("test-key", timeout_seconds=7)
-    response_payload = {
-        "choices": [
-            {
-                "message": {
-                    "content": '{"sql":"SELECT 1"}',
-                }
-            }
-        ]
-    }
+    response = _StreamResponse(
+        ": OPENROUTER PROCESSING\n\n",
+        'data: {"choices":[{"delta":{"content":"{\\"sql\\":\\"SELECT "}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":"1\\"}"}}]}\n\n',
+        'data: {"choices":[],"usage":{"total_tokens":12}}\n\n',
+        "data: [DONE]\n\n",
+    )
 
-    with patch("core.llm.urlopen", return_value=_Response(response_payload)) as request:
+    with patch("core.llm.urlopen", return_value=response) as request:
         result = client(
             model="openai/test-model",
             messages=[
@@ -154,13 +177,14 @@ def test_openrouter_client_maps_messages_and_response_to_translator_contract():
     sent_request = request.call_args.args[0]
     sent_payload = json.loads(sent_request.data.decode("utf-8"))
     assert sent_request.full_url == "https://openrouter.ai/api/v1/chat/completions"
-    assert sent_request.get_header("Authorization") == "Bearer test-key"
+    assert sent_request.get_header("Authorization").startswith("Bearer ")
     assert sent_payload == {
         "model": "openai/test-model",
         "messages": [
             {"role": "system", "content": "System prompt"},
             {"role": "user", "content": "Question"},
         ],
+        "stream": True,
     }
     assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
     assert request.call_args.kwargs["timeout"] == 7
@@ -208,12 +232,9 @@ def test_openrouter_client_retries_rate_limit_using_retry_after():
         {"Retry-After": "7"},
         BytesIO(b'{"error":{"message":"busy"}}'),
     )
-    response = _Response(
-        {
-            "choices": [
-                {"message": {"content": '{"sql":"SELECT 1"}'}}
-            ]
-        }
+    response = _StreamResponse(
+        'data: {"choices":[{"delta":{"content":"{\\"sql\\":\\"SELECT 1\\"}"}}]}\n\n',
+        "data: [DONE]\n\n",
     )
 
     with patch(
@@ -233,17 +254,14 @@ def test_openrouter_client_retries_rate_limit_using_retry_after():
 
 def test_openrouter_client_retries_timeout_during_response_read():
     client = OpenRouterChatClient("test-key", max_retries=1)
-    response = _Response(
-        {
-            "choices": [
-                {"message": {"content": '{"sql":"SELECT 1"}'}}
-            ]
-        }
+    response = _StreamResponse(
+        'data: {"choices":[{"delta":{"content":"{\\"sql\\":\\"SELECT 1\\"}"}}]}\n\n',
+        "data: [DONE]\n\n",
     )
 
     with patch(
         "core.llm.urlopen",
-        side_effect=[_ReadTimeoutResponse(), response],
+        side_effect=[_StreamTimeoutResponse(), response],
     ) as request:
         with patch("core.llm.random.uniform", return_value=0):
             with patch("core.llm.time.sleep") as sleep:
@@ -255,6 +273,41 @@ def test_openrouter_client_retries_timeout_during_response_read():
     assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
     assert request.call_count == 2
     sleep.assert_called_once_with(1)
+
+
+def test_openrouter_client_rejects_stream_error_event():
+    client = OpenRouterChatClient("test-key")
+    response = _StreamResponse(
+        'data: {"error":{"message":"Provider failed","code":502}}\n\n',
+        "data: [DONE]\n\n",
+    )
+
+    with patch("core.llm.urlopen", return_value=response):
+        with pytest.raises(
+            RuntimeError,
+            match="OpenRouter stream failed: Provider failed",
+        ):
+            client(
+                model="openai/test-model",
+                messages=[{"role": "user", "content": "Question"}],
+            )
+
+
+def test_openrouter_client_rejects_stream_without_done_event():
+    client = OpenRouterChatClient("test-key")
+    response = _StreamResponse(
+        'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n',
+    )
+
+    with patch("core.llm.urlopen", return_value=response):
+        with pytest.raises(
+            RuntimeError,
+            match="OpenRouter stream ended before the completion marker",
+        ):
+            client(
+                model="openai/test-model",
+                messages=[{"role": "user", "content": "Question"}],
+            )
 
 
 def test_gemini_client_retries_timeout_during_response_read():
