@@ -54,7 +54,19 @@ def _plan(**overrides):
 
 
 def test_valid_generic_plan_passes_against_profile(profile):
-    PlanValidator.validate_plan(_plan(), profile)
+    assert PlanValidator.validate_plan(_plan(), profile) == []
+
+
+def test_existing_columns_allow_inferred_relationship_with_warning(profile):
+    warnings = PlanValidator.validate_plan(
+        _plan(relationships=("orders.id -> customers.id",)),
+        profile,
+    )
+
+    assert warnings == [
+        "JOIN inferido: orders.id -> customers.id. "
+        "Essa relação não está declarada como chave estrangeira no banco."
+    ]
 
 
 def test_metric_output_alias_is_not_validated_as_schema_column(profile):
@@ -81,6 +93,7 @@ def test_unknown_qualified_column_suggests_matching_schema_columns(profile):
         ("tables", ("missing",), "unknown_table"),
         ("dimensions", ("customers.email",), "unknown_column"),
         ("relationships", ("orders.customer_id -> missing.id",), "unknown_relationship"),
+        ("relationships", ("orders.missing -> customers.id",), "unknown_relationship"),
     ],
 )
 def test_unknown_plan_identifiers_have_stable_validation_errors(
@@ -94,6 +107,27 @@ def test_unknown_plan_identifiers_have_stable_validation_errors(
 
     assert error.value.code == code
     assert error.value.message
+
+
+def test_declared_relationship_in_reverse_direction_has_no_warning(profile):
+    assert PlanValidator.validate_plan(
+        _plan(relationships=("customers.id -> orders.customer_id",)),
+        profile,
+    ) == []
+
+
+def test_repeated_inferred_relationship_has_one_warning(profile):
+    warnings = PlanValidator.validate_plan(
+        _plan(
+            relationships=(
+                "orders.id -> customers.id",
+                "orders.id -> customers.id",
+            )
+        ),
+        profile,
+    )
+
+    assert len(warnings) == 1
 
 
 def test_sql_validation_accepts_select_and_with():

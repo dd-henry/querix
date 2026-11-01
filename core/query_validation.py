@@ -18,7 +18,8 @@ class QueryValidationError(ValueError):
 
 class PlanValidator:
     @staticmethod
-    def validate_plan(plan: QueryPlan, profile: SemanticProfile) -> None:
+    def validate_plan(plan: QueryPlan, profile: SemanticProfile) -> list[str]:
+        warnings: list[str] = []
         for table_name in plan.tables:
             if table_name not in profile.tables:
                 raise QueryValidationError(
@@ -27,21 +28,53 @@ class PlanValidator:
                 )
 
         known_relationships = {
-            _relationship_key(
-                relationship.table,
-                relationship.column,
-                relationship.foreign_table,
-                relationship.foreign_column,
-            )
+            key
             for relationship in profile.relationships
+            for key in (
+                _relationship_key(
+                    relationship.table,
+                    relationship.column,
+                    relationship.foreign_table,
+                    relationship.foreign_column,
+                ),
+                _relationship_key(
+                    relationship.foreign_table,
+                    relationship.foreign_column,
+                    relationship.table,
+                    relationship.column,
+                ),
+            )
         }
         for relationship in plan.relationships:
             normalized = _normalize_relationship(relationship)
-            if normalized not in known_relationships:
+            match = _RELATIONSHIP.fullmatch(normalized)
+            if match is None:
                 raise QueryValidationError(
                     "unknown_relationship",
                     f"Unknown relationship in query plan: {relationship}.",
                 )
+            left_table, left_column, right_table, right_column = match.groups()
+            if (
+                left_table not in plan.tables
+                or right_table not in plan.tables
+                or not _has_column(profile, left_table, left_column)
+                or not _has_column(profile, right_table, right_column)
+            ):
+                raise QueryValidationError(
+                    "unknown_relationship",
+                    f"Unknown relationship in query plan: {relationship}.",
+                )
+            if normalized not in known_relationships:
+                display_relationship = (
+                    f"{left_table}.{left_column} -> "
+                    f"{right_table}.{right_column}"
+                )
+                warning = (
+                    f"JOIN inferido: {display_relationship}. Essa relação não está "
+                    "declarada como chave estrangeira no banco."
+                )
+                if warning not in warnings:
+                    warnings.append(warning)
 
         expressions: Iterable[str] = (
             *plan.dimensions,
@@ -58,6 +91,7 @@ class PlanValidator:
                     "Every query-plan filter must identify a column.",
                 )
             _validate_expression(column, plan, profile)
+        return warnings
 
     @staticmethod
     def validate_sql(sql: str) -> str:
@@ -72,6 +106,10 @@ class PlanValidator:
 
 _QUALIFIED_IDENTIFIER = re.compile(
     r"\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b"
+)
+_RELATIONSHIP = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*->\s*"
+    r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*$"
 )
 _IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 _OUTPUT_ALIAS = re.compile(
@@ -170,6 +208,17 @@ def _validate_qualified_column(
             f"Unknown column in query plan: {table_name}.{column_name}."
             f"{suggestion_text}",
         )
+
+
+def _has_column(
+    profile: SemanticProfile,
+    table_name: str,
+    column_name: str,
+) -> bool:
+    table = profile.tables.get(table_name)
+    return table is not None and any(
+        column.name == column_name for column in table.columns
+    )
 
 
 def _column_references(expression: str) -> Iterable[tuple[Optional[str], str]]:

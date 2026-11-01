@@ -545,6 +545,26 @@ describe("useChat", () => {
     expect(readMessages()).toHaveLength(2);
   });
 
+  it("restores inferred join warnings from conversation metadata", async () => {
+    const detail = restoredConversation();
+    detail.messages[1].metadata = {
+      warnings: ["JOIN inferido: orders.id -> customers.id."],
+    };
+    const client = createClient();
+    vi.mocked(client.conversations.get).mockResolvedValue(detail);
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          warnings: ["JOIN inferido: orders.id -> customers.id."],
+        }),
+      ),
+    );
+  });
+
   it("keeps a restored query retryable after execution fails", async () => {
     const execute = vi.fn().mockRejectedValue(
       new ApiError("database_unavailable", "Banco indisponível.", 503),

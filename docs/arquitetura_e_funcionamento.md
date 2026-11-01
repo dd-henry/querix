@@ -40,6 +40,7 @@ A comunicação com o banco de dados ocorre através do padrão *Adapter*.
   - Utiliza o `load_dotenv` para buscar as credenciais com segurança.
   - Usa o `SQLAlchemy` e o driver `psycopg2` para gerir conexões.
   - Possui o método `get_schema_info` que consulta o dicionário de dados interno do PostgreSQL (`information_schema` e `pg_catalog`) para extrair nomes, tipos, comentários e relacionamentos de chaves estrangeiras para entregar à IA.
+  - Chaves estrangeiras são relações de alta confiança, mas não são obrigatórias para um `JOIN`: o plano também pode inferir uma relação quando as tabelas e colunas existem. Essas relações são mantidas como avisos para revisão, enquanto identificadores inexistentes continuam bloqueados.
   - Também fornece a execução em transação somente de leitura usada pelos retries de consulta.
 
 ### 5. Persistência de Conversas e Histórico

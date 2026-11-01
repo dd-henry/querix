@@ -415,7 +415,7 @@ class ChatService:
             "validating_sql",
             "Validando a consulta gerada.",
         )
-        plan = self._validate_plan(
+        plan, plan_warnings = self._validate_plan(
             translated.get("plan"),
             user_id,
             conversation_id,
@@ -427,7 +427,7 @@ class ChatService:
                 conversation_id,
                 request_id,
                 sql,
-                metadata={"grafico": chart},
+                metadata={"grafico": chart, "warnings": plan_warnings},
             )
             self._set_progress(
                 request_id,
@@ -440,6 +440,7 @@ class ChatService:
                 status="warning",
                 content=sql,
                 chart=chart,
+                warnings=plan_warnings,
                 interpretation=build_interpretation(plan, temporal),
             )
         if not sql:
@@ -491,6 +492,7 @@ class ChatService:
                 "plan": plan.to_dict() if plan is not None else None,
                 "temporal": temporal,
                 "interpretation": build_interpretation(plan, temporal),
+                "warnings": plan_warnings,
             },
         )
         self._set_progress(
@@ -505,6 +507,7 @@ class ChatService:
             content=content,
             sql=normalized_sql,
             chart=chart,
+            warnings=plan_warnings,
             interpretation=build_interpretation(plan, temporal),
         )
 
@@ -514,17 +517,18 @@ class ChatService:
         user_id: str,
         conversation_id: UUID,
         request_id: UUID,
-    ) -> Optional[QueryPlan]:
+    ) -> tuple[Optional[QueryPlan], List[str]]:
         if value is None:
-            return None
+            return None, []
         try:
             plan = value if isinstance(value, QueryPlan) else QueryPlan.from_payload(value)
+            warnings: List[str] = []
             if self.semantic_context is not None:
-                PlanValidator.validate_plan(
+                warnings = PlanValidator.validate_plan(
                     plan,
                     self.semantic_context.get_profile(),
                 )
-            return plan
+            return plan, warnings
         except (QueryPlanError, QueryValidationError) as exc:
             self._persist_assistant_turn(
                 user_id,
@@ -732,14 +736,17 @@ class ChatService:
         self._raise_if_cancelled(request_id)
         diagnostics = critique_result(result, metadata.get("plan"))
 
-        warnings = self._record_history(
-            user_id,
-            conversation_id,
-            user_question,
-            sql,
-            parameters,
-            metadata,
-            request_id,
+        warnings = self._metadata_warnings(metadata)
+        warnings.extend(
+            self._record_history(
+                user_id,
+                conversation_id,
+                user_question,
+                sql,
+                parameters,
+                metadata,
+                request_id,
+            )
         )
         self._raise_if_cancelled(request_id)
         self._set_progress(
@@ -1451,6 +1458,15 @@ class ChatService:
         metadata = message.get("metadata")
         return dict(metadata) if isinstance(metadata, Mapping) else {}
 
+    @staticmethod
+    def _metadata_warnings(metadata: Mapping[str, object]) -> List[str]:
+        warnings = metadata.get("warnings")
+        return (
+            [item for item in warnings if isinstance(item, str)]
+            if isinstance(warnings, list)
+            else []
+        )
+
     def _existing_result(
         self,
         messages: List[Dict[str, object]],
@@ -1482,6 +1498,7 @@ class ChatService:
             content=content,
             sql=str(sql) if sql else None,
             chart=metadata.get("grafico"),
+            warnings=ChatService._metadata_warnings(metadata),
             retryable=bool(metadata.get("retryable")),
             retry_kind=metadata.get("retry_kind"),
             interpretation=(

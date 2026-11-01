@@ -616,6 +616,61 @@ def test_unknown_plan_identifier_is_rejected_before_database_call():
     assert database.execute_read_only_query.call_count == 0
 
 
+def test_inferred_join_is_allowed_and_persisted_as_warning():
+    repository = MemoryConversationRepository()
+    translator = FakeTranslator(
+        response={
+            "sql": (
+                "SELECT orders.id, customers.id "
+                "FROM orders JOIN customers ON orders.id = customers.id"
+            ),
+            "plan": {
+                "intent": "match records",
+                "tables": ["orders", "customers"],
+                "relationships": ["orders.id -> customers.id"],
+                "dimensions": ["customers.id"],
+                "metrics": ["orders.id"],
+                "filters": [],
+                "grain": None,
+                "assumptions": ["the existing columns are compatible"],
+            },
+        }
+    )
+    metadata_source = Mock()
+    metadata_source.get_schema_metadata.return_value = {
+        "tables": [
+            {
+                "name": "orders",
+                "columns": [{"name": "id", "data_type": "integer"}],
+            },
+            {
+                "name": "customers",
+                "columns": [{"name": "id", "data_type": "integer"}],
+            },
+        ],
+        "relationships": [],
+    }
+    service = _service(
+        repository,
+        translator,
+        semantic_context=SemanticContextService(metadata_source),
+    )
+
+    result = service.translate_prompt(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+        "Match records",
+    )
+
+    expected_warning = (
+        "JOIN inferido: orders.id -> customers.id. "
+        "Essa relação não está declarada como chave estrangeira no banco."
+    )
+    assert result.warnings == [expected_warning]
+    assert repository.append_calls[-1][7]["warnings"] == [expected_warning]
+
+
 def test_invalid_stored_sql_is_rejected_before_database_call():
     repository = MemoryConversationRepository(
         [_user_message(), _assistant_message(sql="UPDATE sales SET total = 0")]
@@ -666,6 +721,26 @@ def test_stored_execution_is_read_only_bounded_and_records_history():
         session_id=CONVERSATION_ID,
     )
     assert repository.update_calls[-1][3] == "Aqui estão os resultados da consulta:"
+
+
+def test_stored_execution_preserves_plan_warnings():
+    warning = "JOIN inferido: orders.id -> customers.id."
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(metadata={"warnings": [warning]}),
+        ]
+    )
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame([{"total": 12}])
+
+    result = _service(repository, FakeTranslator(), database).execute_stored_query(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.warnings == [warning]
 
 
 def test_stored_execution_uses_ai_summary_when_available():

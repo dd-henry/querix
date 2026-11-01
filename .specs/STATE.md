@@ -34,6 +34,14 @@
 - **Date**: 2026-11-01
 - **Status**: active
 
+### AD-005
+- **Decision**: Query-plan joins are accepted when both endpoint tables and columns exist, even without a declared foreign key; undeclared joins emit a persisted review warning.
+- **Reason**: Legacy and loosely constrained databases can contain valid logical relationships that PostgreSQL does not declare as foreign keys.
+- **Trade-off**: The model may propose a semantically wrong join, so the warning remains visible instead of silently treating the relationship as trusted.
+- **Scope**: `core/query_validation.py`, `api/services/chat.py`, `core/prompter.py`, and chat persistence/restoration.
+- **Date**: 2026-11-01
+- **Status**: active
+
 ## Handoff
 
 Feature: web-frontend-migration

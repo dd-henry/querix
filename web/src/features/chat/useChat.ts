@@ -149,6 +149,7 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
   return detail.messages.map((message) => {
     const chart = message.metadata.grafico;
     const summary = message.metadata.summary;
+    const warnings = stringArray(message.metadata.warnings);
     const interpretation = parseInterpretation(
       message.metadata.interpretation,
     );
@@ -174,7 +175,7 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
         chart && typeof chart === "object"
           ? (chart as Record<string, unknown>)
           : undefined,
-      warnings: [],
+      warnings,
       reexecuteAvailable:
         message.role === "assistant" &&
         Boolean(message.sql) &&
