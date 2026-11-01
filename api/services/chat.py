@@ -27,6 +27,16 @@ class ChatServiceError(RuntimeError):
 
 
 @dataclass
+class ChatInsight:
+    key: str
+    title: str
+    summary: Optional[str] = None
+    sql: Optional[str] = None
+    result: Optional[ResultPayload] = None
+    warning: Optional[str] = None
+
+
+@dataclass
 class ChatResult:
     conversation_id: UUID
     request_id: UUID
@@ -36,6 +46,7 @@ class ChatResult:
     chart: Optional[Dict[str, Any]] = None
     summary: Optional[str] = None
     result: Optional[ResultPayload] = None
+    insights: List[ChatInsight] = field(default_factory=list)
     retryable: bool = False
     retry_kind: Optional[str] = None
     warnings: List[str] = field(default_factory=list)
@@ -138,6 +149,9 @@ class ChatService:
             parameters = {}
         parameters = {str(key): value for key, value in parameters.items()}
         intent = translated.get("intent")
+        supporting_queries = self._prepare_supporting_queries(
+            translated.get("supporting_queries")
+        )
         if sql.startswith("AVISO:"):
             self._persist_assistant_turn(
                 user_id,
@@ -194,6 +208,7 @@ class ChatService:
                 "grafico": chart,
                 "parameters": parameters,
                 "intent": intent,
+                "supporting_queries": supporting_queries,
             },
         )
         return ChatResult(
@@ -271,6 +286,10 @@ class ChatService:
                 "The database is unavailable.",
             ) from exc
 
+        insights = self._execute_supporting_queries(
+            metadata.get("supporting_queries"),
+        )
+
         warnings = self._record_history(
             user_id,
             conversation_id,
@@ -291,6 +310,7 @@ class ChatService:
             "Aqui estão os resultados da consulta:",
             sql=sql,
             metadata={
+                **metadata,
                 "grafico": metadata.get("grafico"),
                 "source": metadata.get("source", "chat"),
                 "parameters": parameters,
@@ -305,6 +325,7 @@ class ChatService:
             chart=metadata.get("grafico"),
             result=result,
             summary=summary,
+            insights=insights,
             warnings=warnings,
         )
 
@@ -521,6 +542,7 @@ class ChatService:
     ) -> List[str]:
         if self.query_history_repository is None:
             return []
+
         try:
             self.query_history_repository.record(
                 user_id,
@@ -536,6 +558,148 @@ class ChatService:
                 f"A consulta foi executada, mas não foi salva no histórico. ({exc})"
             ]
         return []
+
+    @staticmethod
+    def _prepare_supporting_queries(value: object) -> List[Dict[str, object]]:
+        if not isinstance(value, list):
+            return []
+
+        prepared: List[Dict[str, object]] = []
+        for index, item in enumerate(value[:3]):
+            if not isinstance(item, Mapping):
+                continue
+            key = item.get("key")
+            title = item.get("title")
+            raw_sql = item.get("sql")
+            parameters = item.get("parameters") or {}
+            if (
+                not isinstance(key, str)
+                or not key.strip()
+                or not isinstance(title, str)
+                or not title.strip()
+                or not isinstance(raw_sql, str)
+                or not raw_sql.strip()
+                or not isinstance(parameters, Mapping)
+            ):
+                continue
+
+            support: Dict[str, object] = {
+                "key": key.strip(),
+                "title": title.strip(),
+                "sql": raw_sql.strip(),
+                "parameters": dict(parameters),
+            }
+            try:
+                support["sql"] = PredefinedQueryRepository.validate_query(
+                    raw_sql,
+                    [],
+                )
+            except (AttributeError, TypeError, ValueError) as exc:
+                support["validation_error"] = (
+                    "A consulta complementar não é somente leitura."
+                )
+                logger.warning(
+                    "Supporting query %s was rejected before execution: %s",
+                    index,
+                    exc,
+                )
+            prepared.append(support)
+        return prepared
+
+    def _execute_supporting_queries(
+        self,
+        value: object,
+    ) -> List[ChatInsight]:
+        if not isinstance(value, list):
+            return []
+
+        insights: List[ChatInsight] = []
+        for item in value[:3]:
+            if not isinstance(item, Mapping):
+                continue
+            key = str(item.get("key") or "supporting_query")
+            title = str(item.get("title") or "Análise complementar")
+            validation_error = item.get("validation_error")
+            if validation_error:
+                insights.append(
+                    ChatInsight(
+                        key=key,
+                        title=title,
+                        warning=str(validation_error),
+                    )
+                )
+                continue
+
+            raw_sql = item.get("sql")
+            if not isinstance(raw_sql, str) or not raw_sql.strip():
+                insights.append(
+                    ChatInsight(
+                        key=key,
+                        title=title,
+                        warning="A consulta complementar está vazia.",
+                    )
+                )
+                continue
+            try:
+                sql = PredefinedQueryRepository.validate_query(raw_sql, [])
+            except (AttributeError, TypeError, ValueError) as exc:
+                logger.warning(
+                    "Stored supporting query %s failed validation: %s",
+                    key,
+                    exc,
+                )
+                insights.append(
+                    ChatInsight(
+                        key=key,
+                        title=title,
+                        warning=(
+                            "A consulta complementar foi rejeitada por "
+                            "não ser somente leitura."
+                        ),
+                    )
+                )
+                continue
+
+            parameters = item.get("parameters") or {}
+            if not isinstance(parameters, dict):
+                parameters = {}
+            try:
+                dataframe = self.database.execute_read_only_query(
+                    sql,
+                    parameters,
+                )
+                result = serialize_dataframe(
+                    dataframe,
+                    max_rows=self.result_limit,
+                )
+            except Exception:
+                logger.exception(
+                    "Supporting query %s execution failed.",
+                    key,
+                )
+                insights.append(
+                    ChatInsight(
+                        key=key,
+                        title=title,
+                        sql=sql,
+                        warning=(
+                            "Não foi possível calcular esta análise "
+                            "complementar."
+                        ),
+                    )
+                )
+                continue
+
+            insights.append(
+                ChatInsight(
+                    key=key,
+                    title=title,
+                    summary=summarize_result(result),
+                    sql=sql,
+                    result=result,
+                )
+            )
+        return insights
 
     @staticmethod
     def _find_message(

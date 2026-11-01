@@ -97,7 +97,7 @@ supporting-query specs while preserving the existing single-query fallback.
 
 ### T3: Execute bounded analytical plans in the chat service
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Validate and execute the primary query followed by up to three
 supporting queries, preserving primary success when a support fails.

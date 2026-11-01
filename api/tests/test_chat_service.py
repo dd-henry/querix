@@ -341,6 +341,128 @@ def test_stored_execution_is_read_only_bounded_and_records_history():
     assert repository.update_calls[-1][3] == "Aqui estão os resultados da consulta:"
 
 
+def test_stored_execution_returns_supporting_insights_after_primary_result():
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(
+                metadata={
+                    "parameters": {},
+                    "supporting_queries": [
+                        {
+                            "key": "kpi",
+                            "title": "Indicadores do período",
+                            "sql": "SELECT 2",
+                            "parameters": {},
+                        },
+                        {
+                            "key": "top_products",
+                            "title": "Produtos mais vendidos",
+                            "sql": "SELECT 3",
+                            "parameters": {},
+                        },
+                    ],
+                },
+            ),
+        ]
+    )
+    database = Mock()
+    database.execute_read_only_query.side_effect = [
+        pd.DataFrame([{"total": 12}]),
+        pd.DataFrame([{"faturamento": 12}]),
+        pd.DataFrame([{"produto": "Picanha", "valor": 12}]),
+    ]
+    service = _service(repository, FakeTranslator(), database)
+
+    result = service.execute_stored_query(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.result["rows"] == [{"total": 12}]
+    assert [insight.key for insight in result.insights] == [
+        "kpi",
+        "top_products",
+    ]
+    assert result.insights[0].result["rows"] == [{"faturamento": 12}]
+    assert result.insights[0].summary == "A consulta retornou 1 linha(s)."
+    assert database.execute_read_only_query.call_count == 3
+
+
+def test_supporting_failure_preserves_primary_result_with_warning():
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(
+                metadata={
+                    "supporting_queries": [
+                        {
+                            "key": "kpi",
+                            "title": "Indicadores do período",
+                            "sql": "SELECT 2",
+                            "parameters": {},
+                        }
+                    ]
+                },
+            ),
+        ]
+    )
+    database = Mock()
+    database.execute_read_only_query.side_effect = [
+        pd.DataFrame([{"total": 12}]),
+        ConnectionError("offline"),
+    ]
+    service = _service(repository, FakeTranslator(), database)
+
+    result = service.execute_stored_query(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.status == "executed"
+    assert result.result["rows"] == [{"total": 12}]
+    assert result.insights[0].warning == (
+        "Não foi possível calcular esta análise complementar."
+    )
+
+
+def test_invalid_supporting_query_is_reported_without_database_execution():
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(
+                metadata={
+                    "supporting_queries": [
+                        {
+                            "key": "unsafe",
+                            "title": "Unsafe",
+                            "sql": "DELETE FROM sales",
+                            "parameters": {},
+                        }
+                    ]
+                },
+            ),
+        ]
+    )
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame(
+        [{"total": 12}]
+    )
+    service = _service(repository, FakeTranslator(), database)
+
+    result = service.execute_stored_query(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.result["rows"] == [{"total": 12}]
+    assert result.insights[0].warning is not None
+    database.execute_read_only_query.assert_called_once_with("SELECT 1", {})
+
+
 def test_translation_persists_bound_parameters_for_known_analytical_query():
     repository = MemoryConversationRepository()
     translator = FakeTranslator(
@@ -373,6 +495,41 @@ def test_translation_persists_bound_parameters_for_known_analytical_query():
         "period_end": "2026-09-01T00:00:00+00:00",
     }
     assert metadata["intent"] == "revenue_total"
+
+
+def test_translation_persists_bounded_supporting_queries():
+    repository = MemoryConversationRepository()
+    translator = FakeTranslator(
+        response={
+            "sql": "SELECT 1",
+            "grafico": None,
+            "supporting_queries": [
+                {
+                    "key": "kpi",
+                    "title": "Indicadores",
+                    "sql": "SELECT 2",
+                    "parameters": {},
+                }
+            ],
+        }
+    )
+    service = _service(repository, translator)
+
+    service.translate_prompt(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+        "Show revenue",
+    )
+
+    assert repository.messages[-1]["metadata"]["supporting_queries"] == [
+        {
+            "key": "kpi",
+            "title": "Indicadores",
+            "sql": "SELECT 2",
+            "parameters": {},
+        }
+    ]
 
 
 def test_database_failure_stores_a_retryable_error():
