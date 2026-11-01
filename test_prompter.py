@@ -72,3 +72,21 @@ def test_build_system_prompt_com_arquivos_locais(tmp_path):
     
     assert "CREATE TABLE teste (id INT);" in prompt
     assert "Sempre considere o faturamento em Reais." in prompt
+
+
+def test_build_stage_prompts_define_planning_and_sql_contracts(tmp_path):
+    prompter = Prompter(context_dir=str(tmp_path))
+
+    planner_prompt = prompter.build_planner_prompt(
+        live_schema="Tabela: events\n  - created_at (timestamp)",
+    )
+    sql_prompt = prompter.build_sql_generation_prompt(
+        live_schema="Tabela: events\n  - created_at (timestamp)",
+    )
+
+    assert "ETAPA 1: PLANEJAMENTO ANALÍTICO" in planner_prompt
+    assert "intent, tables, relationships, dimensions, metrics" in planner_prompt
+    assert "ETAPA 2: GERAÇÃO SQL" in sql_prompt
+    assert "supporting_queries e grafico" in sql_prompt
+    assert "Tabela: events" in planner_prompt
+    assert "Tabela: events" in sql_prompt

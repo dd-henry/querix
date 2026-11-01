@@ -127,13 +127,13 @@ explicit half-open date intervals and planning hints.
 
 ### T3: Separating plan and SQL generation
 
-**Status**: Pending
+**Status**: Complete
 
 **What**: Add typed `QueryPlan` normalization and two-stage Ollama
 planning/SQL-generation contracts while preserving the existing translation
 response shape.
 **Where**: `core/query_plan.py`, `core/prompter.py`, `core/translator.py`,
-`test_translator.py`, `test_prompter.py`
+`api/dependencies.py`, `test_translator.py`, `test_prompter.py`
 **Depends on**: T1, T2
 **Reuses**: Existing conversation context, JSON extraction, and Ollama call.
 **Requirement**: AQI-07, AQI-08

@@ -1,7 +1,12 @@
+from datetime import date
+
 import pytest
 from unittest.mock import patch
 
+from core.query_plan import QueryPlan
+from core.temporal import TemporalInterpreter
 from core.translator import Translator
+from core.translator import TranslationStageError
 
 # Fixture é um recurso do pytest para criar instâncias reutilizáveis
 @pytest.fixture
@@ -176,3 +181,102 @@ def test_translate_to_sql_surfaces_ollama_failure(translator):
     ):
         with pytest.raises(RuntimeError, match="Ollama unavailable"):
             translator.translate_to_sql("Quantos clientes?")
+
+
+def _staged_translator():
+    return Translator(
+        system_prompt="legacy prompt",
+        model_name="test_model",
+        planner_prompt="planner prompt",
+        sql_generation_prompt="sql prompt",
+    )
+
+
+def test_plan_question_normalizes_typed_plan():
+    translator = _staged_translator()
+    planner_payload = (
+        '{"intent":"ranking","tables":["orders"],'
+        '"relationships":["orders.customer_id -> customers.id"],'
+        '"dimensions":["customers.name"],"metrics":["SUM(orders.amount)"],'
+        '"filters":[{"column":"orders.created_at","operator":">=","value":"2025-01-01"}],'
+        '"grain":"customer","assumptions":["amount is additive"]}'
+    )
+
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={"message": {"content": planner_payload}},
+    ):
+        plan = translator.plan_question(
+            "Ranking de clientes",
+            temporal_interpretation=TemporalInterpreter().interpret(
+                "em janeiro",
+                reference_date=date(2025, 1, 15),
+            ),
+        )
+
+    assert isinstance(plan, QueryPlan)
+    assert plan.tables == ("orders",)
+    assert plan.metrics == ("SUM(orders.amount)",)
+    assert plan.filters[0]["operator"] == ">="
+    assert plan.assumptions == ("amount is additive",)
+
+
+def test_translate_to_sql_sends_normalized_plan_and_temporal_hint():
+    translator = _staged_translator()
+    plan_payload = (
+        '{"intent":"trend","tables":["events"],"relationships":[],'
+        '"dimensions":["created_at"],"metrics":["COUNT(*)"],"filters":[],'
+        '"grain":"day","assumptions":["created_at defines the period"]}'
+    )
+    sql_payload = '{"sql":"SELECT created_at, COUNT(*) FROM events GROUP BY created_at"}'
+
+    with patch(
+        "core.translator.ollama.chat",
+        side_effect=[
+            {"message": {"content": plan_payload}},
+            {"message": {"content": sql_payload}},
+        ],
+    ) as chat:
+        result = translator.translate_to_sql("Eventos de janeiro")
+
+    assert result["sql"].startswith("SELECT created_at")
+    assert chat.call_count == 2
+    sql_stage_prompt = chat.call_args_list[1].kwargs["messages"][0]["content"]
+    assert '"tables": ["events"]' in sql_stage_prompt
+    expected_year = date.today().year
+    assert f'"start": "{expected_year}-01-01"' in sql_stage_prompt
+    assert f'"end": "{expected_year}-02-01"' in sql_stage_prompt
+
+
+@pytest.mark.parametrize(
+    ("stage", "response"),
+    [
+        ("planning", '{"intent":"missing"}'),
+        ("sql_generation", '{"sql":'),
+    ],
+)
+def test_staged_translation_returns_retryable_typed_errors(stage, response):
+    translator = _staged_translator()
+    plan = QueryPlan(
+        intent="list",
+        tables=("events",),
+        relationships=(),
+        dimensions=("created_at",),
+        metrics=(),
+        filters=(),
+        grain=None,
+        assumptions=("no aggregation requested",),
+    )
+
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={"message": {"content": response}},
+    ):
+        with pytest.raises(TranslationStageError) as error:
+            if stage == "planning":
+                translator.plan_question("Liste eventos")
+            else:
+                translator.translate_plan_to_sql(plan, "Liste eventos")
+
+    assert error.value.stage == stage
+    assert error.value.retryable is True

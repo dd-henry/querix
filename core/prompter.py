@@ -123,6 +123,51 @@ class Prompter:
 
         return system_prompt.strip()
 
+    def build_planner_prompt(
+        self,
+        live_schema: str = "",
+        reference_date: Optional[date] = None,
+        sql_dialect: str = "PostgreSQL",
+    ) -> str:
+        """Builds the stage prompt that extracts intent before SQL generation."""
+        return (
+            self.build_system_prompt(
+                live_schema=live_schema,
+                reference_date=reference_date,
+                sql_dialect=sql_dialect,
+            )
+            + "\n\n"
+            "=== ETAPA 1: PLANEJAMENTO ANALÍTICO ===\n"
+            "Antes de escrever SQL, retorne somente um objeto JSON válido com "
+            "intent, tables, relationships, dimensions, metrics, filters, "
+            "grain e assumptions. Use arrays vazios quando uma categoria não "
+            "for necessária. assumptions deve conter pelo menos uma frase, "
+            "mesmo quando a conclusão for que não há suposições adicionais.\n"
+            "Não inclua SQL, markdown ou texto fora do JSON."
+        )
+
+    def build_sql_generation_prompt(
+        self,
+        live_schema: str = "",
+        reference_date: Optional[date] = None,
+        sql_dialect: str = "PostgreSQL",
+    ) -> str:
+        """Builds the stage prompt that renders SQL from a normalized plan."""
+        return (
+            self.build_system_prompt(
+                live_schema=live_schema,
+                reference_date=reference_date,
+                sql_dialect=sql_dialect,
+            )
+            + "\n\n"
+            "=== ETAPA 2: GERAÇÃO SQL ===\n"
+            "Receba o plano analítico validado no contexto da mensagem. Gere "
+            "SQL somente com identificadores presentes no esquema e preserve "
+            "as dimensões, métricas, filtros, granularidade e período do plano. "
+            "Retorne o contrato JSON existente com sql, parameters, "
+            "supporting_queries e grafico. Não invente conclusões numéricas."
+        )
+
 # --- Exemplo de uso rápido (opcional, apenas para testes locais) ---
 if __name__ == "__main__":
     prompter = Prompter()

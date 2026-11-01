@@ -166,8 +166,8 @@ the exact aggregate metrics.
 | AQI-04 | P1: Plan an analytical question | Design | Complete |
 | AQI-05 | P1: Plan an analytical question | Design | Complete |
 | AQI-06 | P1: Plan an analytical question | Design | Complete |
-| AQI-07 | P1: Plan an analytical question | Design | Pending |
-| AQI-08 | P1: Plan an analytical question | Design | Pending |
+| AQI-07 | P1: Plan an analytical question | Design | Complete |
+| AQI-08 | P1: Plan an analytical question | Design | Complete |
 | AQI-09 | P1: Validate and recover query execution | Design | Pending |
 | AQI-10 | P1: Validate and recover query execution | Design | Pending |
 | AQI-11 | P1: Validate and recover query execution | Design | Pending |
@@ -180,7 +180,7 @@ the exact aggregate metrics.
 | AQI-18 | P2: Measure query quality | Design | Pending |
 | AQI-19 | P2: Measure query quality | Design | Pending |
 
-**Coverage**: 6 complete, 13 pending.
+**Coverage**: 8 complete, 11 pending.
 
 ## Success Criteria
 

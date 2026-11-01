@@ -59,10 +59,16 @@ def get_semantic_context() -> SemanticContextService:
 @lru_cache(maxsize=1)
 def get_translator() -> Translator:
     database = get_db_adapter()
-    system_prompt = Prompter().build_system_prompt(
-        live_schema=database.get_schema_info()
+    prompter = Prompter()
+    live_schema = database.get_schema_info()
+    return Translator(
+        system_prompt=prompter.build_system_prompt(live_schema=live_schema),
+        planner_prompt=prompter.build_planner_prompt(live_schema=live_schema),
+        sql_generation_prompt=prompter.build_sql_generation_prompt(
+            live_schema=live_schema
+        ),
+        model_name="qwen2.5-coder:7b",
     )
-    return Translator(system_prompt=system_prompt, model_name="qwen2.5-coder:7b")
 
 
 def get_chat_service(
