@@ -103,10 +103,10 @@ or a fabricated result.
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
 | SDQP-01 | P1: Portable planning | Execute | Verified by T1 |
-| SDQP-02 | P1: Portable planning | Execute | Pending |
-| SDQP-03 | P1: Portable planning | Execute | Pending |
-| SDQP-04 | P1: Portable planning | Execute | Pending |
-| SDQP-05 | P1: Portable planning | Execute | Pending |
+| SDQP-02 | P1: Portable planning | Execute | Verified by T2 |
+| SDQP-03 | P1: Portable planning | Execute | Verified by T2 |
+| SDQP-04 | P1: Portable planning | Execute | Verified by T2 |
+| SDQP-05 | P1: Portable planning | Execute | Verified by T2 |
 | SDQP-06 | P1: Safe execution | Execute | Verified by T1 |
 | SDQP-07 | P1: Useful analysis | Execute | Pending |
 | SDQP-08 | P1: Useful analysis | Execute | Pending |

@@ -1,5 +1,7 @@
 import logging
+from datetime import date
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,29 +37,49 @@ class Prompter:
 
         return "\n".join(consolidated_content)
 
-    def build_system_prompt(self, live_schema: str = "") -> str:
+    def build_system_prompt(
+        self,
+        live_schema: str = "",
+        reference_date: Optional[date] = None,
+        sql_dialect: str = "PostgreSQL",
+    ) -> str:
         """
         Gera a string final do System Prompt estruturando as instruções gerais,
         esquema atual lido do banco, DDLs e regras de negócio.
         """
         ddls_content = self._read_directory_files(self.ddls_dir, (".sql",))
         rules_content = self._read_directory_files(self.rules_dir, (".md", ".txt"))
+        period_reference = reference_date or date.today()
 
         system_prompt = (
-            "Você é um Engenheiro de Dados Sênior e Especialista em PostgreSQL.\n"
-            "Sua única função é traduzir solicitações em linguagem natural para consultas SQL analíticas válidas.\n"
-            "Pense como um analista de dados operacional: entregue métricas, dimensões, agrupamentos e filtros que respondam à intenção do usuário, sem inventar conclusões.\n"
-            "ATENÇÃO: Utilize estritamente sintaxe nativa do PostgreSQL. Para filtrar períodos, use um intervalo inclusivo no início e exclusivo no fim (coluna >= início AND coluna < fim). Para agrupamentos mensais, use EXTRACT(MONTH FROM coluna) ou EXTRACT(YEAR FROM coluna). NUNCA use funções genéricas como MONTH() ou YEAR().\n"
-            "REGRAS ANALÍTICAS DO DOMÍNIO DE VENDAS:\n"
-            "- Considere apenas vendas com status = 'concluida', exceto quando o usuário pedir explicitamente vendas canceladas.\n"
-            "- Faturamento de cupons usa SUM(vendas.valor_total). Não use esse campo para calcular valor por produto.\n"
-            "- Vendas por produto exigem a relação vendas -> itens_venda -> produtos.\n"
-            "- Quantidade por produto usa SUM(itens_venda.quantidade).\n"
-            "- Valor por produto usa SUM(itens_venda.subtotal), que preserva o preço histórico do item.\n"
-            "- Quando a pergunta pedir produtos vendidos, retorne uma linha por produto com produto, quantidade e valor, agrupando por produtos.id e produtos.nome.\n"
-            "- Quando a pergunta pedir total, agregue o resultado em vez de retornar linhas brutas.\n"
-            "- Uma pergunta com mês ou ano deve filtrar o período completo, incluindo o ano; não filtre somente pelo número do mês.\n"
-            "- Se vendas.valor_total e a soma de itens_venda.subtotal forem usados na mesma análise, mantenha as métricas separadas e sinalize a possível divergência.\n"
+            "Você é um Engenheiro de Dados Sênior e Especialista em "
+            f"{sql_dialect}.\n"
+            "Sua única função é traduzir solicitações em linguagem natural "
+            "para consultas SQL analíticas válidas.\n"
+            "Use o contexto fornecido como fonte de verdade. Antes de escrever "
+            "SQL, identifique as entidades, colunas, tipos, medidas, "
+            "dimensões e relacionamentos disponíveis.\n"
+            "REGRAS DE RACIOCÍNIO ANALÍTICO:\n"
+            "- Use somente tabelas, colunas e relacionamentos declarados no "
+            "contexto atual. Nunca invente identificadores.\n"
+            "- Faça joins somente por chaves ou relacionamentos indicados no "
+            "schema, DDL ou regras de negócio.\n"
+            "- Escolha dimensões e medidas que respondam ao pedido. Quando "
+            "houver relação confiável, complemente a resposta com até três "
+            "leituras gerenciais úteis, sem substituir o resultado principal.\n"
+            "- Agregue quando o usuário pedir totais, comparações, evolução "
+            "ou rankings; preserve o nível de detalhe quando ele for pedido.\n"
+            "- Para períodos explícitos, use a coluna temporal compatível com "
+            "o tipo e a semântica disponíveis. Prefira intervalo inclusivo "
+            "no início e exclusivo no fim (coluna >= início AND coluna < fim).\n"
+            "- Se um mês for informado sem ano, use o ano da data de "
+            "referência fornecida. Se não houver período explícito, não "
+            "invente um filtro temporal, exceto quando o pedido significar "
+            "explicitamente o período atual.\n"
+            f"- Data de referência para períodos incompletos: "
+            f"{period_reference.isoformat()}.\n"
+            "- Retorne métricas calculadas somente por SQL executável e não "
+            "escreva conclusões numéricas que não estejam no resultado.\n"
             "Se a pergunta exigir informações, tabelas ou colunas que não existem no ESQUEMA DO BANCO DE DADOS fornecido, não invente dados.\n"
             "Neste caso, retorne EXCLUSIVAMENTE a frase: 'AVISO: As informações solicitadas não existem no banco de dados.'\n"
             "Caso contrário, retorne EXCLUSIVAMENTE um objeto JSON válido com a seguinte estrutura:\n"
@@ -67,7 +89,7 @@ class Prompter:
             '  "supporting_queries": [\n'
             "    {\n"
             '      "key": "identificador_estavel",\n'
-            '      "title": "Título da análise",\n'
+            '      "title": "Título da leitura",\n'
             '      "sql": "SQL complementar somente leitura",\n'
             '      "parameters": {}\n'
             "    }\n"
@@ -80,16 +102,15 @@ class Prompter:
             "  }\n"
             "}\n"
             "Use no máximo três supporting_queries. Cada uma deve usar somente "
-            "tabelas e colunas presentes no esquema atual e relações existentes. "
+            "tabelas, colunas, tipos e relações presentes no contexto atual. "
             "Use parâmetros nomeados para períodos e filtros; não invente "
-            "tabelas, colunas ou valores. Se não houver complemento confiável, "
-            'retorne "supporting_queries": []. Não escreva conclusões numéricas '
-            "no JSON; elas serão calculadas a partir das linhas retornadas.\n"
+            "valores. Se não houver complemento confiável, retorne "
+            '"supporting_queries": [].\n'
             "Não inclua blocos de formatação markdown (como ```json) ou qualquer texto adicional, apenas o JSON puro.\n\n"
         )
 
         if live_schema:
-            system_prompt += "=== CONTEXTO: ESQUEMA ATUAL DO BANCO DE DADOS (Extraído do PostgreSQL) ===\n"
+            system_prompt += "=== CONTEXTO: ESQUEMA ATUAL DO BANCO DE DADOS ===\n"
             system_prompt += f"{live_schema}\n"
 
         if ddls_content:

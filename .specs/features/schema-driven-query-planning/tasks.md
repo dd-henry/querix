@@ -75,7 +75,7 @@ the current prompt/context.
 
 ### T2: Generalizing the prompt and schema context
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Replace sales rules with generic schema-grounded analytical
 guidance, include a runtime reference date, and expose foreign-key
@@ -87,11 +87,11 @@ relationships from PostgreSQL introspection.
 
 **Done when**:
 
-- [ ] The prompt contains no former sales entities or metrics.
-- [ ] The prompt includes generic period behavior, bounded supporting-query
+- [x] The prompt contains no former sales entities or metrics.
+- [x] The prompt includes generic period behavior, bounded supporting-query
       rules, named parameters, and live schema grounding.
-- [ ] Foreign-key metadata is rendered with source and target identifiers.
-- [ ] Empty relationship results remain valid schema context.
+- [x] Foreign-key metadata is rendered with source and target identifiers.
+- [x] Empty relationship results remain valid schema context.
 
 **Tests**: unit
 **Gate**: quick

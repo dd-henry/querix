@@ -88,7 +88,7 @@ class PostgresAdapter(DatabaseAdapter):
             return False
 
     def get_schema_info(self) -> str:
-        """Consulta tabelas, colunas, tipos e comentários do schema public e formata para a IA."""
+        """Consulta metadados atuais do schema public e formata para a IA."""
         sql = """
         SELECT
             cols.table_name,
@@ -115,7 +115,7 @@ class PostgresAdapter(DatabaseAdapter):
             df = self.execute_query(sql)
             if df.empty:
                 return "Nenhuma tabela encontrada no schema public."
-            
+
             schema_text = []
             for table_name, group in df.groupby('table_name'):
                 table_comment = group['table_comment'].iloc[0]
@@ -126,6 +126,40 @@ class PostgresAdapter(DatabaseAdapter):
                     col_comment_str = f" -- Comentário: {col_comment}" if pd.notna(col_comment) and col_comment else ""
                     schema_text.append(f"  - {row['column_name']} ({row['data_type']}){col_comment_str}")
                 schema_text.append("")
+
+            relationships = self.execute_query(
+                """
+                SELECT
+                    tc.table_name,
+                    kcu.column_name,
+                    ccu.table_name AS foreign_table_name,
+                    ccu.column_name AS foreign_column_name
+                FROM information_schema.table_constraints AS tc
+                JOIN information_schema.key_column_usage AS kcu
+                  ON tc.constraint_name = kcu.constraint_name
+                 AND tc.table_schema = kcu.table_schema
+                JOIN information_schema.constraint_column_usage AS ccu
+                  ON tc.constraint_name = ccu.constraint_name
+                 AND tc.table_schema = ccu.table_schema
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                  AND tc.table_schema = 'public'
+                ORDER BY
+                    tc.table_name,
+                    kcu.column_name,
+                    ccu.table_name,
+                    ccu.column_name;
+                """
+            )
+            if not relationships.empty:
+                schema_text.append("Relacionamentos (chaves estrangeiras):")
+                for _, row in relationships.iterrows():
+                    schema_text.append(
+                        "  - "
+                        f"{row['table_name']}.{row['column_name']} -> "
+                        f"{row['foreign_table_name']}."
+                        f"{row['foreign_column_name']}"
+                    )
+
             return "\n".join(schema_text)
         except Exception as e:
             return f"Erro ao obter esquema: {e}"

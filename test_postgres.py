@@ -83,3 +83,72 @@ def test_test_connection_falha_graciosamente():
     # Forçamos o connect a estourar um erro para simular banco offline
     with patch.object(adapter, "connect", side_effect=Exception("Banco de dados indisponível")):
         assert adapter.test_connection() is False
+
+
+def test_get_schema_info_inclui_relacionamentos_de_chave_estrangeira(mock_env):
+    adapter = PostgresAdapter()
+    columns = pd.DataFrame(
+        [
+            {
+                "table_name": "orders",
+                "table_comment": None,
+                "column_name": "customer_id",
+                "data_type": "integer",
+                "column_comment": None,
+            },
+            {
+                "table_name": "customers",
+                "table_comment": None,
+                "column_name": "id",
+                "data_type": "integer",
+                "column_comment": None,
+            },
+        ]
+    )
+    relationships = pd.DataFrame(
+        [
+            {
+                "table_name": "orders",
+                "column_name": "customer_id",
+                "foreign_table_name": "customers",
+                "foreign_column_name": "id",
+            }
+        ]
+    )
+
+    with patch.object(
+        adapter,
+        "execute_query",
+        side_effect=[columns, relationships],
+    ):
+        schema = adapter.get_schema_info()
+
+    assert "Tabela: orders" in schema
+    assert "Tabela: customers" in schema
+    assert "Relacionamentos (chaves estrangeiras):" in schema
+    assert "orders.customer_id -> customers.id" in schema
+
+
+def test_get_schema_info_aceita_schema_sem_relacionamentos(mock_env):
+    adapter = PostgresAdapter()
+    columns = pd.DataFrame(
+        [
+            {
+                "table_name": "events",
+                "table_comment": None,
+                "column_name": "created_at",
+                "data_type": "timestamp",
+                "column_comment": None,
+            }
+        ]
+    )
+
+    with patch.object(
+        adapter,
+        "execute_query",
+        side_effect=[columns, pd.DataFrame()],
+    ):
+        schema = adapter.get_schema_info()
+
+    assert "Tabela: events" in schema
+    assert "Relacionamentos (chaves estrangeiras):" not in schema
