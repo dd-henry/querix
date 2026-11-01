@@ -169,10 +169,11 @@ class GeminiChatClient:
                         f"{exc.code}: {detail or exc.reason}"
                     ) from exc
                 self._wait_before_retry(attempt, exc.code)
-            except URLError as exc:
+            except (URLError, TimeoutError, ConnectionError) as exc:
                 if attempt >= self._max_retries:
+                    reason = getattr(exc, "reason", str(exc))
                     raise RuntimeError(
-                        f"Gemini request failed: {exc.reason}"
+                        f"Gemini request failed: {reason}"
                     ) from exc
                 self._wait_before_retry(attempt, "network")
 

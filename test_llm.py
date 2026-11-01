@@ -27,6 +27,17 @@ class _Response:
         return self._payload
 
 
+class _ReadTimeoutResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return None
+
+    def read(self):
+        raise TimeoutError("response read timed out")
+
+
 def test_llm_config_defaults_to_local_ollama():
     config = LLMConfig.from_env({})
 
@@ -97,6 +108,32 @@ def test_gemini_client_retries_transient_503_with_backoff():
     with patch(
         "core.llm.urlopen",
         side_effect=[transient_error, response],
+    ) as request:
+        with patch("core.llm.random.uniform", return_value=0):
+            with patch("core.llm.time.sleep") as sleep:
+                result = client(
+                    model="gemini-test",
+                    messages=[{"role": "user", "content": "Question"}],
+                )
+
+    assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
+    assert request.call_count == 2
+    sleep.assert_called_once_with(1)
+
+
+def test_gemini_client_retries_timeout_during_response_read():
+    client = GeminiChatClient("test-key", max_retries=1)
+    response = _Response(
+        {
+            "candidates": [
+                {"content": {"parts": [{"text": '{"sql":"SELECT 1"}'}]}}
+            ]
+        }
+    )
+
+    with patch(
+        "core.llm.urlopen",
+        side_effect=[_ReadTimeoutResponse(), response],
     ) as request:
         with patch("core.llm.random.uniform", return_value=0):
             with patch("core.llm.time.sleep") as sleep:
