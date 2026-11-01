@@ -183,12 +183,13 @@ def test_translate_to_sql_surfaces_ollama_failure(translator):
             translator.translate_to_sql("Quantos clientes?")
 
 
-def _staged_translator():
+def _staged_translator(**kwargs):
     return Translator(
         system_prompt="legacy prompt",
         model_name="test_model",
         planner_prompt="planner prompt",
         sql_generation_prompt="sql prompt",
+        **kwargs,
     )
 
 
@@ -216,8 +217,11 @@ def test_plan_question_normalizes_typed_plan():
 
     assert isinstance(plan, QueryPlan)
     assert plan.tables == ("orders",)
+    assert plan.relationships == ("orders.customer_id -> customers.id",)
+    assert plan.dimensions == ("customers.name",)
     assert plan.metrics == ("SUM(orders.amount)",)
     assert plan.filters[0]["operator"] == ">="
+    assert plan.grain == "customer"
     assert plan.assumptions == ("amount is additive",)
 
 
@@ -246,6 +250,54 @@ def test_translate_to_sql_sends_normalized_plan_and_temporal_hint():
     expected_year = date.today().year
     assert f'"start": "{expected_year}-01-01"' in sql_stage_prompt
     assert f'"end": "{expected_year}-02-01"' in sql_stage_prompt
+
+
+def test_sql_generation_runs_only_after_the_plan_validator():
+    validation_events = []
+
+    def validate(plan):
+        validation_events.append(plan)
+
+    translator = _staged_translator(plan_validator=validate)
+    plan_payload = (
+        '{"intent":"trend","tables":["events"],"relationships":[],'
+        '"dimensions":["created_at"],"metrics":["COUNT(*)"],"filters":[],'
+        '"grain":"day","assumptions":["created_at defines the period"]}'
+    )
+    sql_payload = '{"sql":"SELECT created_at, COUNT(*) FROM events GROUP BY created_at"}'
+
+    def chat_response(*_args, **_kwargs):
+        if len(validation_events) == 0:
+            return {"message": {"content": plan_payload}}
+        return {"message": {"content": sql_payload}}
+
+    with patch(
+        "core.translator.ollama.chat",
+        side_effect=chat_response,
+    ):
+        result = translator.translate_to_sql("Eventos de janeiro")
+
+    assert result["sql"].startswith("SELECT created_at")
+    assert len(validation_events) == 1
+    assert isinstance(validation_events[0], QueryPlan)
+
+
+def test_planning_rejects_empty_assumptions():
+    translator = _staged_translator()
+    with patch(
+        "core.translator.ollama.chat",
+        return_value={
+            "message": {
+                "content": (
+                    '{"intent":"list","tables":["events"],'
+                    '"relationships":[],"dimensions":[],"metrics":[],'
+                    '"filters":[],"grain":null,"assumptions":[]}'
+                )
+            }
+        },
+    ):
+        with pytest.raises(TranslationStageError, match="must not be empty"):
+            translator.plan_question("Liste eventos")
 
 
 @pytest.mark.parametrize(

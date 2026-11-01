@@ -552,6 +552,7 @@ def test_stored_execution_reports_missing_expected_metric_without_fabricating_it
     assert result.diagnostics["kind"] == "missing_expected_columns"
     assert result.diagnostics["expected_columns"] == ["revenue"]
     assert "revenue" not in result.summary
+    assert "999" not in result.summary
 
 
 def test_supporting_failure_preserves_primary_result_with_warning():
@@ -812,8 +813,21 @@ def test_database_failure_stores_a_retryable_error():
 
 
 def test_database_failure_is_repaired_once_and_updates_same_message():
+    plan = {
+        "intent": "List totals",
+        "tables": ["orders"],
+        "relationships": [],
+        "dimensions": [],
+        "metrics": ["total"],
+        "filters": [],
+        "grain": None,
+        "assumptions": ["total is available"],
+    }
     repository = MemoryConversationRepository(
-        [_user_message(), _assistant_message()]
+        [
+            _user_message(),
+            _assistant_message(metadata={"plan": plan}),
+        ]
     )
     translator = RepairTranslator({"sql": "SELECT 2", "parameters": {}})
     database = Mock()
@@ -836,6 +850,8 @@ def test_database_failure_is_repaired_once_and_updates_same_message():
     assert repository.update_calls[-1][5] is None
     assert repository.update_calls[-1][6]["repair_attempted"] is True
     assert repository.update_calls[-1][6]["repaired_from"] == "SELECT 1"
+    assert translator.repair_calls[0]["database_error"] == "missing column"
+    assert translator.repair_calls[0]["plan"] == plan
 
 
 def test_invalid_repair_is_not_executed_and_remains_retryable():
@@ -878,6 +894,9 @@ def test_failed_repair_is_bounded_to_one_database_retry():
     assert repository.update_calls[-1][4] == "SELECT 2"
     assert repository.update_calls[-1][5] == "database_unavailable"
     assert repository.update_calls[-1][6]["repair_attempted"] is True
+    assert repository.update_calls[-1][2] == REQUEST_ID
+    assert repository.update_calls[-1][6]["retryable"] is True
+    assert repository.update_calls[-1][6]["retry_kind"] == "execute"
 
 
 def test_duplicate_request_returns_stored_message_without_translation_or_insert():

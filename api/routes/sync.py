@@ -25,6 +25,7 @@ def synchronize_schema(
     get_translator.cache_clear()
     get_predefined_query_repository.cache_clear()
     try:
+        get_semantic_context().get_profile()
         get_translator()
     except Exception as exc:
         logger.exception("Schema synchronization failed.")

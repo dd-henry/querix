@@ -7,6 +7,8 @@ from api.auth.session import SessionClaims, SessionError, require_session
 from api.config import Settings
 from api.services.chat import ChatService
 from core.prompter import Prompter
+from core.query_plan import QueryPlan
+from core.query_validation import PlanValidator
 from core.semantic_context import SemanticContextService
 from core.translator import Translator
 from database.conversations import ConversationRepository
@@ -56,6 +58,13 @@ def get_semantic_context() -> SemanticContextService:
     return SemanticContextService(get_db_adapter())
 
 
+def validate_translation_plan(plan: QueryPlan) -> None:
+    PlanValidator.validate_plan(
+        plan,
+        get_semantic_context().get_profile(),
+    )
+
+
 @lru_cache(maxsize=1)
 def get_translator() -> Translator:
     database = get_db_adapter()
@@ -68,6 +77,7 @@ def get_translator() -> Translator:
             live_schema=live_schema
         ),
         model_name="qwen2.5-coder:7b",
+        plan_validator=validate_translation_plan,
     )
 
 

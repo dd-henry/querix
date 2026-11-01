@@ -2,7 +2,7 @@ import re
 import json
 from collections.abc import Mapping
 from datetime import date
-from typing import Dict, List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
 import ollama
 
@@ -22,6 +22,7 @@ class Translator:
         model_name: str = "qwen2.5-coder:7b",
         planner_prompt: Optional[str] = None,
         sql_generation_prompt: Optional[str] = None,
+        plan_validator: Optional[Callable[[QueryPlan], None]] = None,
     ):
         """
         Inicializa o tradutor com o prompt de sistema configurado e o modelo desejado.
@@ -34,6 +35,7 @@ class Translator:
         self.model_name = model_name
         self.planner_prompt = planner_prompt
         self.sql_generation_prompt = sql_generation_prompt
+        self.plan_validator = plan_validator
 
     def _clean_sql_response(self, text: str) -> dict:
         """
@@ -168,6 +170,8 @@ class Translator:
                 "sql_generation",
                 "SQL generation requires a normalized query plan.",
             )
+        if self.plan_validator is not None:
+            self.plan_validator(plan)
         if not self.sql_generation_prompt:
             raise TranslationStageError(
                 "sql_generation",

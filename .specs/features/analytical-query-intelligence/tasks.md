@@ -7,7 +7,7 @@ tested, gated, marked done, and committed before the next task begins.
 
 **Design**: `.specs/features/analytical-query-intelligence/design.md`
 **Context**: `.specs/features/analytical-query-intelligence/context.md`
-**Status**: Draft
+**Status**: Complete
 
 ## Test Coverage Matrix
 
@@ -86,13 +86,13 @@ safe candidates, process-local caching, and schema-sync invalidation.
 
 **Done when**:
 
-- [ ] Profile includes structural metadata, relationships, and candidate
+- [x] Profile includes structural metadata, relationships, and candidate
       columns without raw rows.
-- [ ] Cache is invalidated by schema synchronization.
-- [ ] Existing `get_schema_info` behavior remains compatible.
-- [ ] Unit tests cover empty schemas, missing relationships, and profile
+- [x] Cache is invalidated by schema synchronization.
+- [x] Existing `get_schema_info` behavior remains compatible.
+- [x] Unit tests cover empty schemas, missing relationships, and profile
       privacy.
-- [ ] Gate passes with the backend baseline test count unchanged or higher.
+- [x] Gate passes with the backend baseline test count unchanged or higher.
 
 **Tests**: unit
 **Gate**: quick
@@ -115,12 +115,12 @@ explicit half-open date intervals and planning hints.
 
 **Done when**:
 
-- [ ] Month-without-year uses the reference year.
-- [ ] Current/previous month, current year, and relative day windows produce
+- [x] Month-without-year uses the reference year.
+- [x] Current/previous month, current year, and relative day windows produce
       exact start-inclusive/end-exclusive intervals.
-- [ ] Explicit years override the reference year.
-- [ ] Questions without a temporal expression produce no temporal filter.
-- [ ] Boundary and Portuguese accent variants are tested.
+- [x] Explicit years override the reference year.
+- [x] Questions without a temporal expression produce no temporal filter.
+- [x] Boundary and Portuguese accent variants are tested.
 
 **Tests**: unit
 **Gate**: quick
@@ -145,11 +145,11 @@ response shape.
 
 **Done when**:
 
-- [ ] Planner output normalizes into a typed plan with all required fields.
-- [ ] SQL generation receives the normalized plan and temporal hints.
-- [ ] Malformed planner or SQL-stage JSON produces a retryable typed error.
-- [ ] No domain-specific SQL templates are introduced.
-- [ ] Existing translator tests pass and new tests cover both stages.
+- [x] Planner output normalizes into a typed plan with all required fields.
+- [x] SQL generation receives the normalized plan and temporal hints.
+- [x] Malformed planner or SQL-stage JSON produces a retryable typed error.
+- [x] No domain-specific SQL templates are introduced.
+- [x] Existing translator tests pass and new tests cover both stages.
 
 **Tests**: unit
 **Gate**: quick
@@ -173,11 +173,11 @@ SQL guard before any database execution.
 
 **Done when**:
 
-- [ ] Unknown tables, columns, and relationships are rejected with stable
+- [x] Unknown tables, columns, and relationships are rejected with stable
       validation errors.
-- [ ] Non-read-only and multi-statement SQL never reaches the database.
-- [ ] Valid generic plans and SELECT/WITH SQL pass.
-- [ ] Tests assert database calls are absent on validation failure.
+- [x] Non-read-only and multi-statement SQL never reaches the database.
+- [x] Valid generic plans and SELECT/WITH SQL pass.
+- [x] Tests assert database calls are absent on validation failure.
 
 **Tests**: unit
 **Gate**: quick
@@ -201,12 +201,12 @@ and persist either the repaired result or a retryable terminal failure.
 
 **Done when**:
 
-- [ ] A database error triggers no more than one repair attempt.
-- [ ] A repaired query passes validation before execution.
-- [ ] A successful repair updates the same assistant message and records the
+- [x] A database error triggers no more than one repair attempt.
+- [x] A repaired query passes validation before execution.
+- [x] A successful repair updates the same assistant message and records the
       repaired SQL.
-- [ ] A failed repair exposes one retryable error without a loop.
-- [ ] Tests cover original failure, successful repair, and failed repair.
+- [x] A failed repair exposes one retryable error without a loop.
+- [x] Tests cover original failure, successful repair, and failed repair.
 
 **Tests**: unit
 **Gate**: quick
@@ -231,11 +231,11 @@ columns, preserving valid results and prohibiting invented numeric claims.
 
 **Done when**:
 
-- [ ] Zero-row results remain successful and carry an explicit diagnostic.
-- [ ] Missing expected dimensions or metrics carry an explicit diagnostic.
-- [ ] API responses include interpretation and diagnostics without breaking
+- [x] Zero-row results remain successful and carry an explicit diagnostic.
+- [x] Missing expected dimensions or metrics carry an explicit diagnostic.
+- [x] API responses include interpretation and diagnostics without breaking
       existing clients.
-- [ ] Tests prove no fabricated numeric summary is emitted.
+- [x] Tests prove no fabricated numeric summary is emitted.
 
 **Tests**: unit
 **Gate**: quick
@@ -262,11 +262,11 @@ assistant response without adding chat messages or disrupting review/execute.
 
 **Done when**:
 
-- [ ] Interpretation displays dimensions, metrics, period, and assumptions.
-- [ ] Diagnostics display beside the same assistant result.
-- [ ] Existing review, execution, retry, and message-count behavior remains
+- [x] Interpretation displays dimensions, metrics, period, and assumptions.
+- [x] Diagnostics display beside the same assistant result.
+- [x] Existing review, execution, retry, and message-count behavior remains
       stable.
-- [ ] Unit and E2E tests cover successful, empty, and failed states.
+- [x] Unit and E2E tests cover successful, empty, and failed states.
 
 **Tests**: unit/e2e
 **Gate**: full
@@ -291,12 +291,12 @@ and documentation for comparing query quality.
 
 **Done when**:
 
-- [ ] Harness accepts generic cases and recorded results without production
+- [x] Harness accepts generic cases and recorded results without production
       database access.
-- [ ] Report includes executable rate, expected-column coverage, zero-row
+- [x] Report includes executable rate, expected-column coverage, zero-row
       rate, and latency.
-- [ ] Unit tests assert exact aggregate metrics.
-- [ ] Documentation explains how to add real cases without embedding SQL
+- [x] Unit tests assert exact aggregate metrics.
+- [x] Documentation explains how to add real cases without embedding SQL
       templates in the application.
 
 **Tests**: unit

@@ -174,6 +174,10 @@ def test_interpretation_and_diagnostics_are_exposed_on_the_same_response():
     body = response.json()
     assert body["interpretation"]["dimensions"] == ["region"]
     assert body["interpretation"]["metrics"] == ["revenue"]
+    assert body["interpretation"]["period"] is None
+    assert body["interpretation"]["assumptions"] == [
+        "revenue is the order total"
+    ]
     assert body["diagnostics"]["kind"] == "empty_result"
     assert body["diagnostics"]["expected_columns"] == []
 

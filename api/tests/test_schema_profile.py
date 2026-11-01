@@ -61,6 +61,18 @@ def test_profile_contains_structure_candidates_and_no_raw_rows():
     profile = service.get_profile()
     orders = profile.tables["orders"]
 
+    assert set(profile.tables) == {"orders", "customers"}
+    assert [column.name for column in orders.columns] == [
+        "id",
+        "created_at",
+        "amount",
+    ]
+    assert orders.columns[0].name == "id"
+    assert orders.columns[0].data_type == "integer"
+    assert orders.columns[0].nullable is False
+    assert orders.columns[2].name == "amount"
+    assert orders.columns[2].data_type == "numeric"
+    assert orders.columns[2].nullable is True
     assert orders.columns[0].is_primary_key is True
     assert orders.columns[0].is_unique is True
     assert orders.candidate_temporal_columns == ("created_at",)
@@ -84,6 +96,31 @@ def test_profile_accepts_empty_schema_without_relationships():
     assert profile.relationships == ()
 
 
+def test_profile_accepts_tables_without_relationships_or_candidates():
+    database = Mock()
+    database.get_schema_metadata.return_value = {
+        "tables": [
+            {
+                "name": "labels",
+                "columns": [
+                    {
+                        "name": "label",
+                        "data_type": "text",
+                        "is_nullable": "YES",
+                    }
+                ],
+            }
+        ],
+        "relationships": [],
+    }
+
+    profile = SemanticContextService(database).get_profile()
+
+    assert profile.relationships == ()
+    assert profile.tables["labels"].candidate_temporal_columns == ()
+    assert profile.tables["labels"].candidate_numeric_columns == ()
+
+
 def test_profile_cache_is_reused_and_invalidated():
     database = Mock()
     database.get_schema_metadata.return_value = _metadata()
@@ -101,6 +138,7 @@ def test_profile_cache_is_reused_and_invalidated():
 
 def test_schema_sync_invalidates_semantic_context_cache(monkeypatch):
     semantic_context = Mock()
+    semantic_context.return_value = semantic_context
     translator = Mock(return_value=object())
     catalog = Mock()
     monkeypatch.setattr(sync_route, "get_semantic_context", semantic_context)
@@ -114,3 +152,4 @@ def test_schema_sync_invalidates_semantic_context_cache(monkeypatch):
     sync_route.synchronize_schema({"id": "profile"})
 
     semantic_context.cache_clear.assert_called_once_with()
+    semantic_context.get_profile.assert_called_once_with()

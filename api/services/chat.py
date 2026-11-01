@@ -122,6 +122,21 @@ class ChatService:
                 normalized_prompt,
                 conversation_context=context,
             )
+        except QueryValidationError as exc:
+            logger.warning("Generated query plan failed validation: %s", exc)
+            self._persist_assistant_turn(
+                user_id,
+                conversation_id,
+                request_id,
+                "O plano analítico gerado não corresponde ao esquema atual.",
+                error="query_plan_invalid",
+                metadata={"validation_code": getattr(exc, "code", "invalid_plan")},
+            )
+            raise ChatServiceError(
+                422,
+                "query_plan_invalid",
+                str(exc),
+            ) from exc
         except Exception as exc:
             logger.exception("Chat translation failed.")
             self._persist_assistant_turn(
