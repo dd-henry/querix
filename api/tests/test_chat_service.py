@@ -597,6 +597,11 @@ def test_unknown_plan_identifier_is_rejected_before_database_call():
     assert error.value.status_code == 422
     assert error.value.code == "query_plan_invalid"
     assert repository.messages[-1]["error"] == "query_plan_invalid"
+    assert repository.messages[-1]["metadata"] == {
+        "validation_code": "unknown_column",
+        "retryable": True,
+        "retry_kind": "translate",
+    }
     assert database.execute_read_only_query.call_count == 0
 
 
@@ -1184,4 +1189,32 @@ def test_translation_retry_reuses_request_and_excludes_it_from_context():
     assert repository.create_calls == []
     assert repository.append_calls == []
     assert repository.context_calls == [(6, REQUEST_ID)]
+    assert repository.update_calls[-1][2] == REQUEST_ID
+
+
+def test_translation_retry_recovers_legacy_plan_error_without_retry_metadata():
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(
+                content="O plano analítico gerado não corresponde ao esquema atual.",
+                sql=None,
+                error="query_plan_invalid",
+                metadata={"validation_code": "unknown_column"},
+            ),
+        ]
+    )
+    translator = FakeTranslator(
+        response={"sql": "SELECT 3", "grafico": None}
+    )
+    service = _service(repository, translator)
+
+    result = service.retry_request(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+    assert result.sql == "SELECT 3"
+    assert translator.calls == [("Show revenue", [])]
     assert repository.update_calls[-1][2] == REQUEST_ID

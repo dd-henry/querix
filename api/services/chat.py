@@ -21,6 +21,10 @@ from database.query_history import QueryHistoryRepository
 
 logger = logging.getLogger(__name__)
 
+_TRANSLATION_RETRYABLE_ERRORS = frozenset(
+    {"query_plan_invalid", "sql_not_read_only", "translator_unavailable"}
+)
+
 
 class ChatServiceError(RuntimeError):
     """An expected chat operation failure exposed by the API layer."""
@@ -354,7 +358,11 @@ class ChatService:
                 request_id,
                 "O plano analítico gerado não corresponde ao esquema atual.",
                 error="query_plan_invalid",
-                metadata={"validation_code": getattr(exc, "code", "invalid_plan")},
+                metadata={
+                    "validation_code": getattr(exc, "code", "invalid_plan"),
+                    "retryable": True,
+                    "retry_kind": "translate",
+                },
             )
             raise ChatServiceError(
                 422,
@@ -451,7 +459,11 @@ class ChatService:
                 "A consulta gerada não é somente leitura.",
                 sql=sql,
                 error="sql_not_read_only",
-                metadata={"grafico": chart},
+                metadata={
+                    "grafico": chart,
+                    "retryable": True,
+                    "retry_kind": "translate",
+                },
             )
             raise ChatServiceError(
                 422,
@@ -519,7 +531,11 @@ class ChatService:
                 request_id,
                 "O plano analítico gerado não corresponde ao esquema atual.",
                 error="query_plan_invalid",
-                metadata={"validation_code": getattr(exc, "code", "invalid_plan")},
+                metadata={
+                    "validation_code": getattr(exc, "code", "invalid_plan"),
+                    "retryable": True,
+                    "retry_kind": "translate",
+                },
             )
             raise ChatServiceError(
                 422,
@@ -930,6 +946,11 @@ class ChatService:
             )
 
         retry_kind = self._metadata(assistant).get("retry_kind")
+        if (
+            retry_kind is None
+            and assistant.get("error") in _TRANSLATION_RETRYABLE_ERRORS
+        ):
+            retry_kind = "translate"
         if retry_kind == "translate":
             return self.translate_prompt(
                 user_id,
