@@ -293,6 +293,28 @@ def test_cancellation_is_scoped_to_the_active_request_owner():
     assert not registry.is_cancelled(REQUEST_ID)
 
 
+def test_request_id_collision_cannot_finish_another_owner_request():
+    repository = MemoryConversationRepository()
+    registry = ChatCancellationRegistry()
+    registry.start(REQUEST_ID, USER_ID, CONVERSATION_ID)
+    service = _service(
+        repository,
+        FakeTranslator(response={"sql": "SELECT 1", "grafico": None}),
+        cancellation_registry=registry,
+    )
+
+    with pytest.raises(ChatServiceError) as error:
+        service.translate_prompt(
+            "00000000-0000-0000-0000-000000000009",
+            CONVERSATION_ID,
+            REQUEST_ID,
+            "Show revenue",
+        )
+
+    assert error.value.code == "request_id_in_use"
+    assert registry.is_active(REQUEST_ID, USER_ID, CONVERSATION_ID)
+
+
 def test_completed_request_cannot_be_cancelled():
     repository = MemoryConversationRepository([_user_message()])
     service = _service(
@@ -306,6 +328,35 @@ def test_completed_request_cannot_be_cancelled():
 
     assert error.value.status_code == 409
     assert error.value.code == "request_not_active"
+
+
+def test_cancellation_during_cached_lookup_does_not_return_cached_result():
+    registry = ChatCancellationRegistry()
+
+    class CancellingRepository(MemoryConversationRepository):
+        def get_messages(self, user_id, conversation_id):
+            messages = super().get_messages(user_id, conversation_id)
+            registry.cancel(REQUEST_ID, user_id, conversation_id)
+            return messages
+
+    repository = CancellingRepository(
+        [_user_message(), _assistant_message()]
+    )
+    service = _service(
+        repository,
+        FakeTranslator(response={"sql": "SELECT 1", "grafico": None}),
+        cancellation_registry=registry,
+    )
+
+    with pytest.raises(ChatServiceError) as error:
+        service.translate_prompt(
+            USER_ID,
+            CONVERSATION_ID,
+            REQUEST_ID,
+            "Show revenue",
+        )
+
+    assert error.value.code == "request_cancelled"
 
 
 def test_cancellation_after_database_response_skips_result_persistence():

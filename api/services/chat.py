@@ -44,11 +44,15 @@ class ChatCancellationRegistry:
         request_id: UUID,
         user_id: str,
         conversation_id: UUID,
-    ) -> None:
+    ) -> bool:
         with self._lock:
-            if request_id not in self._active:
-                self._active[request_id] = (user_id, conversation_id)
-                self._cancelled.discard(request_id)
+            owner = (user_id, conversation_id)
+            existing = self._active.get(request_id)
+            if existing is not None:
+                return existing == owner
+            self._active[request_id] = owner
+            self._cancelled.discard(request_id)
+            return True
 
     def is_active(
         self,
@@ -79,10 +83,18 @@ class ChatCancellationRegistry:
         with self._lock:
             return request_id in self._cancelled
 
-    def finish(self, request_id: UUID) -> None:
+    def finish(
+        self,
+        request_id: UUID,
+        user_id: str,
+        conversation_id: UUID,
+    ) -> bool:
         with self._lock:
+            if self._active.get(request_id) != (user_id, conversation_id):
+                return False
             self._active.pop(request_id, None)
             self._cancelled.discard(request_id)
+            return True
 
     def run_if_not_cancelled(
         self,
@@ -171,10 +183,18 @@ class ChatService:
                 retry=retry,
             )
         except Exception:
-            self._finish_cancellable_request(request_id)
+            self._finish_cancellable_request(
+                request_id,
+                user_id,
+                conversation_id,
+            )
             raise
         if review_mode or result.status in {"warning", "executed"}:
-            self._finish_cancellable_request(request_id)
+            self._finish_cancellable_request(
+                request_id,
+                user_id,
+                conversation_id,
+            )
         return result
 
     def _translate_prompt(
@@ -192,6 +212,7 @@ class ChatService:
             user_id,
             conversation_id,
         )
+        self._raise_if_cancelled(request_id)
         if not retry:
             existing = self._existing_result(
                 messages,
@@ -407,7 +428,11 @@ class ChatService:
             )
         finally:
             if started_here or self._is_cancellable_request_active(request_id):
-                self._finish_cancellable_request(request_id)
+                self._finish_cancellable_request(
+                    request_id,
+                    user_id,
+                    conversation_id,
+                )
 
     def _execute_stored_query(
         self,
@@ -804,11 +829,17 @@ class ChatService:
             user_id,
             conversation_id,
         )
-        self.cancellation_registry.start(
+        started = self.cancellation_registry.start(
             request_id,
             user_id,
             conversation_id,
         )
+        if not started:
+            raise ChatServiceError(
+                409,
+                "request_id_in_use",
+                "The request identifier is already active.",
+            )
         return not was_active
 
     def _is_cancellable_request_active(self, request_id: UUID) -> bool:
@@ -817,9 +848,18 @@ class ChatService:
             and self.cancellation_registry.has_active(request_id)
         )
 
-    def _finish_cancellable_request(self, request_id: UUID) -> None:
+    def _finish_cancellable_request(
+        self,
+        request_id: UUID,
+        user_id: str,
+        conversation_id: UUID,
+    ) -> None:
         if self.cancellation_registry is not None:
-            self.cancellation_registry.finish(request_id)
+            self.cancellation_registry.finish(
+                request_id,
+                user_id,
+                conversation_id,
+            )
 
     def _raise_if_cancelled(self, request_id: UUID) -> None:
         if (

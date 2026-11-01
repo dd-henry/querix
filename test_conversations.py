@@ -31,7 +31,8 @@ def test_create_with_user_message_is_atomic_and_keeps_full_prompt(db):
     )
 
     sql, parameters = db.execute_command.call_args.args
-    assert "WITH created AS" in sql
+    assert "WITH target AS" in sql
+    assert "ON CONFLICT (id) DO UPDATE" in sql
     assert "INSERT INTO ask_sql_conversation_messages" in sql
     assert parameters == {
         "session_id": "session-id",

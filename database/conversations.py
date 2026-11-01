@@ -61,20 +61,22 @@ class ConversationRepository:
 
         self.db.execute_command(
             """
-            WITH created AS (
+            WITH target AS (
                 INSERT INTO ask_sql_conversation_sessions (id, user_id, title)
                 VALUES (
                     CAST(:session_id AS uuid),
                     CAST(:user_id AS uuid),
                     :title
                 )
-                ON CONFLICT (id) DO NOTHING
+                ON CONFLICT (id) DO UPDATE
+                SET id = EXCLUDED.id
+                WHERE ask_sql_conversation_sessions.user_id = EXCLUDED.user_id
                 RETURNING id
             )
             INSERT INTO ask_sql_conversation_messages
                 (session_id, request_id, role, content)
             SELECT id, CAST(:request_id AS uuid), 'user', :prompt
-            FROM created
+            FROM target
             ON CONFLICT (session_id, request_id, role) DO NOTHING
             """,
             {
