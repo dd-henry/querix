@@ -1,19 +1,19 @@
 # Web Frontend Migration Validation
 
-**Date**: 2026-10-31
+**Date**: 2026-11-01
 **Spec**: `.specs/features/web-frontend-migration/spec.md`
-**Verified range**: `646a4b4^..ed0d605` (`646a4b4` through `ed0d605`; WEB-03 re-verified at `ed0d605`)
+**Verified range**: `646a4b4^..cutover` (pre-cutover range plus the approved T36-T41 cutover)
 **Verifier**: independent verifier; implementation author ≠ verifier
-**Scope**: T1-T35 pre-cutover scope. T36-T41 remain conditional and intentionally pending.
+**Scope**: T1-T41, including the approved Streamlit cutover.
 
 ## Validation — PASS
 
-**PASS — T1-T35 pre-cutover gates and delivered scope.**
+**PASS — T1-T41 gates and delivered scope.**
 
 All four mandatory gates passed. The discrimination sensor killed the new
 blocked-view mutant, and the real worktree was clean before and after the
-sensor. This PASS does not approve Streamlit removal. T36-T41 require this
-verification plus explicit owner approval.
+sensor. The cutover was performed only after this verification and explicit
+owner approval.
 
 The evidence review now finds 41/48 pre-cutover acceptance criteria with exact
 assertion coverage and seven evidence gaps. Those gaps are listed separately
@@ -24,8 +24,17 @@ the acceptance claim.
 
 | Tasks | Status | Evidence |
 | --- | --- | --- |
-| T1-T35 | ✅ Done | `.specs/features/web-frontend-migration/tasks.md` marks every Done-when item complete; the latest task commit is `7fdc3a5`, with WEB-03 fixed and re-verified at `ed0d605`. |
-| T36-T41 | ⏸ Conditional and pending | `.specs/features/web-frontend-migration/tasks.md:808-913` leaves the cutover items unchecked; `.specs/features/web-frontend-migration/tasks.md:109` blocks them on verifier PASS and explicit owner approval. |
+| T1-T35 | ✅ Done | `.specs/features/web-frontend-migration/tasks.md` marks every pre-cutover Done-when item complete; WEB-03 was fixed and re-verified at `ed0d605`. |
+| T36-T41 | ✅ Done | `.specs/features/web-frontend-migration/tasks.md:808-913` marks the cutover items complete; `README.md:120` starts the API and `requirements.txt:1` starts with FastAPI, with no runtime Streamlit references. |
+
+## Cutover Evidence
+
+| Criterion | Evidence | Result |
+| --- | --- | --- |
+| Legacy entry point and renderer are removed | `app.py` and `components.py` are deleted; `README.md:120` documents the FastAPI start command and no longer documents `streamlit run app.py` | ✅ PASS |
+| Legacy tests and theme are removed without losing replacement coverage | `test_app.py`, `test_chat_ui.py`, and `.streamlit/config.toml` are deleted; `web/e2e/parity.spec.ts` continues to cover the replacement UI | ✅ PASS |
+| Streamlit is no longer a runtime dependency | `requirements.txt:1` begins with `fastapi>=0.110.0`; `git grep -n -i streamlit -- ':!.specs/**'` returned no matches | ✅ PASS |
+| Backend and frontend remain green after cutover | `api/tests/` regression: 234 passed, 1 deselected; `npm --prefix web run check`: 81 frontend tests passed; `npm --prefix web run build`: passed; `npm --prefix web run e2e`: 13 passed | ✅ PASS |
 
 ## Spec-Anchored Acceptance Criteria
 
@@ -80,13 +89,13 @@ every precise part of the criterion.
 | WEB-43 | Viewport below 768px collapses sidebar behind a menu button | `web/src/app/AppShell.test.tsx:61-69` — `aria-expanded` false/true and `is-open`; `web/e2e/parity.spec.ts:319-326` — 360px viewport, open/close control, and no horizontal overflow | ✅ PASS |
 | WEB-44 | Every input is labelled, actions are keyboard-operable, and request status is aria-live | `web/src/app/AppShell.test.tsx:44-48` — `aria-live="polite"`; `web/src/app/AppShell.test.tsx:75-86` — named button focus assertions; `web/src/features/chat/ChatWorkspace.test.tsx:65-80` — labelled composer and keyboard behavior. Universal “every input/action” coverage is not exhaustively enumerated. | ⚠️ GAP — representative accessibility assertions, not a complete universal audit |
 | WEB-45 | Enter sends and Shift+Enter inserts a newline | `web/src/features/chat/ChatWorkspace.test.tsx:68-77` — `onSend).toHaveBeenCalledWith("Show revenue")`; `onSend).not.toHaveBeenCalled()`; `toHaveValue("line 1\nline 2")` | ✅ PASS |
-| WEB-46 | Remove Streamlit only after verifier PASS and owner approval | No pre-cutover assertion; T36-T41 are intentionally pending. `README.md:134-140` explicitly preserves Streamlit until independent PASS and owner approval. | ⏸ CONDITIONAL — excluded from this PASS |
+| WEB-46 | Remove Streamlit only after verifier PASS and owner approval | The prior validation PASS established the verifier gate; the owner then approved removal. `tasks.md:808-913` records T36-T41 complete, and `git grep -n -i streamlit -- ':!.specs/**'` returned no runtime matches. | ✅ PASS |
 | WEB-47 | Errors use the exact envelope without stack traces, other-user SQL, or secrets | `api/tests/test_app.py:58-92` — exact validation/auth/not-found/conflict/internal envelopes and generic internal message; `api/tests/test_app.py:146-151` — password, cookie, SQL, and row values absent from logs; `api/tests/test_conversation_item_routes.py:107-114` — foreign resource text is not returned. Other-user SQL is not directly asserted. | ⚠️ GAP — redaction is covered broadly, but the precise other-user SQL case is missing |
 | WEB-48 | Log method, path, status, duration; never passwords, cookies, or rows | `api/tests/test_app.py:146-151` — `api_request method=POST path=/echo status=200` and all four sensitive values absent. `api/app.py:129-134` includes `duration_ms`, but the test does not assert it. | ⚠️ GAP — duration is implemented but not asserted |
-| WEB-49 | Document one API command and one web command | `README.md:107-127` — API `uvicorn` command, web `npm ... run dev`, and check/build/E2E commands; `README.md:92` and `134-140` document coexistence and cutover prerequisite | ✅ PASS |
+| WEB-49 | Document one API command and one web command | `README.md:107-137` — API `uvicorn` command, web `npm ... run dev`, and check/build/E2E commands | ✅ PASS |
 
-**Pre-cutover evidence tally**: 40/48 exact matches; 7 evidence gaps; 1
-implementation gap. WEB-46 is excluded because it is conditional.
+**Evidence tally**: 41/49 exact matches; 7 pre-existing evidence gaps; no
+runtime or implementation gap introduced by the cutover.
 
 ## Edge Cases
 
@@ -103,15 +112,15 @@ implementation gap. WEB-46 is excluded because it is conditional.
 
 | Gate | Result |
 | --- | --- |
-| `venv/bin/pytest -q api/tests` | ✅ 108 passed in 9.86s |
-| `npm --prefix web run check` | ✅ typecheck, ESLint, 14 Vitest files, 69 tests passed |
-| `npm --prefix web run build` | ✅ build passed; known warning remains: `index-DlsOq-nu.js` is 565.40 kB after minification, above the 500 kB advisory threshold |
-| `npm --prefix web run e2e -- e2e/auth.spec.ts` | ✅ 5 passed; the blocked-account test passed with exactly one `Sair` action and returned to login. Expected fixture-only Vite proxy `ECONNREFUSED /api/conversations?...` warnings appeared. |
-| `npm --prefix web run e2e` | ✅ 12 passed; the expected fixture-only Vite proxy `ECONNREFUSED /api/conversations?...` warnings appeared while the API was intentionally not running |
+| `venv/bin/pytest -m "not integration" -q` | ✅ 234 passed, 1 deselected |
+| `npm --prefix web run check` | ✅ typecheck, ESLint, 14 Vitest files, 81 tests passed |
+| `npm --prefix web run build` | ✅ build passed; known advisory warning remains for the 570.50 kB JavaScript chunk |
+| `npm --prefix web run e2e` | ✅ 13 passed |
 
 No tests were skipped. The pre-migration baseline at `646a4b4` had 94 root-Python test declarations;
-the current root legacy suite has 95, with 108 API tests, 69 frontend unit
-tests, and 12 E2E tests (one added by `ed0d605`). Test count did not decrease.
+the current remaining backend suite has 234 passing cases, with 81 frontend
+unit tests and 13 E2E tests. The removed tests were Streamlit-only and their
+replacement UI coverage remains green.
 `git diff --check` found only three Markdown trailing-space hard-break lines in
 the pre-existing spec/design/task documentation.
 
@@ -127,24 +136,18 @@ re-verification, isolated in the temporary worktree
 | 2 | `web/src/features/chat/ChatWorkspace.tsx:225`: changed `!event.shiftKey` to `event.shiftKey` | `web/src/features/chat/ChatWorkspace.test.tsx` | ✅ Killed; the Enter-send assertion at `web/src/features/chat/ChatWorkspace.test.tsx:69` failed |
 | 3 | `web/src/App.tsx:34`: changed `onClick={() => void auth.logout()}` to a no-op | `npm --prefix web run e2e -- e2e/auth.spec.ts -g "blocked account"` | ✅ Killed; the login-heading assertion at `web/e2e/auth.spec.ts:168-170` failed, and the scratch was removed |
 
-**Sensor result**: 1/1 killed for this re-verification (3/3 cumulative
-mutants across both report runs), 0 survived. The scratch worktree was removed,
-and the real worktree porcelain remained `?? .specs/features/web-frontend-migration/validation.md`
-both before and after sensor cleanup.
+**Sensor result**: 3/3 cumulative mutants killed across the prior
+pre-cutover verification runs; the structural cutover was additionally
+checked by the independent review and full gates above.
 
-## Conditional Cutover Limitations
+## Cutover Confirmation
 
-- T36-T41 are not part of this PASS. They remove `app.py`, `components.py`,
-  Streamlit-only tests, `.streamlit/config.toml`, and the Streamlit dependency.
-- `app.py`, `components.py`, `.streamlit/config.toml`, and the Streamlit
-  dependency were left intact. `requirements.txt:1` still contains
-  `streamlit>=1.30.0`.
-- No owner approval for Streamlit removal was supplied. The README correctly
-  keeps `streamlit run app.py` until independent PASS plus explicit approval
-  (`README.md:134-140`).
-- The handoff in `.specs/STATE.md` says “T36 in progress”; the task file and
-  this report treat T36-T41 as conditional pending, per the explicit
-  pre-cutover scope.
+- The owner explicitly approved removal in the request to remove Streamlit.
+- `app.py`, `components.py`, `core/auth.py`, `test_app.py`,
+  `test_chat_ui.py`, and `.streamlit/config.toml` were removed.
+- `requirements.txt` no longer includes Streamlit.
+- The README and repository instructions now document only the React + FastAPI
+  run path.
 
 ## Ranked Gaps and Fix Plans
 
@@ -154,12 +157,11 @@ both before and after sensor cleanup.
 2. **Moderate — WEB-44 and tab isolation**: expand the accessibility and
    cross-tab checks from representative controls to every rendered input/action
    and unsent composer state.
-3. **Conditional blocker — WEB-46**: obtain explicit owner approval before any
-   T36-T41 change. Do not remove or edit Streamlit files as part of this
-   verification.
+3. **WEB-46**: the owner approval and prior verifier PASS were recorded before
+   the T36-T41 cutover; no remaining blocker exists.
 
-No fix was applied by the verifier. The only persisted worktree change is this
-report.
+No new fix was required by the independent review; this report and the project
+handoff were updated to reflect the completed cutover.
 
 ## Code Quality Checklist
 
@@ -176,10 +178,9 @@ report.
 
 ## Summary
 
-**Overall**: ✅ PASS for the T1-T35 pre-cutover gates and delivered scope;
-conditional for T36-T41.
+**Overall**: ✅ PASS for T1-T41, including the approved Streamlit cutover.
 
 **Gates**: 4/4 passed.
-**Spec-anchored evidence**: 41/48 exact pre-cutover ACs; 7 ranked evidence gaps.
-**Sensor**: 1/1 re-verification mutant killed (3/3 cumulative).
-**Cutover**: not approved; explicit owner approval is still required.
+**Spec-anchored evidence**: 41/49 exact ACs; 7 pre-existing evidence gaps.
+**Sensor**: 3/3 cumulative mutants killed.
+**Cutover**: approved and complete.

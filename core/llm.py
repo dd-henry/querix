@@ -15,7 +15,7 @@ class LLMConfigurationError(ValueError):
 
 @dataclass(frozen=True)
 class LLMConfig:
-    """Runtime configuration shared by the API and legacy Streamlit app."""
+    """Runtime configuration used by the API LLM integration."""
 
     provider: str = "local"
     ollama_model: str = "qwen2.5-coder:7b"

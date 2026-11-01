@@ -3,9 +3,9 @@
 ## Decisions
 
 ### AD-001
-- **Decision**: The interface moves from Streamlit to a React + TypeScript + Vite single-page app served against a FastAPI backend; Streamlit stays only until the new UI passes verification.
+- **Decision**: The authoritative interface is a React + TypeScript + Vite single-page app served against a FastAPI backend; the legacy Streamlit interface was removed after the new UI passed verification and received owner approval.
 - **Reason**: Streamlit's full-script rerun produced duplicated forms and transient elements during login and query execution (reproduced: 4 → 6 → 4 inputs during a login submit, even after removing spinners).
-- **Trade-off**: Two apps coexist during the migration and the API layer must be built and tested.
+- **Trade-off**: The project no longer carries a second UI runtime, but the React and API gates must remain green.
 - **Scope**: Whole project; `api/` (backend), `web/` (frontend), existing `core/` and `database/` reused.
 - **Date**: 2026-10-31
 - **Status**: active
@@ -26,14 +26,22 @@
 - **Date**: 2026-10-31
 - **Status**: active
 
+### AD-004
+- **Decision**: Analytical query generation uses an in-process semantic context layer enriched with staged planning, validation, bounded repair, and result diagnostics.
+- **Reason**: A structured semantic boundary improves schema accuracy and query recoverability without introducing a separately deployed service.
+- **Trade-off**: Complex questions may require additional local model calls and therefore higher latency.
+- **Scope**: `core/`, `api/services/chat.py`, `database/`, `web/src/features/chat/`, and `evaluation/`.
+- **Date**: 2026-11-01
+- **Status**: active
+
 ## Handoff
 
 Feature: web-frontend-migration
-Phase: 7 - Documentation and conditional cutover
-Current batch: Pre-cutover verification complete; T36-T41 pending owner approval
-Completed: Specification, design, tasks, dependency validation, execution-mode approval, Streamlit auth stabilization, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, T32, T33, T34, and T35
-In progress: T36 in Phase 7
-Next step: Await Verifier PASS and explicit owner approval before any Streamlit cutover
+Phase: 7 - Documentation and cutover complete
+Current batch: T36-T41 completed after verifier PASS and owner approval
+Completed: Specification, design, tasks, dependency validation, execution-mode approval, T1-T41, legacy Streamlit removal, and final backend/frontend/E2E gates
+In progress: None
+Next step: None
 Blockers: None
 Uncommitted files: None
 Branch: main

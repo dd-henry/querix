@@ -176,13 +176,12 @@ def _assistant_message(**overrides):
     return message
 
 
-def test_service_has_no_streamlit_import_or_session_state_mutation():
+def test_service_does_not_mutate_web_session_state():
     source = open(
         "api/services/chat.py",
         encoding="utf-8",
     ).read()
 
-    assert "streamlit" not in source
     assert "session_state" not in source
 
 

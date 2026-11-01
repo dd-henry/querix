@@ -17,14 +17,12 @@ Os fluxos de conversa usam serviços externos simulados para que os testes valid
 - **`test_conversations.py`:** verifica escopo por proprietário, gravação idempotente e ordenada, falhas de persistência, favoritos, expiração, exclusão e o limite de seis turnos, incluindo a exclusão do turno em retry do contexto.
 - **`test_query_history.py`:** verifica o vínculo anulável da conversa, exclusão em cascata, deduplicação dentro de cada sessão e compatibilidade com registros legados sem sessão.
 - **`test_translator.py` e `test_llm.py`:** verificam contexto em ordem, limite de seis turnos, comportamento com contexto ausente ou vazio, seleção do provedor, adaptação do payload do Gemini e erros do LLM.
-- **`test_chat_ui.py`:** verifica uma única renderização por mensagem, estabilidade em reruns, SQL e erro associados, revisão separada da transcrição e preservação de tabela, gráfico e download CSV.
-- **`test_app.py`:** verifica login, propriedade e retomada de sessões, grupos por recência, persistência única, ausência de resultados restaurados, favoritos, expiração, exclusão confirmada, estados de falha e retry explícito. Também protege os papéis e as ferramentas existentes da barra lateral.
 - **`test_postgres.py`:** verifica o uso de transações somente de leitura no retry e o retorno da contagem de linhas dos comandos.
 
 Para executar os testes focados nesses fluxos:
 
 ```bash
-python -m pytest test_conversations.py test_query_history.py test_translator.py test_chat_ui.py test_app.py test_postgres.py -q
+python -m pytest test_conversations.py test_query_history.py test_translator.py test_llm.py test_postgres.py -q
 ```
 
 #### Testes do Prompter (`test_prompter.py`)
@@ -45,7 +43,7 @@ Garante que a biblioteca do banco se comporta como esperado ao receber credencia
 - **Fluxos:**
   - `monkeypatch` sobrecarrega a chamada do pacote `python-dotenv` garantindo que as credenciais provêm estritamente das simulações da suíte de teste e não do seu `.env` local.
   - A camada de conexão e a camada do *pandas* (`pd.read_sql`) foram completamente "mockadas" (*patched*). Em vez de bater no banco, o teste injeta um DataFrame sintético que confirma se o adaptador devolve a estrutura desejada sem executar instruções SQL reais.
-  - Fazer os "caminhos infelizes" falharem graciosamente (simulando falha do mock no `test_connection()` para garantir que retorne booleano `False` invés de derrubar o Streamlit com uma `Exception` fatal).
+  - Fazer os "caminhos infelizes" falharem graciosamente (simulando falha do mock no `test_connection()` para garantir que retorne booleano `False` sem interromper a API).
 
 ### 2. Testes de Integração e do LLM
 
@@ -71,7 +69,7 @@ Para executar a suíte de testes, utilizamos o framework `pytest` a partir da ra
 O gate completo de regressão também verifica a sintaxe Python antes dos testes:
 
 ```bash
-python -m compileall -q app.py components.py core database test_*.py
+python -m compileall -q api core database test_*.py
 python -m pytest -m "not integration" -q
 ```
 
@@ -84,4 +82,4 @@ Como não é trivial prever 100% da saída de um LLM, o debug costuma ser parte 
 ### 3. Validações Manuais ("Scripts de Fumaça")
 
 O projeto inclui pequenos scripts isolados — `teste_db.py` e `teste_ollama.py`. 
-Eles não utilizam asserções do pytest. Servem como scripts *CLI* rápidos que rodam fora do Streamlit e são usados pelo desenvolvedor para testar sua infraestrutura local se algo falhar na subida do aplicativo web (ex: "As credenciais do `.env` e o banco Postgres local estão atrelados de fato?" ou "A rede do Ollama está rodando e consegue devolver um SQL simples no terminal?").
+Eles não utilizam asserções do pytest. Servem como scripts *CLI* rápidos para testar a infraestrutura local se algo falhar na subida da API (ex: "As credenciais do `.env` e o banco Postgres local estão atrelados de fato?" ou "A rede do Ollama está rodando e consegue devolver um SQL simples no terminal?").

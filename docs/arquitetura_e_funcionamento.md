@@ -14,7 +14,7 @@ O código é modular e segue o princípio de separação de responsabilidades.
 
 ### 1. Ponto de Entrada e Interface: `web/` e `api/`
 - **`web/`:** Renderiza a aplicação React, mantém a transcrição estável e coordena autenticação, conversas, execução, resultados e histórico.
-- **`api/`:** Expõe autenticação, conversas, tradução, execução e histórico. `app.py` e `components.py` permanecem como interface Streamlit legada durante a migração.
+- **`api/`:** Expõe autenticação, conversas, tradução, execução e histórico para o frontend React.
 
 ### 2. Motor de Tradução (LLM): `core/translator.py`
 O **`Translator`** é responsável pela comunicação com o modelo de inteligência artificial através do cliente configurado em `core/llm.py`.
@@ -58,7 +58,7 @@ A comunicação com o banco de dados ocorre através do padrão *Adapter*.
 2. **Persistência do prompt:** Ao enviar a primeira pergunta, o app cria uma sessão titulada pelo prompt e salva a mensagem do usuário. Em sessões existentes, adiciona a mensagem à sessão ativa. A chave única por sessão, requisição e papel protege gravações contra duplicidade.
 3. **Contexto e tradução:** O `ConversationRepository` busca até seis turnos concluídos da sessão ativa, em ordem cronológica. O tradutor envia esses pares, o schema contextual e a nova pergunta ao provedor LLM configurado. A resposta precisa usar apenas entidades declaradas nesse contexto.
 4. **Revisão de SQL:** A revisão começa ativada. Nesse modo, o SQL é persistido na mensagem do assistente e exibido com uma ação de execução separada. Se a revisão estiver desativada, o app encaminha o SQL para execução direta.
-5. **Execução e histórico:** O app consome a ação pendente uma vez, mostra o progresso e executa a consulta pelo `PostgresAdapter`. Em caso de sucesso, associa a consulta ao histórico e mantém o DataFrame no estado do Streamlit; não salva as linhas retornadas na conversa. Falhas persistem o SQL e o erro na mensagem do assistente.
-6. **Renderização:** `render_chat_messages` percorre a transcrição persistida e renderiza cada mensagem uma vez. Resultados disponíveis na sessão recebem tabela, gráfico e download CSV; erros e SQL permanecem associados à mensagem correspondente.
+5. **Execução e histórico:** O frontend consome a ação pendente uma vez, mostra o progresso e executa a consulta pelo `PostgresAdapter`. Em caso de sucesso, associa a consulta ao histórico e mantém o resultado no estado da conversa; não salva as linhas retornadas na conversa. Falhas persistem o SQL e o erro na mensagem do assistente.
+6. **Renderização:** O workspace React percorre a transcrição persistida e renderiza cada mensagem uma vez. Resultados disponíveis recebem tabela, gráfico e download CSV; erros e SQL permanecem associados à mensagem correspondente.
 7. **Retomada e retry:** Ao reabrir uma sessão, o repositório carrega as mensagens do proprietário em ordem e não restaura DataFrames. A ação `Reexecutar consulta` executa o SQL armazenado usando apenas os identificadores da conversa e da solicitação; o backend recupera e valida o SQL e o resultado atualiza a mesma mensagem do assistente. Um retry também atualiza a mesma mensagem e, para SQL, usa uma transação somente de leitura.
 8. **Organização do workspace:** A conversa ocupa a área principal. A barra lateral reúne sessões, histórico de consultas, consultas compartilhadas e controles administrativos conforme o papel do usuário.

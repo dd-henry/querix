@@ -22,7 +22,6 @@ O projeto é construído com uma arquitetura modular, garantindo que cada compon
 ```mermaid
 graph TD
     A[Usuário via React] --> B(web/);
-    L[Usuário via Streamlit legado] --> M(app.py);
     B --> N(FastAPI api/);
     N --> C{Prompter};
     D[Schema e relacionamentos do Banco] --> C;
@@ -37,10 +36,9 @@ graph TD
 
 1.  **Interface web (`web/`):** Frontend React + TypeScript + Vite. Mantém o estado do chat no navegador e chama a API por cookie de sessão.
 2.  **API (`api/`):** Backend FastAPI que expõe autenticação, conversas, chat, histórico, consultas compartilhadas, administração e sincronização do schema.
-3.  **Interface legada (`app.py` e `components.py`):** Frontend Streamlit mantido durante a migração. Ele continua disponível, mas não é necessário para executar o frontend web.
-4.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" com estratégias analíticas genéricas, data de referência, regras de negócio, DDLs, tabelas, colunas e relacionamentos atuais. O código não contém SQL de um domínio específico.
-5.  **Motor de Tradução (`core/translator.py`):** Comunica-se com o provedor LLM configurado em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio. O provedor é selecionado por `LLM_PROVIDER` (`local` para Ollama ou `google` para Gemini).
-6.  **Banco de Dados (`database/postgres.py`):** Implementa a conexão com o PostgreSQL usando SQLAlchemy e entrega ao planejador tabelas, colunas, comentários e chaves estrangeiras do schema público.
+3.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" com estratégias analíticas genéricas, data de referência, regras de negócio, DDLs, tabelas, colunas e relacionamentos atuais. O código não contém SQL de um domínio específico.
+4.  **Motor de Tradução (`core/translator.py`):** Comunica-se com o provedor LLM configurado em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio. O provedor é selecionado por `LLM_PROVIDER` (`local` para Ollama ou `google` para Gemini).
+5.  **Banco de Dados (`database/postgres.py`):** Implementa a conexão com o PostgreSQL usando SQLAlchemy e entrega ao planejador tabelas, colunas, comentários e chaves estrangeiras do schema público.
 
 ## 🚀 Instalação e Configuração
 
@@ -91,13 +89,13 @@ SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_ANON_KEY=sua_chave_anon_publica
 ```
 
-O cadastro exige confirmação de email e cria um perfil `pending`. Um admin precisa aprová-lo antes do acesso. Os papéis são `user`, `dev` e `admin`; os status são `pending`, `approved`, `rejected` e `disabled`. A chave `SUPABASE_ANON_KEY` pode ficar no servidor Streamlit, mas nunca use a `service_role` no navegador.
+O cadastro exige confirmação de email e cria um perfil `pending`. Um admin precisa aprová-lo antes do acesso. Os papéis são `user`, `dev` e `admin`; os status são `pending`, `approved`, `rejected` e `disabled`. A chave `SUPABASE_ANON_KEY` deve permanecer no backend, nunca no navegador.
 
 ## 🏃 Como Usar
 
 ### Frontend web React + API FastAPI
 
-O frontend e a API são processos independentes. Em desenvolvimento, o Vite usa a porta `5173` e encaminha `/api` para a API na porta `8000`; os dois podem executar ao mesmo tempo que o Streamlit na porta `8501`.
+O frontend e a API são processos independentes. Em desenvolvimento, o Vite usa a porta `5173` e encaminha `/api` para a API na porta `8000`.
 
 1. Configure no `.env` as variáveis da API:
 
@@ -141,16 +139,6 @@ npm --prefix web run e2e
 
 Os testes E2E usam fixtures HTTP do Playwright e iniciam o servidor Vite automaticamente; a API real não precisa estar ativa para essa suíte.
 
-### Frontend Streamlit legado
-
-O Streamlit permanece disponível durante a migração e pode ser iniciado da forma anterior:
-
-```bash
-streamlit run app.py
-```
-
-Ele será removido somente depois de uma verificação independente com resultado PASS e aprovação explícita do responsável pelo projeto. Até lá, não remova nem substitua esse comando em ambientes existentes.
-
 ### Conversas e histórico de consultas
 
 Use **＋ Nova conversa** na barra lateral para começar um chat em branco. A conversa é salva quando você envia a primeira mensagem e recebe um título baseado nesse prompt. As conversas pertencem à sua conta; ao selecionar uma conversa salva, o chat restaura as mensagens, o SQL e os erros anteriores.
@@ -160,18 +148,6 @@ Os resultados das consultas, incluindo as linhas retornadas, não são salvos na
 O **Histórico de consultas** é separado das conversas: reúne consultas executadas e permite fixar, excluir ou executá-las novamente. Ao excluir uma conversa após confirmar, as mensagens e os registros do histórico vinculados a ela também são excluídos; registros antigos sem vínculo com uma conversa são preservados.
 
 Você pode favoritar conversas para mantê-las. Conversas não favoritas sem atividade por um ano são removidas quando o histórico de conversas é aberto. A exclusão manual também exige confirmação.
-
-Você também pode executar uma pergunta diretamente pela linha de comando para testes rápidos:
-
-```bash
-python app.py "Sua pergunta em linguagem natural aqui"
-```
-
-**Exemplo:**
-
-```bash
-python app.py "Quantos usuários se cadastraram no último mês?"
-```
 
 ## ✅ Estratégia de Testes
 

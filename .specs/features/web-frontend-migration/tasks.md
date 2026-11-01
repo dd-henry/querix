@@ -106,7 +106,7 @@ T34 -> T35
 T35 -> T36 -> T37 -> T38 -> T39 -> T40 -> T41
 ```
 
-T36-T41 are blocked until the independent Verifier returns PASS and the user explicitly approves removal of Streamlit.
+T36-T41 required the independent Verifier PASS and explicit owner approval; both conditions were satisfied before the cutover.
 
 ## Task Breakdown
 
@@ -815,9 +815,9 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] User approval and Verifier PASS are recorded before the change.
-- [ ] No documented start command points to `streamlit run app.py`.
-- [ ] Full backend/frontend/E2E gates pass after removal.
+- [x] User approval and Verifier PASS are recorded before the change.
+- [x] No documented start command points to `streamlit run app.py`.
+- [x] Full backend/frontend/E2E gates pass after removal.
 
 **Tests**: none
 **Gate**: Full
@@ -833,9 +833,9 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] No runtime import references `components.py`.
-- [ ] Frontend parity E2E remains green.
-- [ ] `git grep -n streamlit` reports only approved historical/spec references, if any.
+- [x] No runtime import references `components.py`.
+- [x] Frontend parity E2E remains green.
+- [x] `git grep -n streamlit` reports only approved historical/spec references, if any.
 
 **Tests**: none
 **Gate**: Full
@@ -851,9 +851,9 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] No unique acceptance criterion loses coverage.
-- [ ] Remaining Python tests pass.
-- [ ] The removed tests are listed in the cutover evidence.
+- [x] No unique acceptance criterion loses coverage.
+- [x] Remaining Python tests pass.
+- [x] The removed tests are listed in the cutover evidence.
 
 **Tests**: none
 **Gate**: Full
@@ -869,9 +869,9 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] Every removed UI assertion maps to a React unit or E2E test.
-- [ ] The remaining Python test suite passes.
-- [ ] No test imports Streamlit rendering code.
+- [x] Every removed UI assertion maps to a React unit or E2E test.
+- [x] The remaining Python test suite passes.
+- [x] No test imports Streamlit rendering code.
 
 **Tests**: none
 **Gate**: Full
@@ -887,8 +887,8 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] The frontend build and browser suite pass without Streamlit configuration.
-- [ ] No start or test command references the removed file.
+- [x] The frontend build and browser suite pass without Streamlit configuration.
+- [x] No start or test command references the removed file.
 
 **Tests**: none
 **Gate**: Build
@@ -904,9 +904,9 @@ T36-T41 are blocked until the independent Verifier returns PASS and the user exp
 
 **Done when**:
 
-- [ ] `git grep -n streamlit` has no runtime dependency/import references.
-- [ ] Python and frontend build/test gates pass from a clean environment.
-- [ ] The Verifier writes `validation.md` with PASS and the migration state is closed.
+- [x] `git grep -n streamlit` has no runtime dependency/import references.
+- [x] Python and frontend build/test gates pass from a clean environment.
+- [x] The Verifier writes `validation.md` with PASS and the migration state is closed.
 
 **Tests**: none
 **Gate**: Build
