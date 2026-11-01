@@ -157,7 +157,6 @@ test("lets a blocked account return to the login screen", async ({ page }) => {
       body: JSON.stringify({ message: "Logged out." }),
     });
   });
-
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Acesso pendente" }),
@@ -183,6 +182,13 @@ test("returns to one login screen after logout", async ({ page }) => {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ message: "Logged out." }),
+    });
+  });
+  await page.route("**/api/conversations*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ groups: [], expired_count: 0 }),
     });
   });
 

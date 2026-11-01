@@ -64,12 +64,12 @@ specs.
 
 **Done when**:
 
-- [ ] Explicit August without year uses August of the injected current year.
-- [ ] No explicit month uses the injected current month.
-- [ ] "Quais foram as vendas do mês de agosto?" returns sale-level primary SQL
+- [x] Explicit August without year uses August of the injected current year.
+- [x] No explicit month uses the injected current month.
+- [x] "Quais foram as vendas do mês de agosto?" returns sale-level primary SQL
       and no more than three labeled support queries.
-- [ ] Every support query uses known schema relationships and named parameters.
-- [ ] Invalid periods remain an LLM fallback.
+- [x] Every support query uses known schema relationships and named parameters.
+- [x] Invalid periods remain an LLM fallback.
 
 **Tests**: unit
 **Gate**: quick
@@ -87,10 +87,10 @@ supporting-query specs while preserving the existing single-query fallback.
 
 **Done when**:
 
-- [ ] The prompt requires schema-grounded, parameterized supporting queries.
-- [ ] Valid fallback plans are parsed with titles, keys, SQL, and parameters.
-- [ ] Missing or malformed support data produces an empty support list.
-- [ ] Existing Ollama fallback tests remain green.
+- [x] The prompt requires schema-grounded, parameterized supporting queries.
+- [x] Valid fallback plans are parsed with titles, keys, SQL, and parameters.
+- [x] Missing or malformed support data produces an empty support list.
+- [x] Existing Ollama fallback tests remain green.
 
 **Tests**: unit
 **Gate**: quick
@@ -107,19 +107,19 @@ supporting queries, preserving primary success when a support fails.
 
 **Done when**:
 
-- [ ] Primary and support queries are independently read-only validated.
-- [ ] Supports are bounded to three and five thousand rows each.
-- [ ] A support database error becomes a warning insight without erasing the
+- [x] Primary and support queries are independently read-only validated.
+- [x] Supports are bounded to three and five thousand rows each.
+- [x] A support database error becomes a warning insight without erasing the
       primary result.
-- [ ] A primary database error remains retryable.
-- [ ] Stored plan metadata supports idempotent retry.
+- [x] A primary database error remains retryable.
+- [x] Stored plan metadata supports idempotent retry.
 
 **Tests**: unit
 **Gate**: quick
 
 ### T4: Expose managerial insights through the API
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Add optional insight response models and map plan results/warnings
 through translate and execute routes without changing the primary result.
@@ -130,18 +130,18 @@ through translate and execute routes without changing the primary result.
 
 **Done when**:
 
-- [ ] Existing clients still receive the primary `result`.
-- [ ] Successful supports are returned as labeled insights with result and
+- [x] Existing clients still receive the primary `result`.
+- [x] Successful supports are returned as labeled insights with result and
       deterministic summary.
-- [ ] Failed supports include explicit warnings.
-- [ ] Review and automatic execution response modes remain compatible.
+- [x] Failed supports include explicit warnings.
+- [x] Review and automatic execution response modes remain compatible.
 
 **Tests**: unit
 **Gate**: quick
 
 ### T5: Carry insights through React state and render the managerial section
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Type, map, and render optional insights after the primary result
 without adding timeline messages or hiding the direct answer.
@@ -152,17 +152,17 @@ without adding timeline messages or hiding the direct answer.
 
 **Done when**:
 
-- [ ] Primary result renders before the "Leitura gerencial" section.
-- [ ] Each insight has its own summary/result or warning and collapsed SQL.
-- [ ] Empty insight results remain truthful and visible.
-- [ ] Timeline message count remains unchanged.
+- [x] Primary result renders before the "Leitura gerencial" section.
+- [x] Each insight has its own summary/result or warning and collapsed SQL.
+- [x] Empty insight results remain truthful and visible.
+- [x] Timeline message count remains unchanged.
 
 **Tests**: unit
 **Gate**: full
 
 ### T6: Cover managerial plan behavior end to end
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Add E2E scenarios for automatic primary-plus-insights execution,
 partial support warning, and explicit review compatibility.
@@ -172,10 +172,10 @@ partial support warning, and explicit review compatibility.
 
 **Done when**:
 
-- [ ] A sales-period question displays the primary result and managerial
+- [x] A sales-period question displays the primary result and managerial
       section without duplicate messages.
-- [ ] Support warnings are visible while the primary answer remains visible.
-- [ ] Review-mode behavior remains covered.
+- [x] Support warnings are visible while the primary answer remains visible.
+- [x] Review-mode behavior remains covered.
 
 **Tests**: e2e
 **Gate**: build

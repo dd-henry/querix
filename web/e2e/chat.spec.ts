@@ -76,6 +76,20 @@ test("keeps one user and assistant message during a double-clicked send", async 
           row_count: 1,
           truncated: false,
         },
+        insights: [
+          {
+            key: "kpi",
+            title: "Indicadores do período",
+            summary: "A consulta retornou 1 linha(s).",
+            sql: "SELECT COUNT(*) FROM sales",
+            result: {
+              columns: ["total"],
+              rows: [{ total: 1 }],
+              row_count: 1,
+              truncated: false,
+            },
+          },
+        ],
       }),
     });
   });
@@ -94,6 +108,14 @@ test("keeps one user and assistant message during a double-clicked send", async 
   await expect(
     page.getByText("O faturamento retornado foi R$ 12,00."),
   ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Leitura gerencial" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Indicadores do período" }),
+  ).toBeVisible();
+  await expect(page.locator("[data-message-id$=':user']")).toHaveCount(1);
+  await expect(page.locator("[data-message-id$=':assistant']")).toHaveCount(1);
   expect(requestBody?.review_mode).toBe(false);
   await expect(
     page.getByRole("button", { name: "Executar SQL revisado" }),
@@ -163,6 +185,51 @@ test("executes reviewed SQL once, keeps controls stable, and exposes chart and C
   await page.getByRole("link", { name: "Download Relatório (CSV)" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^relatorio-.*\.csv$/);
+});
+
+test("keeps the primary answer visible when a managerial insight fails", async ({
+  page,
+}) => {
+  await mockAuthenticatedPage(page);
+  await page.route("**/api/chat/translate", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...reviewResponse,
+        status: "executed",
+        content: "Aqui estão os resultados da consulta:",
+        summary: "O faturamento retornado foi R$ 12,00.",
+        result: {
+          columns: ["label", "total"],
+          rows: [{ label: "Janeiro", total: 12 }],
+          row_count: 1,
+          truncated: false,
+        },
+        insights: [
+          {
+            key: "payments",
+            title: "Formas de pagamento",
+            warning: "Não foi possível calcular esta análise complementar.",
+          },
+        ],
+      }),
+    });
+  });
+
+  await openChat(page);
+  await page.getByLabel("Pergunte sobre seus dados").fill("Total de vendas");
+  await page.getByRole("button", { name: "Enviar pergunta" }).click();
+
+  await expect(page.getByRole("heading", { name: "Resultados" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Leitura gerencial" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Não foi possível calcular esta análise complementar."),
+  ).toBeVisible();
+  await expect(page.locator("[data-message-id$=':user']")).toHaveCount(1);
+  await expect(page.locator("[data-message-id$=':assistant']")).toHaveCount(1);
 });
 
 test("retries the same failed request and keeps warning responses non-executable", async ({

@@ -111,12 +111,12 @@ cannot be calculated, with a visible explanation of the missing insight.
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| MANAGER-01 | P1: Correct period interpretation | Design | Pending |
-| MANAGER-02 | P1: Direct sales answer | Design | Pending |
-| MANAGER-03 | P1: Managerial context | Design | Pending |
-| MANAGER-04 | P1: Safe partial execution | Design | Pending |
-| MANAGER-05 | P1: Safe partial execution | Design | Pending |
-| MANAGER-06 | P1: Managerial context | Design | Pending |
+| MANAGER-01 | P1: Correct period interpretation | Execute | Verified |
+| MANAGER-02 | P1: Direct sales answer | Execute | Verified |
+| MANAGER-03 | P1: Managerial context | Execute | Verified |
+| MANAGER-04 | P1: Safe partial execution | Execute | Verified |
+| MANAGER-05 | P1: Safe partial execution | Execute | Verified |
+| MANAGER-06 | P1: Managerial context | Execute | Verified |
 
 ## Success Criteria
 
