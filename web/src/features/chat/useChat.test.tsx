@@ -5,6 +5,7 @@ import {
   ApiError,
   type ApiClient,
   type ChatResponse,
+  type ConversationDetail,
 } from "../../api/client";
 import { useChat } from "./useChat";
 
@@ -134,6 +135,38 @@ function readMessages(): Array<Record<string, unknown>> {
   >;
 }
 
+function restoredConversation(): ConversationDetail {
+  return {
+    id: "conversation-1",
+    title: "Revenue",
+    is_favorite: false,
+    created_at: "2025-01-15T10:00:00Z",
+    last_activity: "2025-01-15T10:30:00Z",
+    messages: [
+      {
+        id: 1,
+        request_id: "request-1",
+        role: "user",
+        content: "Show revenue",
+        sql: null,
+        error: null,
+        metadata: {},
+        created_at: "2025-01-15T10:00:00Z",
+      },
+      {
+        id: 2,
+        request_id: "request-1",
+        role: "assistant",
+        content: "Consulta carregada.",
+        sql: "SELECT 1",
+        error: null,
+        metadata: { retryable: false },
+        created_at: "2025-01-15T10:00:01Z",
+      },
+    ],
+  };
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
@@ -254,35 +287,9 @@ describe("useChat", () => {
       },
     });
     const client = createClient({ execute });
-    vi.mocked(client.conversations.get).mockResolvedValue({
-      id: "conversation-1",
-      title: "Revenue",
-      is_favorite: false,
-      created_at: "2025-01-15T10:00:00Z",
-      last_activity: "2025-01-15T10:30:00Z",
-      messages: [
-        {
-          id: 1,
-          request_id: "request-1",
-          role: "user",
-          content: "Show revenue",
-          sql: null,
-          error: null,
-          metadata: {},
-          created_at: "2025-01-15T10:00:00Z",
-        },
-        {
-          id: 2,
-          request_id: "request-1",
-          role: "assistant",
-          content: "Consulta carregada.",
-          sql: "SELECT 1",
-          error: null,
-          metadata: { retryable: false },
-          created_at: "2025-01-15T10:00:01Z",
-        },
-      ],
-    });
+    vi.mocked(client.conversations.get).mockResolvedValue(
+      restoredConversation(),
+    );
     render(<Harness client={client} />);
 
     fireEvent.click(screen.getByRole("button", { name: "open" }));
@@ -311,6 +318,68 @@ describe("useChat", () => {
     });
     expect(execute.mock.calls[0][0]).not.toHaveProperty("sql");
     expect(readMessages()).toHaveLength(2);
+  });
+
+  it("keeps a restored query retryable after execution fails", async () => {
+    const execute = vi.fn().mockRejectedValue(
+      new ApiError("database_unavailable", "Banco indisponível.", 503),
+    );
+    const client = createClient({ execute });
+    vi.mocked(client.conversations.get).mockResolvedValue(
+      restoredConversation(),
+    );
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({ reexecuteAvailable: true }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "confirm" }));
+
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          requestId: "request-1",
+          status: "error",
+          retryable: true,
+          retryKind: "execute",
+        }),
+      ),
+    );
+    expect(readMessages()).toHaveLength(2);
+  });
+
+  it("does not execute a restored query twice while the first request is pending", async () => {
+    const execution = deferred<ChatResponse>();
+    const execute = vi.fn().mockReturnValue(execution.promise);
+    const client = createClient({ execute });
+    vi.mocked(client.conversations.get).mockResolvedValue(
+      restoredConversation(),
+    );
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({ reexecuteAvailable: true }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "confirm" }));
+    fireEvent.click(screen.getByRole("button", { name: "confirm" }));
+
+    expect(execute).toHaveBeenCalledOnce();
+    execution.resolve({
+      ...reviewResponse,
+      status: "executed",
+      content: "Resultado atualizado.",
+    });
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({ status: "executed" }),
+      ),
+    );
   });
 
   it("cancels review without executing or adding another message", async () => {

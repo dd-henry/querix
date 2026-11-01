@@ -6,7 +6,7 @@ Implement one task at a time. Each task is tested, gated, marked done, and
 committed before the next task begins.
 
 **Design**: `.specs/features/conversation-query-reexecution/design.md`
-**Status**: In Progress
+**Status**: Done
 
 ## Test Coverage Matrix
 
@@ -38,6 +38,12 @@ T1
 
 ```text
 T1 -> T2
+```
+
+### Phase 3: Closing restored failure coverage
+
+```text
+T1 -> T2 -> T3
 ```
 
 ## Task Breakdown
@@ -90,3 +96,27 @@ the restored-query action in the architecture guide.
 
 **Tests**: e2e
 **Gate**: build
+
+### T3: Covering restored execution failures
+
+**Status**: Done
+
+**What**: Add focused unit coverage for a restored query that fails during
+execution, including retry visibility, stable message identity, and the
+existing pending-request guard.
+**Where**: `web/src/features/chat/useChat.test.tsx`,
+`web/src/features/chat/ChatWorkspace.test.tsx`
+**Depends on**: T2
+**Requirement**: CQR-04
+
+**Done when**:
+
+- [x] A restored execution failure remains on the same assistant message,
+      becomes retryable, and keeps the timeline at two messages.
+- [x] The failed restored message shows `Tentar novamente` and not
+      `Reexecutar consulta`.
+- [x] A second restored execution click while pending does not issue another
+      execute request.
+
+**Tests**: unit
+**Gate**: quick

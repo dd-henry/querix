@@ -150,24 +150,35 @@ describe("ChatWorkspace", () => {
     );
   });
 
-  it.each([
-    {
-      label: "without SQL",
-      message: { ...reviewMessage, sql: undefined, reexecuteAvailable: true },
-    },
-    {
-      label: "after a failed execution",
-      message: {
-        ...reviewMessage,
-        status: "error" as const,
-        reviewState: undefined,
-        reexecuteAvailable: true,
-        retryable: true,
-      },
-    },
-  ])("does not show re-execution for a restored message $label", ({ message }) => {
+  it("does not show re-execution for a restored message without SQL", () => {
+    const message = {
+      ...reviewMessage,
+      sql: undefined,
+      reexecuteAvailable: true,
+    };
     renderWorkspace([userMessage, message]);
 
+    expect(
+      screen.queryByRole("button", { name: "Reexecutar consulta" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows retry instead of re-execution after restored execution fails", () => {
+    const message: ChatMessage = {
+      ...reviewMessage,
+      status: "error",
+      reviewState: undefined,
+      reexecuteAvailable: true,
+      retryable: true,
+      retryKind: "execute",
+      content: "Banco indisponível.",
+      error: "database_unavailable",
+    };
+    renderWorkspace([userMessage, message]);
+
+    expect(
+      screen.getByRole("button", { name: "Tentar novamente" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Reexecutar consulta" }),
     ).not.toBeInTheDocument();
