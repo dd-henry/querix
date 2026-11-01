@@ -6,7 +6,7 @@ Implement one task at a time. Each task is tested, gated, marked done, and
 committed before the next task begins.
 
 **Design**: `.specs/features/schema-driven-query-planning/design.md`
-**Status**: In Progress
+**Status**: Done
 
 ## Test Coverage Matrix
 
