@@ -102,6 +102,37 @@ describe("MessageList", () => {
     expect(onCancelRequest).toHaveBeenCalledOnce();
   });
 
+  it("shows the current phase and elapsed time while a request is pending", () => {
+    render(
+      <MessageList
+        messages={[
+          userMessage,
+          {
+            ...assistantMessage,
+            status: "pending",
+            content: "Processando sua pergunta...",
+            progress: {
+              status: "running",
+              phase: "executing_query",
+              message: "Executando a consulta no banco de dados.",
+              elapsed_seconds: 4.2,
+            },
+          },
+        ]}
+        onRetry={vi.fn()}
+        pendingRequestId="request-1"
+        onCancelRequest={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Progresso da consulta")).toHaveTextContent(
+      "Executando a consulta no banco de dados.",
+    );
+    expect(screen.getByLabelText("Progresso da consulta")).toHaveTextContent(
+      "Tempo decorrido: 4.2s",
+    );
+  });
+
   it("places attachments immediately after their assistant message", () => {
     const { container } = render(
       <MessageList

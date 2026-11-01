@@ -9,6 +9,7 @@ from api.schemas.chat import (
     ChatExecuteRequest,
     ChatCancelResponse,
     ChatInsight as ChatInsightResponse,
+    ChatProgressResponse,
     ChatResponse,
     ChatRetryRequest,
 )
@@ -88,6 +89,26 @@ def cancel_chat(
     except ChatServiceError as exc:
         raise APIError(exc.status_code, exc.code, exc.message) from exc
     return ChatCancelResponse(status="cancelled")
+
+
+@router.post("/status", response_model=ChatProgressResponse)
+def chat_status(
+    payload: ChatRetryRequest,
+    profile: Dict[str, object] = Depends(require_approved_user),
+    service: ChatService = Depends(get_chat_service),
+) -> ChatProgressResponse:
+    progress = service.get_request_progress(
+        _owner_id(profile),
+        payload.conversation_id,
+        payload.request_id,
+    )
+    if progress is None:
+        raise APIError(
+            404,
+            "request_not_active",
+            "The chat request is no longer active.",
+        )
+    return ChatProgressResponse.model_validate(progress)
 
 
 @router.post("/retry", response_model=ChatResponse)

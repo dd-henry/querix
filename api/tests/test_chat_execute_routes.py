@@ -306,3 +306,40 @@ def test_cancel_route_rejects_an_unknown_request():
 
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "request_not_found"
+
+
+def test_status_route_returns_owner_scoped_progress():
+    service = Mock()
+    service.get_request_progress.return_value = {
+        "status": "running",
+        "phase": "executing_query",
+        "message": "Executando a consulta no banco de dados.",
+        "elapsed_seconds": 4.2,
+    }
+    client = _client(service)
+
+    response = client.post("/api/chat/status", json=_payload())
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "running",
+        "phase": "executing_query",
+        "message": "Executando a consulta no banco de dados.",
+        "elapsed_seconds": 4.2,
+    }
+    service.get_request_progress.assert_called_once_with(
+        USER_ID,
+        CONVERSATION_ID,
+        REQUEST_ID,
+    )
+
+
+def test_status_route_rejects_a_finished_request():
+    service = Mock()
+    service.get_request_progress.return_value = None
+    client = _client(service)
+
+    response = client.post("/api/chat/status", json=_payload())
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "request_not_active"

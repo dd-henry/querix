@@ -7,6 +7,7 @@ import {
   type ChatInsight,
   type ChatDiagnostics,
   type ChatInterpretation,
+  type ChatProgressResponse,
   type ChatRetryKind,
   type ChatStatus,
   type ChatResultPayload,
@@ -32,6 +33,7 @@ export interface ChatMessage {
   insights?: ChatInsight[];
   interpretation?: ChatInterpretation;
   diagnostics?: ChatDiagnostics;
+  progress?: ChatProgressResponse;
   warnings: string[];
   reviewState?: ChatReviewState;
   reexecuteAvailable?: boolean;
@@ -227,6 +229,28 @@ function replaceAssistant(
   );
 }
 
+function waitForProgress(
+  signal: AbortSignal,
+  delayMs: number,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(true);
+    }, delayMs);
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      resolve(false);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 export function useChat({
   client,
   conversationId: initialConversationId,
@@ -288,6 +312,7 @@ export function useChat({
           }));
           return false;
         } finally {
+          controller.abort();
           if (activeRequestRef.current?.requestId === requestId) {
             activeRequestRef.current = null;
           }
@@ -299,9 +324,39 @@ export function useChat({
         controller,
         promise,
       };
+      const readStatus = client.chat.status;
+      if (readStatus) {
+        void (async () => {
+          while (!controller.signal.aborted) {
+            try {
+              const progress = await readStatus(
+                {
+                  conversation_id: conversationId,
+                  request_id: requestId,
+                },
+                { signal: controller.signal },
+              );
+              if (!controller.signal.aborted) {
+                updateAssistant(requestId, (current) => ({
+                  ...current,
+                  progress,
+                }));
+              }
+            } catch (progressError: unknown) {
+              if (controller.signal.aborted) {
+                return;
+              }
+              void progressError;
+            }
+            if (!(await waitForProgress(controller.signal, 750))) {
+              return;
+            }
+          }
+        })();
+      }
       return promise;
     },
-    [updateAssistant],
+    [client.chat.status, updateAssistant],
   );
 
   const send = useCallback(
@@ -338,6 +393,12 @@ export function useChat({
           role: "assistant",
           content: "Processando sua pergunta...",
           status: "pending",
+          progress: {
+            status: "running",
+            phase: "starting",
+            message: "Preparando a consulta.",
+            elapsed_seconds: 0,
+          },
           retryable: false,
           insights: [],
           warnings: [],
@@ -388,6 +449,7 @@ export function useChat({
       ...message,
       content: "Consulta cancelada.",
       status: "cancelled",
+      progress: undefined,
       error: undefined,
       retryable: false,
       retryKind: undefined,
@@ -418,6 +480,12 @@ export function useChat({
         ...message,
         content: "Executando a consulta...",
         status: "pending",
+        progress: {
+          status: "running",
+          phase: "starting",
+          message: "Preparando a execução.",
+          elapsed_seconds: 0,
+        },
         error: undefined,
         reviewState: "confirmed",
       }));
@@ -476,6 +544,12 @@ export function useChat({
         ...message,
         content: "Tentando novamente...",
         status: "pending",
+        progress: {
+          status: "running",
+          phase: "starting",
+          message: "Preparando uma nova tentativa.",
+          elapsed_seconds: 0,
+        },
         error: undefined,
       }));
       return startRequest(

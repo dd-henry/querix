@@ -35,6 +35,13 @@ class ChatCancelResponse(BaseModel):
     status: Literal["cancelled"]
 
 
+class ChatProgressResponse(BaseModel):
+    status: Literal["running", "cancelling"]
+    phase: str
+    message: str
+    elapsed_seconds: float = Field(ge=0)
+
+
 class ChatInterpretation(BaseModel):
     intent: str
     dimensions: List[str] = Field(default_factory=list)

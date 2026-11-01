@@ -172,4 +172,34 @@ describe("createApiClient", () => {
       }),
     );
   });
+
+  it("reads chat progress with the request abort signal", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      response({
+        status: "running",
+        phase: "executing_query",
+        message: "Executando a consulta no banco de dados.",
+        elapsed_seconds: 4.2,
+      }),
+    );
+    const client = createApiClient({ fetchImpl });
+    const controller = new AbortController();
+
+    await client.chat.status(
+      {
+        conversation_id: "conversation-1",
+        request_id: "request-1",
+      },
+      { signal: controller.signal },
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/chat/status",
+      expect.objectContaining({
+        method: "POST",
+        signal: controller.signal,
+        credentials: "include",
+      }),
+    );
+  });
 });

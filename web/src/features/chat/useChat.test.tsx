@@ -50,6 +50,12 @@ function createClient(
           truncated: false,
         },
       }),
+      status: vi.fn().mockResolvedValue({
+        status: "running",
+        phase: "generating_sql",
+        message: "Interpretando sua pergunta e gerando a consulta.",
+        elapsed_seconds: 1.2,
+      }),
       cancel: vi.fn().mockResolvedValue({ status: "cancelled" }),
       retry: vi.fn().mockResolvedValue(reviewResponse),
       ...overrides,
@@ -226,6 +232,48 @@ describe("useChat", () => {
           reviewState: "open",
           sql: "SELECT 1",
         }),
+      ),
+    );
+  });
+
+  it("updates the pending message with server progress", async () => {
+    const request = deferred<ChatResponse>();
+    const status = vi.fn().mockResolvedValue({
+      status: "running",
+      phase: "executing_query",
+      message: "Executando a consulta no banco de dados.",
+      elapsed_seconds: 4.2,
+    });
+    const client = createClient({
+      translate: vi.fn().mockReturnValue(request.promise),
+      status,
+    });
+    render(<Harness client={client} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "send" }));
+
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({
+          progress: expect.objectContaining({
+            phase: "executing_query",
+            elapsed_seconds: 4.2,
+          }),
+        }),
+      ),
+    );
+    expect(status).toHaveBeenCalledWith(
+      {
+        conversation_id: "generated-1",
+        request_id: "generated-2",
+      },
+      { signal: expect.any(AbortSignal) },
+    );
+
+    request.resolve(reviewResponse);
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(
+        expect.objectContaining({ status: "review" }),
       ),
     );
   });

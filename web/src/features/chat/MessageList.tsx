@@ -26,6 +26,14 @@ export function MessageList({
   pendingRequestId,
   renderAfterMessage,
 }: MessageListProps) {
+  const pendingMessage = pendingRequestId
+    ? messages.find(
+        (message) =>
+          message.role === "assistant" &&
+          message.requestId === pendingRequestId,
+      )
+    : undefined;
+  const progress = pendingMessage?.progress;
   return (
     <section className="message-list" aria-label="Mensagens da conversa">
       <div className="message-list__items">
@@ -87,6 +95,24 @@ export function MessageList({
       </div>
       <div className="message-list__live-status" role="status" aria-live="polite">
         {!pendingRequestId ? liveStatus(messages) : null}
+        {pendingRequestId ? (
+          <div
+            className="chat-progress"
+            aria-label="Progresso da consulta"
+          >
+            <span className="chat-progress__spinner" aria-hidden="true" />
+            <span className="chat-progress__copy">
+              <strong>
+                {progress?.message ?? "A consulta está em andamento."}
+              </strong>
+              <span>
+                {progress
+                  ? `Tempo decorrido: ${progress.elapsed_seconds.toFixed(1)}s`
+                  : "Aguardando atualização do servidor."}
+              </span>
+            </span>
+          </div>
+        ) : null}
         {pendingRequestId && onCancelRequest ? (
           <button
             className="chat-cancel-button"

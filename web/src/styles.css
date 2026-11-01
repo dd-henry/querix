@@ -541,8 +541,49 @@ select:disabled {
 
 .message-list__live-status {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   min-height: 2.5rem;
   align-items: center;
+}
+
+.chat-progress {
+  display: inline-flex;
+  min-width: min(100%, 22rem);
+  align-items: center;
+  gap: 0.7rem;
+  color: #dbeafe;
+}
+
+.chat-progress__spinner {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border: 2px solid rgb(147 197 253 / 30%);
+  border-top-color: #93c5fd;
+  border-radius: 50%;
+  animation: chat-progress-spin 800ms linear infinite;
+}
+
+.chat-progress__copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.chat-progress__copy strong {
+  color: #f9fafb;
+  font-size: 0.88rem;
+}
+
+.chat-progress__copy span {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+@keyframes chat-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .chat-cancel-button {

@@ -239,6 +239,50 @@ def test_cancelled_request_stops_before_translation():
     assert translator.calls == []
 
 
+def test_active_request_exposes_phase_and_elapsed_time():
+    registry = ChatCancellationRegistry()
+
+    assert registry.start(REQUEST_ID, USER_ID, CONVERSATION_ID)
+    initial = registry.get_progress(
+        REQUEST_ID,
+        USER_ID,
+        CONVERSATION_ID,
+    )
+    assert initial is not None
+    assert initial["status"] == "running"
+    assert initial["phase"] == "starting"
+    assert initial["message"] == "Preparando a consulta."
+    assert isinstance(initial["elapsed_seconds"], float)
+
+    assert registry.update_phase(
+        REQUEST_ID,
+        "executing_query",
+        "Executando a consulta no banco de dados.",
+    )
+    current = registry.get_progress(
+        REQUEST_ID,
+        USER_ID,
+        CONVERSATION_ID,
+    )
+    assert current == {
+        "status": "running",
+        "phase": "executing_query",
+        "message": "Executando a consulta no banco de dados.",
+        "elapsed_seconds": current["elapsed_seconds"],
+    }
+
+
+def test_progress_is_not_visible_to_another_request_owner():
+    registry = ChatCancellationRegistry()
+    registry.start(REQUEST_ID, USER_ID, CONVERSATION_ID)
+
+    assert registry.get_progress(
+        REQUEST_ID,
+        "00000000-0000-0000-0000-000000000009",
+        CONVERSATION_ID,
+    ) is None
+
+
 def test_cancellation_can_win_before_the_user_turn_is_persisted():
     registry = ChatCancellationRegistry()
 

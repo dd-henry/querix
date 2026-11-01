@@ -1,4 +1,5 @@
 import logging
+import time
 from dataclasses import dataclass, field
 from threading import Lock
 from typing import Any, Callable, Dict, List, Mapping, NoReturn, Optional
@@ -31,6 +32,13 @@ class ChatServiceError(RuntimeError):
         self.message = message
 
 
+@dataclass(frozen=True)
+class ChatProgress:
+    phase: str
+    message: str
+    started_at: float
+
+
 class ChatCancellationRegistry:
     """Track cancellable chat requests within the current API process."""
 
@@ -38,6 +46,7 @@ class ChatCancellationRegistry:
         self._lock = Lock()
         self._active: Dict[UUID, tuple[str, UUID]] = {}
         self._cancelled: set[UUID] = set()
+        self._progress: Dict[UUID, ChatProgress] = {}
 
     def start(
         self,
@@ -52,6 +61,18 @@ class ChatCancellationRegistry:
                 return existing == owner
             self._active[request_id] = owner
             self._cancelled.discard(request_id)
+            self._progress[request_id] = ChatProgress(
+                phase="starting",
+                message="Preparando a consulta.",
+                started_at=time.monotonic(),
+            )
+            logger.info(
+                "Chat request started request_id=%s conversation_id=%s "
+                "phase=starting message=%s",
+                request_id,
+                conversation_id,
+                self._progress[request_id].message,
+            )
             return True
 
     def is_active(
@@ -77,7 +98,70 @@ class ChatCancellationRegistry:
             if self._active.get(request_id) != (user_id, conversation_id):
                 return False
             self._cancelled.add(request_id)
+            progress = self._progress.get(request_id)
+            if progress is not None:
+                self._progress[request_id] = ChatProgress(
+                    phase="cancelling",
+                    message="Cancelando a consulta.",
+                    started_at=progress.started_at,
+                )
+            logger.info(
+                "Chat request cancellation requested request_id=%s "
+                "conversation_id=%s",
+                request_id,
+                conversation_id,
+            )
             return True
+
+    def update_phase(
+        self,
+        request_id: UUID,
+        phase: str,
+        message: str,
+    ) -> bool:
+        with self._lock:
+            progress = self._progress.get(request_id)
+            if request_id not in self._active or progress is None:
+                return False
+            self._progress[request_id] = ChatProgress(
+                phase=phase,
+                message=message,
+                started_at=progress.started_at,
+            )
+            owner = self._active[request_id]
+            logger.info(
+                "Chat request progress request_id=%s conversation_id=%s "
+                "phase=%s message=%s",
+                request_id,
+                owner[1],
+                phase,
+                message,
+            )
+            return True
+
+    def get_progress(
+        self,
+        request_id: UUID,
+        user_id: str,
+        conversation_id: UUID,
+    ) -> Optional[Dict[str, object]]:
+        with self._lock:
+            if self._active.get(request_id) != (user_id, conversation_id):
+                return None
+            progress = self._progress.get(request_id)
+            if progress is None:
+                return None
+            elapsed_seconds = max(0.0, time.monotonic() - progress.started_at)
+            return {
+                "status": (
+                    "cancelling"
+                    if request_id in self._cancelled
+                    else "running"
+                ),
+                "phase": progress.phase,
+                "message": progress.message,
+                "elapsed_seconds": round(elapsed_seconds, 1),
+            }
 
     def is_cancelled(self, request_id: UUID) -> bool:
         with self._lock:
@@ -92,8 +176,17 @@ class ChatCancellationRegistry:
         with self._lock:
             if self._active.get(request_id) != (user_id, conversation_id):
                 return False
+            progress = self._progress.get(request_id)
+            logger.info(
+                "Chat request finished request_id=%s conversation_id=%s "
+                "phase=%s",
+                request_id,
+                conversation_id,
+                progress.phase if progress is not None else "unknown",
+            )
             self._active.pop(request_id, None)
             self._cancelled.discard(request_id)
+            self._progress.pop(request_id, None)
             return True
 
     def run_if_not_cancelled(
@@ -208,11 +301,21 @@ class ChatService:
     ) -> ChatResult:
         normalized_prompt = self._validate_prompt(prompt)
         self._raise_if_cancelled(request_id)
+        self._set_progress(
+            request_id,
+            "loading_context",
+            "Lendo o contexto da conversa.",
+        )
         messages = self.conversation_repository.get_messages(
             user_id,
             conversation_id,
         )
         self._raise_if_cancelled(request_id)
+        self._set_progress(
+            request_id,
+            "generating_sql",
+            "Interpretando sua pergunta e gerando a consulta.",
+        )
         if not retry:
             existing = self._existing_result(
                 messages,
@@ -298,6 +401,11 @@ class ChatService:
             translated.get("supporting_queries")
         )
         temporal = translated.get("temporal")
+        self._set_progress(
+            request_id,
+            "validating_sql",
+            "Validando a consulta gerada.",
+        )
         plan = self._validate_plan(
             translated.get("plan"),
             user_id,
@@ -311,6 +419,11 @@ class ChatService:
                 request_id,
                 sql,
                 metadata={"grafico": chart},
+            )
+            self._set_progress(
+                request_id,
+                "ready",
+                "Consulta pronta para revisão.",
             )
             return ChatResult(
                 conversation_id=conversation_id,
@@ -366,6 +479,11 @@ class ChatService:
                 "temporal": temporal,
                 "interpretation": build_interpretation(plan, temporal),
             },
+        )
+        self._set_progress(
+            request_id,
+            "ready",
+            "Consulta pronta para revisão.",
         )
         return ChatResult(
             conversation_id=conversation_id,
@@ -441,6 +559,11 @@ class ChatService:
         request_id: UUID,
     ) -> ChatResult:
         self._raise_if_cancelled(request_id)
+        self._set_progress(
+            request_id,
+            "loading_query",
+            "Carregando a consulta aprovada.",
+        )
         messages = self.conversation_repository.get_messages(
             user_id,
             conversation_id,
@@ -477,13 +600,37 @@ class ChatService:
         parameters = metadata.get("parameters") or {}
         if not isinstance(parameters, dict):
             parameters = {}
+        self._set_progress(
+            request_id,
+            "executing_query",
+            "Executando a consulta no banco de dados.",
+        )
         try:
+            query_started_at = time.monotonic()
+            logger.info(
+                "Chat database query started request_id=%s conversation_id=%s",
+                request_id,
+                conversation_id,
+            )
             dataframe = self.database.execute_read_only_query(sql, parameters)
             result = serialize_dataframe(dataframe, max_rows=self.result_limit)
             summary = summarize_result(result)
+            logger.info(
+                "Chat database query finished request_id=%s conversation_id=%s "
+                "rows=%s elapsed_ms=%s",
+                request_id,
+                conversation_id,
+                result["row_count"],
+                round((time.monotonic() - query_started_at) * 1000),
+            )
         except Exception as exc:
             logger.exception("Stored query execution failed.")
             self._raise_if_cancelled(request_id)
+            self._set_progress(
+                request_id,
+                "repairing_query",
+                "Ajustando a consulta após um erro do banco.",
+            )
             repaired = self._attempt_query_repair(
                 sql,
                 exc,
@@ -503,6 +650,13 @@ class ChatService:
                 )
             sql, parameters, metadata = repaired
             try:
+                query_started_at = time.monotonic()
+                logger.info(
+                    "Chat repaired database query started request_id=%s "
+                    "conversation_id=%s",
+                    request_id,
+                    conversation_id,
+                )
                 dataframe = self.database.execute_read_only_query(
                     sql,
                     parameters,
@@ -512,6 +666,14 @@ class ChatService:
                     max_rows=self.result_limit,
                 )
                 summary = summarize_result(result)
+                logger.info(
+                    "Chat repaired database query finished request_id=%s "
+                    "conversation_id=%s rows=%s elapsed_ms=%s",
+                    request_id,
+                    conversation_id,
+                    result["row_count"],
+                    round((time.monotonic() - query_started_at) * 1000),
+                )
             except Exception as repair_error:
                 logger.exception("Repaired query execution failed.")
                 self._raise_database_failure(
@@ -524,6 +686,11 @@ class ChatService:
                 )
 
         self._raise_if_cancelled(request_id)
+        self._set_progress(
+            request_id,
+            "calculating_insights",
+            "Calculando indicadores complementares.",
+        )
         insights = self._execute_supporting_queries(
             metadata.get("supporting_queries"),
             request_id,
@@ -552,6 +719,11 @@ class ChatService:
             request_id,
         )
         self._raise_if_cancelled(request_id)
+        self._set_progress(
+            request_id,
+            "saving_result",
+            "Salvando o resultado da consulta.",
+        )
         self._persist_assistant_turn(
             user_id,
             conversation_id,
@@ -570,6 +742,11 @@ class ChatService:
             },
         )
         self._raise_if_cancelled(request_id)
+        self._set_progress(
+            request_id,
+            "completed",
+            "Consulta concluída.",
+        )
         return ChatResult(
             conversation_id=conversation_id,
             request_id=request_id,
@@ -806,6 +983,20 @@ class ChatService:
                     "The chat request is no longer active.",
                 )
 
+    def get_request_progress(
+        self,
+        user_id: str,
+        conversation_id: UUID,
+        request_id: UUID,
+    ) -> Optional[Dict[str, object]]:
+        if self.cancellation_registry is None:
+            return None
+        return self.cancellation_registry.get_progress(
+            request_id,
+            user_id,
+            conversation_id,
+        )
+
     def _validate_prompt(self, prompt: str) -> str:
         normalized = (prompt or "").strip()
         if not normalized or len(normalized) > self.prompt_limit:
@@ -870,6 +1061,19 @@ class ChatService:
                 409,
                 "request_cancelled",
                 "A consulta foi cancelada.",
+            )
+
+    def _set_progress(
+        self,
+        request_id: UUID,
+        phase: str,
+        message: str,
+    ) -> None:
+        if self.cancellation_registry is not None:
+            self.cancellation_registry.update_phase(
+                request_id,
+                phase,
+                message,
             )
 
     def _persist_user_turn(

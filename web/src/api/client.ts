@@ -167,6 +167,13 @@ export interface ChatCancelResponse {
   status: "cancelled";
 }
 
+export interface ChatProgressResponse {
+  status: "running" | "cancelling";
+  phase: string;
+  message: string;
+  elapsed_seconds: number;
+}
+
 export interface ChatResultPayload {
   columns: string[];
   rows: Array<Record<string, unknown>>;
@@ -411,6 +418,18 @@ export function createApiClient({
           }),
           "chat execution",
         ),
+      status: async (
+        input: ChatRequestInput,
+        options: ChatRequestOptions = {},
+      ) =>
+        requireResponse(
+          await request<ChatProgressResponse>("/api/chat/status", {
+            method: "POST",
+            body: input,
+            signal: options.signal,
+          }),
+          "chat status",
+        ),
       cancel: async (input: ChatRequestInput) =>
         requireResponse(
           await request<ChatCancelResponse>("/api/chat/cancel", {
@@ -560,4 +579,10 @@ export function createApiClient({
   };
 }
 
-export type ApiClient = ReturnType<typeof createApiClient>;
+type CreatedApiClient = ReturnType<typeof createApiClient>;
+
+export type ApiClient = Omit<CreatedApiClient, "chat"> & {
+  chat: Omit<CreatedApiClient["chat"], "status"> & {
+    status?: CreatedApiClient["chat"]["status"];
+  };
+};
