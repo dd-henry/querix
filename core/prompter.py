@@ -141,7 +141,8 @@ class Prompter:
             "Antes de escrever SQL, retorne somente um objeto JSON válido com "
             "intent, tables, relationships, dimensions, metrics, filters, "
             "grain e assumptions. Use arrays vazios quando uma categoria não "
-            "for necessária. assumptions deve conter pelo menos uma frase, "
+            "for necessária. intent deve ser uma descrição curta e não vazia. "
+            "assumptions deve conter pelo menos uma frase, "
             "mesmo quando a conclusão for que não há suposições adicionais.\n"
             "Não inclua SQL, markdown ou texto fora do JSON."
         )

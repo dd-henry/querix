@@ -86,6 +86,7 @@ def test_build_stage_prompts_define_planning_and_sql_contracts(tmp_path):
 
     assert "ETAPA 1: PLANEJAMENTO ANALÍTICO" in planner_prompt
     assert "intent, tables, relationships, dimensions, metrics" in planner_prompt
+    assert "intent deve ser uma descrição curta e não vazia" in planner_prompt
     assert "ETAPA 2: GERAÇÃO SQL" in sql_prompt
     assert "supporting_queries e grafico" in sql_prompt
     assert "Tabela: events" in planner_prompt

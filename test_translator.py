@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import patch
 
 from core.query_plan import QueryPlan
+from core.query_validation import QueryValidationError
 from core.temporal import TemporalInterpreter
 from core.translator import Translator
 from core.translator import TranslationStageError
@@ -224,6 +225,80 @@ def test_plan_question_normalizes_typed_plan():
     assert plan.filters[0]["operator"] == ">="
     assert plan.grain == "customer"
     assert plan.assumptions == ("amount is additive",)
+
+
+def test_plan_question_retries_malformed_planner_response():
+    translator = _staged_translator()
+    valid_payload = (
+        '{"intent":"list","tables":["events"],"relationships":[],'
+        '"dimensions":["created_at"],"metrics":[],"filters":[],'
+        '"grain":null,"assumptions":["no aggregation requested"]}'
+    )
+
+    with patch(
+        "core.translator.ollama.chat",
+        side_effect=[
+            {"message": {"content": '{"intent":"","tables":[]}'}},
+            {"message": {"content": valid_payload}},
+        ],
+    ) as chat:
+        plan = translator.plan_question("Liste eventos")
+
+    assert plan.tables == ("events",)
+    assert chat.call_count == 2
+    assert (
+        "CORREÇÃO OBRIGATÓRIA"
+        in chat.call_args_list[1].kwargs["messages"][0]["content"]
+    )
+
+
+def test_translate_to_sql_retries_plan_rejected_by_schema_validation():
+    validation_calls = []
+
+    def validate(plan):
+        validation_calls.append(plan)
+        if len(validation_calls) == 1:
+            raise QueryValidationError(
+                "unknown_column",
+                "Unknown column in query plan: total_vendas.",
+            )
+
+    translator = _staged_translator(plan_validator=validate)
+    invalid_payload = (
+        '{"intent":"ranking","tables":["events"],"relationships":[],'
+        '"dimensions":["created_at"],"metrics":["SUM(total_vendas)"],'
+        '"filters":[],"grain":"day","assumptions":["metric is additive"]}'
+    )
+    valid_payload = (
+        '{"intent":"ranking","tables":["events"],"relationships":[],'
+        '"dimensions":["created_at"],"metrics":["COUNT(*)"],'
+        '"filters":[],"grain":"day","assumptions":["count rows"]}'
+    )
+
+    with patch(
+        "core.translator.ollama.chat",
+        side_effect=[
+            {"message": {"content": invalid_payload}},
+            {"message": {"content": valid_payload}},
+            {
+                "message": {
+                    "content": (
+                        '{"sql":"SELECT created_at, COUNT(*) FROM events '
+                        'GROUP BY created_at"}'
+                    )
+                }
+            },
+        ],
+    ) as chat:
+        result = translator.translate_to_sql("Liste eventos")
+
+    assert result["sql"].startswith("SELECT created_at")
+    assert len(validation_calls) == 2
+    assert chat.call_count == 3
+    assert (
+        "total_vendas"
+        in chat.call_args_list[1].kwargs["messages"][0]["content"]
+    )
 
 
 def test_translate_to_sql_sends_normalized_plan_and_temporal_hint():

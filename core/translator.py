@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 import ollama
 
 from core.query_plan import QueryPlan, QueryPlanError
+from core.query_validation import QueryValidationError
 from core.temporal import TemporalInterpretation, TemporalInterpreter
 
 
@@ -38,6 +39,7 @@ class Translator:
         self.sql_generation_prompt = sql_generation_prompt
         self.plan_validator = plan_validator
         self.chat_client = chat_client
+        self._planner_max_attempts = 2
 
     def _clean_sql_response(self, text: str) -> dict:
         """
@@ -134,6 +136,7 @@ class Translator:
         user_question: str,
         conversation_context: Optional[Sequence[Dict[str, str]]] = None,
         temporal_interpretation: Optional[TemporalInterpretation] = None,
+        planner_feedback: Optional[str] = None,
     ) -> QueryPlan:
         if not self.planner_prompt:
             raise TranslationStageError(
@@ -146,19 +149,33 @@ class Translator:
             date.today(),
         )
         prompt = self._append_temporal_hint(self.planner_prompt, temporal)
-        messages = self._stage_messages(
-            prompt,
-            user_question,
-            conversation_context,
-        )
-        try:
-            response = self._chat(messages)
+        for attempt in range(self._planner_max_attempts):
+            attempt_prompt = self._append_planner_feedback(
+                prompt,
+                planner_feedback,
+            )
+            messages = self._stage_messages(
+                attempt_prompt,
+                user_question,
+                conversation_context,
+            )
+            try:
+                response = self._chat(messages)
+            except Exception as exc:
+                raise TranslationStageError("planning", str(exc)) from exc
+
             raw_content = response.get("message", {}).get("content", "")
-            return self._clean_plan_response(raw_content)
-        except TranslationStageError:
-            raise
-        except Exception as exc:
-            raise TranslationStageError("planning", str(exc)) from exc
+            try:
+                return self._clean_plan_response(raw_content)
+            except TranslationStageError as exc:
+                if attempt + 1 >= self._planner_max_attempts:
+                    raise
+                planner_feedback = str(exc)
+
+        raise TranslationStageError(
+            "planning",
+            "The planner did not return a valid query plan.",
+        )
 
     def translate_plan_to_sql(
         self,
@@ -275,12 +292,26 @@ class Translator:
                 conversation_context=conversation_context,
                 temporal_interpretation=temporal,
             )
-            translated = self.translate_plan_to_sql(
-                plan,
-                user_question,
-                conversation_context=conversation_context,
-                temporal_interpretation=temporal,
-            )
+            try:
+                translated = self.translate_plan_to_sql(
+                    plan,
+                    user_question,
+                    conversation_context=conversation_context,
+                    temporal_interpretation=temporal,
+                )
+            except QueryValidationError as exc:
+                plan = self.plan_question(
+                    user_question,
+                    conversation_context=conversation_context,
+                    temporal_interpretation=temporal,
+                    planner_feedback=str(exc),
+                )
+                translated = self.translate_plan_to_sql(
+                    plan,
+                    user_question,
+                    conversation_context=conversation_context,
+                    temporal_interpretation=temporal,
+                )
             translated["plan"] = plan.to_dict()
             translated["temporal"] = (
                 temporal.planning_hint
@@ -349,6 +380,23 @@ class Translator:
             sort_keys=True,
         )
         return f"{prompt}\n=== DICA TEMPORAL DETERMINÍSTICA ===\n{hint}"
+
+    @staticmethod
+    def _append_planner_feedback(
+        prompt: str,
+        feedback: Optional[str],
+    ) -> str:
+        if not feedback:
+            return prompt
+        return (
+            f"{prompt}\n"
+            "=== CORREÇÃO OBRIGATÓRIA DO PLANO ANTERIOR ===\n"
+            "A tentativa anterior foi rejeitada pela validação do contrato ou "
+            "do schema. Corrija o problema abaixo e retorne novamente somente "
+            "o JSON do plano. Não repita identificadores que não aparecem no "
+            "schema fornecido.\n"
+            f"Problema: {feedback}\n"
+        )
 
 
 class TranslationStageError(RuntimeError):
