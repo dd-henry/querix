@@ -27,6 +27,9 @@ def test_build_system_prompt_inclui_regras_analiticas_de_vendas(tmp_path):
     assert "vendas -> itens_venda -> produtos" in prompt
     assert "coluna >= início AND coluna < fim" in prompt
     assert "produto, quantidade e valor" in prompt
+    assert "supporting_queries" in prompt
+    assert "Use no máximo três supporting_queries" in prompt
+    assert "não invente tabelas, colunas ou valores" in prompt
 
 
 def test_build_system_prompt_com_schema(tmp_path):

@@ -76,7 +76,7 @@ specs.
 
 ### T2: Add structured managerial fallback planning
 
-**Status**: Pending
+**Status**: Done
 
 **What**: Extend prompt instructions and translator parsing for optional
 supporting-query specs while preserving the existing single-query fallback.

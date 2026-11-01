@@ -1,6 +1,7 @@
 import re
 import json
-from typing import Dict, Optional, Sequence
+from collections.abc import Mapping
+from typing import Dict, List, Optional, Sequence
 
 import ollama
 
@@ -39,11 +40,57 @@ class Translator:
         if start_idx != -1 and end_idx != -1:
             json_str = text[start_idx:end_idx+1]
             try:
-                return json.loads(json_str)
+                payload = json.loads(json_str)
+                if not isinstance(payload, dict):
+                    raise ValueError("The model response must be a JSON object.")
+                payload["supporting_queries"] = (
+                    self._normalize_supporting_queries(
+                        payload.get("supporting_queries")
+                    )
+                )
+                return payload
             except json.JSONDecodeError:
                 raise ValueError(f"O modelo não retornou um JSON válido. Retorno isolado: {json_str}")
         else:
             raise ValueError("Não foi possível encontrar um objeto JSON válido na resposta do modelo.")
+
+    @staticmethod
+    def _normalize_supporting_queries(value: object) -> List[dict]:
+        if value is None:
+            return []
+        if not isinstance(value, list) or len(value) > 3:
+            return []
+
+        normalized: List[dict] = []
+        keys = set()
+        for item in value:
+            if not isinstance(item, Mapping):
+                return []
+            key = item.get("key")
+            title = item.get("title")
+            sql = item.get("sql")
+            parameters = item.get("parameters", {})
+            if (
+                not isinstance(key, str)
+                or not key.strip()
+                or not isinstance(title, str)
+                or not title.strip()
+                or not isinstance(sql, str)
+                or not sql.strip()
+                or not isinstance(parameters, Mapping)
+                or key in keys
+            ):
+                return []
+            keys.add(key)
+            normalized.append(
+                {
+                    "key": key.strip(),
+                    "title": title.strip(),
+                    "sql": sql.strip(),
+                    "parameters": dict(parameters),
+                }
+            )
+        return normalized
 
     def translate_to_sql(
         self,

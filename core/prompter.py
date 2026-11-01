@@ -63,6 +63,15 @@ class Prompter:
             "Caso contrário, retorne EXCLUSIVAMENTE um objeto JSON válido com a seguinte estrutura:\n"
             "{\n"
             '  "sql": "código SQL puro",\n'
+            '  "parameters": {},\n'
+            '  "supporting_queries": [\n'
+            "    {\n"
+            '      "key": "identificador_estavel",\n'
+            '      "title": "Título da análise",\n'
+            '      "sql": "SQL complementar somente leitura",\n'
+            '      "parameters": {}\n'
+            "    }\n"
+            "  ],\n"
             '  "grafico": {\n'
             '    "tipo": "bar", // Pode ser "bar" (barras) ou "line" (linhas). Use null se não fizer sentido gerar um gráfico.\n'
             '    "eixo_x": "nome_da_coluna_x",\n'
@@ -70,6 +79,12 @@ class Prompter:
             '    "titulo": "Título Sugerido para o Gráfico"\n'
             "  }\n"
             "}\n"
+            "Use no máximo três supporting_queries. Cada uma deve usar somente "
+            "tabelas e colunas presentes no esquema atual e relações existentes. "
+            "Use parâmetros nomeados para períodos e filtros; não invente "
+            "tabelas, colunas ou valores. Se não houver complemento confiável, "
+            'retorne "supporting_queries": []. Não escreva conclusões numéricas '
+            "no JSON; elas serão calculadas a partir das linhas retornadas.\n"
             "Não inclua blocos de formatação markdown (como ```json) ou qualquer texto adicional, apenas o JSON puro.\n\n"
         )
 

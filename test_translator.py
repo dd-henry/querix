@@ -40,6 +40,44 @@ def test_clean_sql_response_deve_falhar_json_invalido(translator):
         translator._clean_sql_response(fake_invalid_response)
 
 
+def test_clean_sql_response_normalizes_supporting_queries(translator):
+    resultado = translator._clean_sql_response(
+        '{"sql":"SELECT 1","grafico":null,"supporting_queries":['
+        '{"key":"kpi","title":"Indicadores","sql":"SELECT 2",'
+        '"parameters":{"period_start":"2026-10-01"}}]}'
+    )
+
+    assert resultado["supporting_queries"] == [
+        {
+            "key": "kpi",
+            "title": "Indicadores",
+            "sql": "SELECT 2",
+            "parameters": {"period_start": "2026-10-01"},
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    "supporting_queries",
+    [
+        '[{"key":"kpi","title":"Indicadores"}]',
+        '[{"key":"kpi","title":"Indicadores","sql":"SELECT 2"},'
+        '{"key":"kpi","title":"Duplicado","sql":"SELECT 3"}]',
+    ],
+)
+def test_clean_sql_response_discards_malformed_supporting_queries(
+    translator,
+    supporting_queries,
+):
+    resultado = translator._clean_sql_response(
+        '{"sql":"SELECT 1","grafico":null,"supporting_queries":'
+        f"{supporting_queries}}}"
+    )
+
+    assert resultado["sql"] == "SELECT 1"
+    assert resultado["supporting_queries"] == []
+
+
 def test_translate_to_sql_passes_context_before_current_question(translator):
     context = [
         {"role": "user", "content": "Quantos clientes?"},
