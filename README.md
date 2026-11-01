@@ -2,7 +2,7 @@
 
 > Converse com seu banco de dados usando linguagem natural.
 
-O **Ask-SQL** é uma ferramenta interativa que traduz perguntas em linguagem natural para consultas SQL, permitindo que você explore seus dados sem precisar escrever código SQL. A aplicação pode utilizar um modelo local via **Ollama** ou o **Gemini** via Google AI Studio, conecta-se a um banco de dados **PostgreSQL** para executar as consultas e exibe os resultados de forma amigável.
+O **Ask-SQL** é uma ferramenta interativa que traduz perguntas em linguagem natural para consultas SQL, permitindo que você explore seus dados sem precisar escrever código SQL. A aplicação pode utilizar um modelo local via **Ollama**, o **Gemini** via Google AI Studio ou qualquer modelo compatível disponível no **OpenRouter**, conecta-se a um banco de dados **PostgreSQL** para executar as consultas e exibe os resultados de forma amigável.
 
 ## ✨ Recursos
 
@@ -26,7 +26,7 @@ graph TD
     N --> C{Prompter};
     D[Schema e relacionamentos do Banco] --> C;
     E[Regras de Negócio] --> C;
-    C --> F{Translator (Ollama ou Gemini)};
+    C --> F{Translator (Ollama, Gemini ou OpenRouter)};
     F --> G[Consulta SQL Gerada];
     G --> H{Executor (Postgres)};
     H --> I[Resultados (DataFrame)];
@@ -37,7 +37,7 @@ graph TD
 1.  **Interface web (`web/`):** Frontend React + TypeScript + Vite. Mantém o estado do chat no navegador e chama a API por cookie de sessão.
 2.  **API (`api/`):** Backend FastAPI que expõe autenticação, conversas, chat, histórico, consultas compartilhadas, administração e sincronização do schema.
 3.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" com estratégias analíticas genéricas, data de referência, regras de negócio, DDLs, tabelas, colunas e relacionamentos atuais. O código não contém SQL de um domínio específico.
-4.  **Motor de Tradução (`core/translator.py`):** Comunica-se com o provedor LLM configurado em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio. O provedor é selecionado por `LLM_PROVIDER` (`local` para Ollama ou `google` para Gemini).
+4.  **Motor de Tradução (`core/translator.py`):** Comunica-se com o provedor LLM configurado em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio. O provedor é selecionado por `LLM_PROVIDER` (`local` para Ollama, `google` para Gemini ou `openrouter` para OpenRouter).
 5.  **Banco de Dados (`database/postgres.py`):** Implementa a conexão com o PostgreSQL usando SQLAlchemy e entrega ao planejador tabelas, colunas, comentários e chaves estrangeiras do schema público.
 
 ## 🚀 Instalação e Configuração
@@ -75,6 +75,9 @@ Siga os passos abaixo para configurar o ambiente de desenvolvimento.
     GEMINI_MODEL=gemini-flash-latest
     GEMINI_MAX_RETRIES=2
     GEMINI_API_KEY=
+    OPENROUTER_MODEL=openai/gpt-4o-mini
+    OPENROUTER_MAX_RETRIES=2
+    OPENROUTER_API_KEY=
     ASK_SQL_USER=nome.do.usuario
     ASK_SQL_ROLE=viewer
     ```
@@ -85,6 +88,11 @@ permanecer somente no ambiente do backend, nunca no frontend ou em commits.
 Falhas transitórias do Gemini recebem até `GEMINI_MAX_RETRIES` novas tentativas
 com backoff; erros permanentes continuam sendo apresentados como falha do
 provedor.
+
+Para testar um modelo do OpenRouter, use `LLM_PROVIDER=openrouter`, informe
+`OPENROUTER_API_KEY` e o identificador do modelo em `OPENROUTER_MODEL`. O
+identificador usa o formato publicado pelo OpenRouter, como
+`openai/gpt-4o-mini`. A chave permanece somente no ambiente do backend.
 
 Configure também o Supabase Auth:
 
@@ -115,6 +123,9 @@ OLLAMA_MODEL=qwen2.5-coder:7b
 GEMINI_MODEL=gemini-flash-latest
 GEMINI_MAX_RETRIES=2
 GEMINI_API_KEY=
+OPENROUTER_MODEL=openai/gpt-4o-mini
+OPENROUTER_MAX_RETRIES=2
+OPENROUTER_API_KEY=
 ```
 
 `DATABASE_URL` pode ser substituída pelos campos `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DBNAME`. Em desenvolvimento local, mantenha `COOKIE_SECURE=false`; ative-o somente quando a aplicação estiver atrás de HTTPS. Nunca coloque `SESSION_SECRET`, credenciais do banco ou a chave `service_role` do Supabase no frontend.

@@ -9,6 +9,7 @@ from core.llm import (
     GeminiChatClient,
     LLMConfig,
     LLMConfigurationError,
+    OpenRouterChatClient,
     create_chat_client,
 )
 
@@ -59,6 +60,29 @@ def test_llm_config_rejects_unknown_provider():
         LLMConfig.from_env({"LLM_PROVIDER": "unknown"})
 
 
+def test_llm_config_supports_openrouter_without_exposing_the_key():
+    config = LLMConfig.from_env(
+        {
+            "LLM_PROVIDER": "openrouter",
+            "OPENROUTER_API_KEY": "test-key",
+            "OPENROUTER_MODEL": "openai/test-model",
+            "OPENROUTER_MAX_RETRIES": "4",
+        }
+    )
+
+    assert config.provider == "openrouter"
+    assert config.model_name == "openai/test-model"
+    assert config.openrouter_api_key == "test-key"
+    assert config.openrouter_max_retries == 4
+    assert "test-key" not in repr(config)
+    assert isinstance(create_chat_client(config), OpenRouterChatClient)
+
+
+def test_llm_config_requires_openrouter_api_key():
+    with pytest.raises(LLMConfigurationError, match="OPENROUTER_API_KEY"):
+        LLMConfig.from_env({"LLM_PROVIDER": "openrouter"})
+
+
 def test_gemini_client_maps_messages_and_response_to_translator_contract():
     client = GeminiChatClient("test-key", timeout_seconds=7)
     response_payload = {
@@ -92,6 +116,42 @@ def test_gemini_client_maps_messages_and_response_to_translator_contract():
         {"role": "user", "parts": [{"text": "Question"}]},
         {"role": "model", "parts": [{"text": '{"sql":"SELECT 0"}'}]},
     ]
+    assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
+    assert request.call_args.kwargs["timeout"] == 7
+
+
+def test_openrouter_client_maps_messages_and_response_to_translator_contract():
+    client = OpenRouterChatClient("test-key", timeout_seconds=7)
+    response_payload = {
+        "choices": [
+            {
+                "message": {
+                    "content": '{"sql":"SELECT 1"}',
+                }
+            }
+        ]
+    }
+
+    with patch("core.llm.urlopen", return_value=_Response(response_payload)) as request:
+        result = client(
+            model="openai/test-model",
+            messages=[
+                {"role": "system", "content": "System prompt"},
+                {"role": "user", "content": "Question"},
+            ],
+        )
+
+    sent_request = request.call_args.args[0]
+    sent_payload = json.loads(sent_request.data.decode("utf-8"))
+    assert sent_request.full_url == "https://openrouter.ai/api/v1/chat/completions"
+    assert sent_request.get_header("Authorization") == "Bearer test-key"
+    assert sent_payload == {
+        "model": "openai/test-model",
+        "messages": [
+            {"role": "system", "content": "System prompt"},
+            {"role": "user", "content": "Question"},
+        ],
+    }
     assert result == {"message": {"content": '{"sql":"SELECT 1"}'}}
     assert request.call_args.kwargs["timeout"] == 7
 
