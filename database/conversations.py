@@ -1,4 +1,5 @@
 import json
+import math
 
 from database.postgres import PostgresAdapter
 
@@ -218,7 +219,13 @@ class ConversationRepository:
             """,
             {"user_id": str(user_id), "session_id": str(session_id)},
         )
-        return result.to_dict("records")
+        records = result.to_dict("records")
+        for record in records:
+            for field in ("sql", "error"):
+                value = record.get(field)
+                if isinstance(value, float) and math.isnan(value):
+                    record[field] = None
+        return records
 
     def get_context(self, user_id, session_id, limit=6, exclude_request_id=None):
         if not isinstance(limit, int) or limit < 0 or limit > self._context_limit:

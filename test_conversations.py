@@ -160,6 +160,16 @@ def test_get_messages_returns_ordered_owner_scoped_records(db):
     assert parameters == {"user_id": "user-id", "session_id": "session-id"}
 
 
+def test_get_messages_normalizes_nan_nullable_fields(db):
+    db.execute_query.return_value = pd.DataFrame(
+        [{"id": 1, "sql": float("nan"), "error": float("nan")}]
+    )
+
+    messages = ConversationRepository(db).get_messages("user-id", "session-id")
+
+    assert messages == [{"id": 1, "sql": None, "error": None}]
+
+
 def test_get_context_returns_recent_turns_in_chronological_order(db):
     rows = [
         {
