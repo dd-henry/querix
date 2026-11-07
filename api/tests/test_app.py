@@ -25,6 +25,15 @@ def test_create_app_does_not_initialize_external_services():
     assert app.state.services is services
 
 
+def test_health_endpoint_is_available_without_external_services():
+    app = create_app(_settings())
+
+    response = TestClient(app).get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_errors_use_the_documented_envelope():
     app = create_app(_settings())
 

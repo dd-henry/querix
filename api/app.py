@@ -94,6 +94,10 @@ def create_app(
     app.include_router(predefined_router)
     app.include_router(sync_router)
 
+    @app.get("/health", include_in_schema=False)
+    def health() -> dict[str, str]:
+        return {"status": "ok"}
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[resolved_settings.web_origin],

@@ -108,6 +108,35 @@ SUPABASE_ANON_KEY=sua_chave_anon_publica
 
 O cadastro exige confirmação de email e cria um perfil `pending`. Um admin precisa aprová-lo antes do acesso. Os papéis são `user`, `dev` e `admin`; os status são `pending`, `approved`, `rejected` e `disabled`. A chave `SUPABASE_ANON_KEY` deve permanecer no backend, nunca no navegador.
 
+## 🚢 Deploy em produção com Dokploy
+
+O repositório inclui um `docker-compose.yml` para publicar a API e o frontend
+como serviços separados, sem expor as portas internas. No Dokploy, crie uma
+aplicação Compose separada da aplicação existente e use a raiz do repositório
+como caminho de build. Aponte o domínio para o serviço `web` na porta `80`;
+por exemplo, `https://ask-sql.seu-dominio.dev`. O frontend encaminha `/api`
+internamente para o serviço `api` na porta `8000`.
+
+Configure as variáveis do backend no ambiente do Dokploy, nunca no repositório:
+
+```env
+WEB_ORIGIN=https://ask-sql.seu-dominio.dev
+COOKIE_SECURE=true
+SESSION_SECRET=um-segredo-aleatorio-com-mais-de-32-caracteres
+DATABASE_URL=postgresql+psycopg2://usuario:senha@host:5432/banco
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua_chave_anon_publica
+LLM_PROVIDER=google
+GEMINI_API_KEY=sua_chave
+```
+
+Para usar o Ollama instalado no mesmo VPS, mantenha `LLM_PROVIDER=local`,
+configure `OLLAMA_HOST=http://host.docker.internal:11434` e garanta que o
+Ollama aceite conexões do Docker. Para OpenRouter, use
+`LLM_PROVIDER=openrouter` e `OPENROUTER_API_KEY`. O serviço `web` expõe
+`/health`; o serviço `api` expõe o mesmo endpoint para os health checks do
+Compose.
+
 ## 🏃 Como Usar
 
 ### Frontend web React + API FastAPI
