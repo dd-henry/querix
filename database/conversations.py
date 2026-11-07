@@ -4,6 +4,12 @@ import math
 from database.postgres import PostgresAdapter
 
 
+def _normalize_nullable_value(value):
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    return value
+
+
 class ConversationRepository:
     """Persists private conversation sessions and their messages."""
 
@@ -222,9 +228,8 @@ class ConversationRepository:
         records = result.to_dict("records")
         for record in records:
             for field in ("sql", "error"):
-                value = record.get(field)
-                if isinstance(value, float) and math.isnan(value):
-                    record[field] = None
+                if field in record:
+                    record[field] = _normalize_nullable_value(record[field])
         return records
 
     def get_context(self, user_id, session_id, limit=6, exclude_request_id=None):
@@ -269,8 +274,8 @@ class ConversationRepository:
                     "content": json.dumps(
                         {
                             "message": turn["assistant_content"],
-                            "sql": turn["assistant_sql"],
-                            "error": turn["assistant_error"],
+                            "sql": _normalize_nullable_value(turn["assistant_sql"]),
+                            "error": _normalize_nullable_value(turn["assistant_error"]),
                         },
                         ensure_ascii=False,
                     ),

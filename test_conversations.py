@@ -203,6 +203,27 @@ def test_get_context_returns_recent_turns_in_chronological_order(db):
     }
 
 
+def test_get_context_normalizes_nan_nullable_fields(db):
+    db.execute_query.return_value = pd.DataFrame(
+        [
+            {
+                "prompt": "Question",
+                "assistant_content": "Answer",
+                "assistant_sql": float("nan"),
+                "assistant_error": float("nan"),
+            }
+        ]
+    )
+
+    context = ConversationRepository(db).get_context("user-id", "session-id")
+
+    assert json.loads(context[1]["content"]) == {
+        "message": "Answer",
+        "sql": None,
+        "error": None,
+    }
+
+
 def test_get_context_rejects_limit_above_six(db):
     with pytest.raises(ValueError, match="six"):
         ConversationRepository(db).get_context("user-id", "session-id", limit=7)
