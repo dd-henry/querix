@@ -1,4 +1,5 @@
 from dataclasses import replace
+from inspect import signature
 from unittest.mock import Mock, patch
 
 import pytest
@@ -29,6 +30,8 @@ from database.postgres import PostgresAdapter
 from database.predefined_queries import PredefinedQueryRepository
 from database.query_history import QueryHistoryRepository
 from database.users import UserRepository
+from api.routes import history as history_route
+from api.routes import predefined as predefined_route
 
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
@@ -241,6 +244,19 @@ def test_chat_service_uses_target_for_queries_and_internal_repositories_for_stat
     assert service.query_history_repository is history_repository
 
 
+def test_target_operation_routes_keep_target_and_internal_dependency_boundaries():
+    history_service = signature(history_route.rerun_history).parameters["service"]
+    predefined_database = signature(
+        predefined_route.execute_predefined_query
+    ).parameters["database"]
+
+    assert history_service.default.dependency is dependencies.get_chat_service
+    assert (
+        predefined_database.default.dependency
+        is dependencies.get_target_db_adapter
+    )
+
+
 def test_translator_factory_wires_live_plan_validation():
     database = Mock()
     database.get_schema_info.return_value = "schema"
@@ -255,6 +271,7 @@ def test_translator_factory_wires_live_plan_validation():
     try:
         translator = dependencies.get_translator(_settings())
         assert translator.plan_validator is not None
+        database.get_schema_info.assert_called_once_with()
     finally:
         dependencies.get_translator.cache_clear()
         dependencies.get_db_adapter = original_db_factory

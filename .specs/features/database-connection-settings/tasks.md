@@ -30,7 +30,7 @@
 ## Execution Plan
 
 ```text
-T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9
+T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9 -> T10
 ```
 
 ## Task Breakdown
@@ -117,6 +117,14 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9
 **Gate**: Full: `venv/bin/pytest -q`
 - **Done when:** Target connection failures never log the connection string, corrupt encrypted configuration returns the documented API error, and the feature's required endpoint behavior and side effects have direct assertions.
 
+#### T10: Close target-operation route evidence ✅
+
+**Depends on**: T9
+**Where**: target operation route tests and dependency wiring tests
+**Tests**: Assert the missing-target response on the actual chat execution endpoint and assert schema/target/internal dependency boundaries used by the production routes.
+**Gate**: Full: `venv/bin/pytest -q`
+- **Done when:** The required query execution endpoint and every target/internal operation boundary have direct, spec-anchored assertions.
+
 ## Traceability
 
 | Task | Requirements |
@@ -130,3 +138,4 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8 -> T9
 | T7 | DCS-001, DCS-010 |
 | T8 | DCS-006 |
 | T9 | DCS-002, DCS-004, DCS-007, DCS-010, DCS-011 |
+| T10 | DCS-007, DCS-008 |

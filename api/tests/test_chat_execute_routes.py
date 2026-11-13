@@ -4,7 +4,7 @@ from uuid import UUID
 import pandas as pd
 from fastapi.testclient import TestClient
 
-from api.app import create_app
+from api.app import APIError, create_app
 from api.config import Settings
 from api.dependencies import get_chat_service, require_approved_user
 from api.services.chat import ChatResult, ChatService, ChatServiceError
@@ -134,6 +134,31 @@ def test_execute_ignores_client_sql_and_returns_bounded_results_and_chart():
         "SELECT total FROM sales",
         {},
     )
+
+
+def test_missing_target_returns_database_not_configured():
+    def missing_target():
+        raise APIError(
+            503,
+            "database_not_configured",
+            "Configure the target database before using data operations.",
+        )
+
+    app = create_app(
+        Settings(
+            web_origin="http://localhost:5173",
+            session_secret="test-secret",
+        )
+    )
+    app.dependency_overrides[get_chat_service] = missing_target
+    app.dependency_overrides[require_approved_user] = _profile
+    response = TestClient(app).post(
+        "/api/chat/execute",
+        json=_payload(),
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "database_not_configured"
 
 
 def test_execute_exposes_supporting_insights_alongside_primary_result():
