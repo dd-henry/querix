@@ -71,7 +71,7 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8
 **Gate**: Full: `venv/bin/pytest -q api/tests`
 - **Done when:** Schema sync, chat service construction, and predefined-query execution use the configured target; internal repositories still use `get_db_adapter`; missing target returns `database_not_configured`.
 
-#### T5: Use target adapter for history and chat execution
+#### T5: Use target adapter for history and chat execution ✅
 
 **Depends on**: T4
 **Where**: `api/dependencies.py`, `api/tests/test_chat_service.py`, `api/tests/test_history_routes.py`

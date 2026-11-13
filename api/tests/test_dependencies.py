@@ -200,6 +200,29 @@ def test_missing_target_database_raises_stable_configuration_error():
         dependencies._get_target_db_adapter.cache_clear()
 
 
+def test_chat_service_uses_target_for_queries_and_internal_repositories_for_state():
+    target_database = Mock()
+    conversation_repository = Mock()
+    translator = Mock()
+    history_repository = Mock()
+    semantic_context = Mock()
+    cancellation_registry = Mock()
+
+    service = dependencies.get_chat_service(
+        _settings(),
+        conversation_repository,
+        translator,
+        target_database,
+        history_repository,
+        semantic_context,
+        cancellation_registry,
+    )
+
+    assert service.database is target_database
+    assert service.conversation_repository is conversation_repository
+    assert service.query_history_repository is history_repository
+
+
 def test_translator_factory_wires_live_plan_validation():
     database = Mock()
     database.get_schema_info.return_value = "schema"
