@@ -45,7 +45,7 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8
 **Gate**: Quick: `venv/bin/pytest -q test_postgres.py`
 - **Done when:** `PostgresAdapter` can be constructed from a validated explicit target URL without reading a target URL from the environment, while existing environment-based tests remain green.
 
-#### T2: Persist encrypted global target connection
+#### T2: Persist encrypted global target connection ✅
 
 **Depends on**: T1
 **Where**: `database/database_connections.py`, `test_database_connections.py`, `requirements.txt`
