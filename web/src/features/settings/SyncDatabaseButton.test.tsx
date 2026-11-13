@@ -48,6 +48,12 @@ function createClient(
       updateStatus: vi.fn(),
       updateRole: vi.fn(),
     },
+    settings: {
+      database: {
+        get: vi.fn().mockResolvedValue({ configured: false, updated_at: null }),
+        save: vi.fn(),
+      },
+    },
     schema: { sync },
   };
 }

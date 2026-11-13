@@ -89,7 +89,7 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8
 **Gate**: Quick: `npm --prefix web test -- --run src/api/client.test.ts`
 - **Done when:** The frontend can read target status and save a connection string through the existing API client.
 
-#### T7: Build and integrate the admin connection settings panel
+#### T7: Build and integrate the admin connection settings panel ✅
 
 **Depends on**: T6
 **Where**: `web/src/features/settings/DatabaseConnectionSettings.tsx`, `web/src/features/settings/DatabaseConnectionSettings.test.tsx`, `web/src/app/AuthenticatedApp.tsx`, `web/src/app/AuthenticatedApp.test.tsx`, `web/src/styles.css`

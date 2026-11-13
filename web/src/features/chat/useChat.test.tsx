@@ -88,6 +88,12 @@ function createClient(
     schema: {
       sync: vi.fn(),
     },
+    settings: {
+      database: {
+        get: vi.fn().mockResolvedValue({ configured: false, updated_at: null }),
+        save: vi.fn(),
+      },
+    },
   };
 }
 

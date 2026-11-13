@@ -55,6 +55,12 @@ describe("App", () => {
       schema: {
         sync: () => Promise.resolve({ status: "synchronized" }),
       },
+      settings: {
+        database: {
+          get: () => Promise.resolve({ configured: false, updated_at: null }),
+          save: () => Promise.reject(new Error("not used")),
+        },
+      },
     };
     render(<App client={client} />);
 

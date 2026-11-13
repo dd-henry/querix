@@ -64,6 +64,12 @@ function createClient(
     schema: {
       sync: vi.fn().mockResolvedValue({ status: "synchronized" }),
     },
+    settings: {
+      database: {
+        get: vi.fn().mockResolvedValue({ configured: false, updated_at: null }),
+        save: vi.fn(),
+      },
+    },
   };
 }
 

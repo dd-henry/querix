@@ -266,7 +266,9 @@ textarea {
 
 .predefined-panel,
 .admin-panel,
-.sync-panel {
+.sync-panel,
+.settings-panel,
+.database-connection-panel {
   display: grid;
   gap: 1rem;
   min-width: 0;
@@ -313,7 +315,8 @@ textarea {
 .predefined-editor,
 .predefined-panel__item,
 .admin-panel__item,
-.sync-panel {
+.sync-panel,
+.database-connection-panel {
   padding: 1rem;
   border: 1px solid #374151;
   border-radius: 0.75rem;
@@ -452,6 +455,52 @@ textarea {
 
 .sync-panel p {
   max-width: 45rem;
+}
+
+.database-connection-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.database-connection-form label {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.database-connection-form input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #4b5563;
+  border-radius: 0.45rem;
+  color: #f9fafb;
+  background: #111827;
+}
+
+.database-connection-form button {
+  width: fit-content;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #4b5563;
+  border-radius: 0.45rem;
+  color: #e5e7eb;
+  background: #374151;
+  cursor: pointer;
+}
+
+.database-connection-panel h2 {
+  margin: 0;
+  color: #f9fafb;
+  font-size: 1.15rem;
+}
+
+.database-connection-panel p {
+  max-width: 45rem;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.database-connection-panel__status {
+  font-weight: 600;
 }
 
 button:disabled,

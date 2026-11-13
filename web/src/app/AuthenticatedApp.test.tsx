@@ -55,6 +55,12 @@ function createClient(): ApiClient {
     schema: {
       sync: vi.fn().mockResolvedValue({ status: "synchronized" }),
     },
+    settings: {
+      database: {
+        get: vi.fn().mockResolvedValue({ configured: false, updated_at: null }),
+        save: vi.fn(),
+      },
+    },
   };
 }
 
@@ -130,6 +136,37 @@ describe("AuthenticatedApp", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
     await screen.findByRole("heading", { level: 1, name: "Configurações" });
+    expect(
+      screen.getByRole("button", { name: "Sincronizar Banco" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Conexão consultada pelo Ask SQL",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not render database connection editing for non-admin users", async () => {
+    render(
+      <AuthenticatedApp
+        client={createClient()}
+        profile={{ ...profile, role: "user" }}
+        onSignOut={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: "Converse com seus dados",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
+    await screen.findByRole("heading", { level: 1, name: "Configurações" });
+
+    expect(
+      screen.queryByRole("heading", {
+        name: "Conexão consultada pelo Ask SQL",
+      }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Sincronizar Banco" }),
     ).toBeInTheDocument();

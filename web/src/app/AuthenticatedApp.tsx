@@ -9,6 +9,7 @@ import { UserAdminPanel } from "../features/admin/UserAdminPanel";
 import { HistoryPanel } from "../features/history/HistoryPanel";
 import { PredefinedQueriesPanel } from "../features/predefined/PredefinedQueriesPanel";
 import { SyncDatabaseButton } from "../features/settings/SyncDatabaseButton";
+import { DatabaseConnectionSettings } from "../features/settings/DatabaseConnectionSettings";
 import type { AuthProviderProps } from "./AuthProvider";
 
 type ActivePanel = "chat" | "history" | "predefined" | "admin" | "settings";
@@ -107,7 +108,12 @@ export function AuthenticatedApp({
     ) : activePanel === "admin" ? (
       <UserAdminPanel client={client} role={profile.role} />
     ) : (
-      <SyncDatabaseButton client={client} />
+      <div className="settings-panel">
+        {profile.role === "admin" ? (
+          <DatabaseConnectionSettings client={client} />
+        ) : null}
+        <SyncDatabaseButton client={client} />
+      </div>
     );
 
   return (
