@@ -81,7 +81,7 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8
 
 ### Phase 3: Frontend
 
-#### T6: Add typed settings client methods
+#### T6: Add typed settings client methods ✅
 
 **Depends on**: T3
 **Where**: `web/src/api/client.ts`, `web/src/api/client.test.ts`

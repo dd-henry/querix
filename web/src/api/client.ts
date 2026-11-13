@@ -27,6 +27,11 @@ export interface SchemaSyncResponse {
   status: "synchronized";
 }
 
+export interface DatabaseConnectionStatus {
+  configured: boolean;
+  updated_at?: string | null;
+}
+
 export interface LoginInput {
   email: string;
   password: string;
@@ -575,6 +580,28 @@ export function createApiClient({
           }),
           "schema synchronization",
         ),
+    },
+    settings: {
+      database: {
+        get: async () =>
+          requireResponse(
+            await request<DatabaseConnectionStatus>(
+              "/api/settings/database",
+            ),
+            "database connection status",
+          ),
+        save: async (connectionString: string) =>
+          requireResponse(
+            await request<DatabaseConnectionStatus>(
+              "/api/settings/database",
+              {
+                method: "PUT",
+                body: { connection_string: connectionString },
+              },
+            ),
+            "database connection",
+          ),
+      },
     },
   };
 }

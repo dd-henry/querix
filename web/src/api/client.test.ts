@@ -202,4 +202,45 @@ describe("createApiClient", () => {
       }),
     );
   });
+
+  it("reads and saves the admin database connection status", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response({ configured: false, updated_at: null }),
+      )
+      .mockResolvedValueOnce(
+        response({ configured: true, updated_at: "2026-11-12T12:00:00Z" }),
+      );
+    const client = createApiClient({ fetchImpl });
+
+    await expect(client.settings.database.get()).resolves.toEqual({
+      configured: false,
+      updated_at: null,
+    });
+    await expect(
+      client.settings.database.save(
+        "postgresql://user:pass@target.example/analytics",
+      ),
+    ).resolves.toEqual({
+      configured: true,
+      updated_at: "2026-11-12T12:00:00Z",
+    });
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      "/api/settings/database",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      "/api/settings/database",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          connection_string: "postgresql://user:pass@target.example/analytics",
+        }),
+      }),
+    );
+  });
 });
