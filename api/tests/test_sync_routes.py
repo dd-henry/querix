@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import api.routes.sync as sync_route
 from fastapi.testclient import TestClient
 
-from api.app import create_app
+from api.app import APIError, create_app
 from api.config import Settings
 from api.dependencies import get_current_profile, require_approved_user
 
@@ -131,3 +131,22 @@ def test_sync_failure_returns_503_without_success_response(monkeypatch):
     assert response.json().get("status") != "synchronized"
     cache_clear.assert_called_once_with()
     catalog.cache_clear.assert_called_once_with()
+
+
+def test_missing_target_returns_database_not_configured(monkeypatch):
+    missing_target = APIError(
+        503,
+        "database_not_configured",
+        "Configure the target database before using data operations.",
+    )
+    monkeypatch.setattr(
+        sync_route,
+        "get_semantic_context",
+        Mock(side_effect=missing_target),
+    )
+    client = _client()
+
+    response = client.post("/api/schema/sync")
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "database_not_configured"

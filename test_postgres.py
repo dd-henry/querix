@@ -114,6 +114,27 @@ def test_test_connection_falha_graciosamente():
         assert adapter.test_connection() is False
 
 
+def test_test_connection_executes_select_one():
+    adapter = PostgresAdapter("postgresql://target.example/analytics")
+    adapter.engine = MagicMock()
+    connection = adapter.engine.connect.return_value.__enter__.return_value
+
+    assert adapter.test_connection() is True
+
+    connection.execute.assert_called_once()
+    assert str(connection.execute.call_args.args[0]) == "SELECT 1"
+
+
+def test_test_connection_does_not_log_connection_string(caplog):
+    secret = "postgresql://user:password@target.example/analytics"
+    adapter = PostgresAdapter(secret)
+
+    with patch.object(adapter, "connect", side_effect=RuntimeError(secret)):
+        assert adapter.test_connection() is False
+
+    assert secret not in caplog.text
+
+
 def test_get_schema_info_inclui_relacionamentos_de_chave_estrangeira(mock_env):
     adapter = PostgresAdapter()
     columns = pd.DataFrame(

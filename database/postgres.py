@@ -103,8 +103,8 @@ class PostgresAdapter(DatabaseAdapter):
             with self.engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
             return True
-        except Exception as e:
-            logger.error(f"Falha na conexão com o banco de dados: {e}")
+        except Exception:
+            logger.error("Falha na conexão com o banco de dados.")
             return False
 
     def get_schema_info(self) -> str:

@@ -13,7 +13,10 @@ from core.query_validation import PlanValidator
 from core.semantic_context import SemanticContextService
 from core.translator import Translator
 from database.conversations import ConversationRepository
-from database.database_connections import DatabaseConnectionRepository
+from database.database_connections import (
+    DatabaseConfigurationError,
+    DatabaseConnectionRepository,
+)
 from database.postgres import PostgresAdapter
 from database.predefined_queries import PredefinedQueryRepository
 from database.query_history import QueryHistoryRepository
@@ -51,7 +54,14 @@ def get_database_connection_repository(
 @lru_cache(maxsize=1)
 def _get_target_db_adapter(session_secret: str) -> PostgresAdapter:
     repository = _get_database_connection_repository(session_secret)
-    connection_string = repository.get_connection_string()
+    try:
+        connection_string = repository.get_connection_string()
+    except DatabaseConfigurationError as exc:
+        raise _api_error(
+            503,
+            "database_configuration_invalid",
+            "The target database configuration is invalid.",
+        ) from exc
     if connection_string is None:
         raise _api_error(
             503,
@@ -60,7 +70,7 @@ def _get_target_db_adapter(session_secret: str) -> PostgresAdapter:
         )
     try:
         normalized = PostgresAdapter.validate_database_url(connection_string)
-    except ValueError as exc:
+    except (DatabaseConfigurationError, ValueError) as exc:
         raise _api_error(
             503,
             "database_configuration_invalid",

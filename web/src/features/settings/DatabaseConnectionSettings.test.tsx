@@ -61,7 +61,10 @@ describe("DatabaseConnectionSettings", () => {
           resolveSave = resolve;
         }),
     );
-    const client = createClient(vi.fn().mockResolvedValue({ configured: false }), save);
+    const client = createClient(
+      vi.fn().mockResolvedValue({ configured: false, updated_at: null }),
+      save,
+    );
     render(<DatabaseConnectionSettings client={client} />);
     const input = screen.getByLabelText("Connection string PostgreSQL");
     fireEvent.change(input, {
@@ -71,8 +74,12 @@ describe("DatabaseConnectionSettings", () => {
       name: "Testar e salvar conexão",
     });
 
-    fireEvent.click(button);
-    fireEvent.click(button);
+    const form = input.closest("form");
+    if (!form) {
+      throw new Error("Expected connection form.");
+    }
+    fireEvent.submit(form);
+    fireEvent.submit(form);
 
     expect(save).toHaveBeenCalledOnce();
     expect(button).toBeDisabled();

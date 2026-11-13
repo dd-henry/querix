@@ -24,6 +24,7 @@ from api.dependencies import (
     require_roles,
 )
 from database.conversations import ConversationRepository
+from database.database_connections import DatabaseConfigurationError
 from database.postgres import PostgresAdapter
 from database.predefined_queries import PredefinedQueryRepository
 from database.query_history import QueryHistoryRepository
@@ -195,6 +196,23 @@ def test_missing_target_database_raises_stable_configuration_error():
             get_target_db_adapter(_settings())
         assert error.value.status_code == 503
         assert error.value.code == "database_not_configured"
+    finally:
+        dependencies._get_database_connection_repository = original_repository
+        dependencies._get_target_db_adapter.cache_clear()
+
+
+def test_corrupt_target_database_configuration_raises_stable_configuration_error():
+    dependencies._get_database_connection_repository.cache_clear()
+    dependencies._get_target_db_adapter.cache_clear()
+    repository = Mock()
+    repository.get_connection_string.side_effect = DatabaseConfigurationError()
+    original_repository = dependencies._get_database_connection_repository
+    dependencies._get_database_connection_repository = lambda _secret: repository
+    try:
+        with pytest.raises(Exception) as error:
+            get_target_db_adapter(_settings())
+        assert error.value.status_code == 503
+        assert error.value.code == "database_configuration_invalid"
     finally:
         dependencies._get_database_connection_repository = original_repository
         dependencies._get_target_db_adapter.cache_clear()

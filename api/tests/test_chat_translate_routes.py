@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 
-from api.app import create_app
+from api.app import APIError, create_app
 from api.config import Settings
 from api.dependencies import (
     get_chat_service,
@@ -78,6 +78,31 @@ def test_review_mode_returns_stored_sql_without_result_or_execution():
         review_mode=True,
     )
     service.execute_stored_query.assert_not_called()
+
+
+def test_missing_target_returns_database_not_configured():
+    def missing_target():
+        raise APIError(
+            503,
+            "database_not_configured",
+            "Configure the target database before using data operations.",
+        )
+
+    app = create_app(
+        Settings(
+            web_origin="http://localhost:5173",
+            session_secret="test-secret",
+        )
+    )
+    app.dependency_overrides[get_chat_service] = missing_target
+    app.dependency_overrides[require_approved_user] = _profile
+    response = TestClient(app).post(
+        "/api/chat/translate",
+        json=_payload(),
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "database_not_configured"
 
 
 def test_review_mode_off_executes_the_stored_request():

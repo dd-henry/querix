@@ -62,12 +62,20 @@ def test_admin_tests_before_saving_and_gets_status(monkeypatch):
         "updated_at": "2026-11-12T12:00:00+00:00",
     }
     target = Mock()
-    target.test_connection.return_value = True
+    events = []
+    target.test_connection.side_effect = lambda: events.append("test") or True
     target_class = Mock(return_value=target)
     target_class.validate_database_url = Mock(
         return_value="postgresql://target.example/analytics"
     )
     monkeypatch.setattr(database_settings_route, "PostgresAdapter", target_class)
+    cache_clear = Mock()
+    monkeypatch.setattr(
+        database_settings_route,
+        "clear_target_database_caches",
+        cache_clear,
+    )
+    repository.save.side_effect = lambda *_args: events.append("save")
 
     response = _client(repository).put(
         "/api/settings/database",
@@ -81,6 +89,8 @@ def test_admin_tests_before_saving_and_gets_status(monkeypatch):
         "postgresql://target.example/analytics",
         USER_ID,
     )
+    assert events == ["test", "save"]
+    cache_clear.assert_called_once_with()
 
 
 def test_invalid_connection_string_is_rejected_before_target_test(monkeypatch):
@@ -102,6 +112,8 @@ def test_invalid_connection_string_is_rejected_before_target_test(monkeypatch):
 
 def test_failed_target_test_does_not_replace_previous_connection(monkeypatch):
     repository = Mock()
+    previous_connection = "postgresql://previous.example/analytics"
+    repository.get_connection_string.return_value = previous_connection
     target = Mock()
     target.test_connection.return_value = False
     target_class = Mock(return_value=target)
@@ -118,6 +130,7 @@ def test_failed_target_test_does_not_replace_previous_connection(monkeypatch):
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "database_connection_failed"
     repository.save.assert_not_called()
+    assert repository.get_connection_string() == previous_connection
 
 
 @pytest.mark.parametrize("method", ["get", "put"])
