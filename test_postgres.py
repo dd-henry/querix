@@ -26,6 +26,35 @@ def test_connect_cria_engine_corretamente(mock_env):
             "postgresql+psycopg2://test_user:test_pass@localhost:5432/test_db"
         )
 
+
+def test_connect_usa_connection_string_explicita_sem_ler_fallback(mock_env):
+    adapter = PostgresAdapter("postgresql://user:pass@target.example:5432/analytics")
+
+    with patch("database.postgres.create_engine") as mock_create_engine:
+        adapter.connect()
+
+    mock_create_engine.assert_called_once_with(
+        "postgresql+psycopg2://user:pass@target.example:5432/analytics"
+    )
+
+
+@pytest.mark.parametrize(
+    "database_url",
+    [
+        "mysql://user:pass@db.example/app",
+        "not-a-url",
+    ],
+)
+def test_connect_rejeita_connection_string_nao_postgresql(mock_env, database_url):
+    adapter = PostgresAdapter(database_url)
+
+    with patch("database.postgres.create_engine") as mock_create_engine:
+        with pytest.raises(ValueError):
+            adapter.connect()
+
+    mock_create_engine.assert_not_called()
+
+
 def test_execute_query_retorna_dataframe(mock_env):
     """Testa a execução simulada de uma query retornando um DataFrame."""
     adapter = PostgresAdapter()

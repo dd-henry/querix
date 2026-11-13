@@ -1,7 +1,10 @@
 import os
 import logging
+from typing import Optional
+
 import pandas as pd
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from dotenv import load_dotenv
 from database.base import DatabaseAdapter
 
@@ -13,11 +16,11 @@ class PostgresAdapter(DatabaseAdapter):
     As credenciais devem ser fornecidas via variáveis de ambiente (.env).
     """
 
-    def __init__(self):
+    def __init__(self, database_url: Optional[str] = None):
         # Carrega variáveis de ambiente do arquivo .env
         load_dotenv()
         
-        self.database_url = os.getenv("DATABASE_URL")
+        self.database_url = database_url or os.getenv("DATABASE_URL")
         self.host = os.getenv("POSTGRES_HOST")
         self.port = os.getenv("POSTGRES_PORT", "5432")
         self.user = os.getenv("POSTGRES_USER")
@@ -26,12 +29,29 @@ class PostgresAdapter(DatabaseAdapter):
         
         self.engine = None
 
+    @staticmethod
+    def validate_database_url(database_url: str) -> str:
+        normalized_url = database_url.strip()
+        if normalized_url.startswith("postgres://"):
+            normalized_url = "postgresql://" + normalized_url[len("postgres://") :]
+        try:
+            parsed_url = make_url(normalized_url)
+        except Exception as exc:
+            raise ValueError("A connection string do PostgreSQL é inválida.") from exc
+        if parsed_url.drivername not in {"postgresql", "postgresql+psycopg2"}:
+            raise ValueError("A conexão deve usar PostgreSQL.")
+        return normalized_url
+
     def connect(self):
         """Estabelece a conexão com o banco de dados PostgreSQL usando SQLAlchemy."""
         if not self.engine:
             if self.database_url:
+                connection_url = self.validate_database_url(self.database_url)
                 # Adapta a URL para usar o driver psycopg2 explicitamente exigido pelo SQLAlchemy
-                connection_url = self.database_url.replace("postgresql://", "postgresql+psycopg2://")
+                if connection_url.startswith("postgresql://"):
+                    connection_url = connection_url.replace(
+                        "postgresql://", "postgresql+psycopg2://", 1
+                    )
             else:
                 if not all([self.host, self.user, self.password, self.dbname]):
                      raise ValueError("Faltam variáveis de ambiente para a conexão com o banco de dados PostgreSQL.")
