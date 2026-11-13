@@ -13,6 +13,7 @@ from core.query_validation import PlanValidator
 from core.semantic_context import SemanticContextService
 from core.translator import Translator
 from database.conversations import ConversationRepository
+from database.database_connections import DatabaseConnectionRepository
 from database.postgres import PostgresAdapter
 from database.predefined_queries import PredefinedQueryRepository
 from database.query_history import QueryHistoryRepository
@@ -32,6 +33,19 @@ def get_api_settings(request: Request) -> Settings:
 @lru_cache(maxsize=1)
 def get_db_adapter() -> PostgresAdapter:
     return PostgresAdapter()
+
+
+@lru_cache(maxsize=1)
+def _get_database_connection_repository(
+    session_secret: str,
+) -> DatabaseConnectionRepository:
+    return DatabaseConnectionRepository(get_db_adapter(), session_secret)
+
+
+def get_database_connection_repository(
+    settings: Settings = Depends(get_api_settings),
+) -> DatabaseConnectionRepository:
+    return _get_database_connection_repository(settings.session_secret)
 
 
 @lru_cache(maxsize=1)

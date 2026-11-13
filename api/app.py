@@ -80,6 +80,7 @@ def create_app(
     from api.routes.chat_translate import router as chat_translate_router
     from api.routes.conversation_collection import router as conversation_router
     from api.routes.conversation_item import router as conversation_item_router
+    from api.routes.database_settings import router as database_settings_router
     from api.routes.history import router as history_router
     from api.routes.predefined import router as predefined_router
     from api.routes.sync import router as sync_router
@@ -90,6 +91,7 @@ def create_app(
     app.include_router(chat_translate_router)
     app.include_router(conversation_router)
     app.include_router(conversation_item_router)
+    app.include_router(database_settings_router)
     app.include_router(history_router)
     app.include_router(predefined_router)
     app.include_router(sync_router)

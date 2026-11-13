@@ -55,7 +55,7 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8
 
 ### Phase 2: Backend API and wiring
 
-#### T3: Add admin-only target connection API
+#### T3: Add admin-only target connection API ✅
 
 **Depends on**: T2
 **Where**: `api/routes/database_settings.py`, `api/schemas/database_settings.py`, `api/tests/test_database_settings.py`

@@ -14,6 +14,7 @@ import api.dependencies as dependencies
 from api.dependencies import (
     get_conversation_repository,
     get_current_profile,
+    get_database_connection_repository,
     get_db_adapter,
     get_predefined_query_repository,
     get_query_history_repository,
@@ -170,6 +171,15 @@ def test_repository_factories_reuse_the_lazy_database_adapter():
         get_predefined_query_repository(),
         PredefinedQueryRepository,
     )
+
+
+def test_database_connection_repository_reuses_the_internal_database():
+    get_db_adapter.cache_clear()
+    dependencies._get_database_connection_repository.cache_clear()
+
+    repository = get_database_connection_repository(_settings())
+
+    assert repository.db is get_db_adapter()
 
 
 def test_translator_factory_wires_live_plan_validation():
