@@ -38,7 +38,7 @@ graph TD
 2.  **API (`api/`):** Backend FastAPI que expõe autenticação, conversas, chat, histórico, consultas compartilhadas, administração e sincronização do schema.
 3.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" com estratégias analíticas genéricas, data de referência, regras de negócio, DDLs, tabelas, colunas e relacionamentos atuais. O código não contém SQL de um domínio específico.
 4.  **Motor de Tradução (`core/translator.py`):** Comunica-se com o provedor LLM configurado em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio. O provedor é selecionado por `LLM_PROVIDER` (`local` para Ollama, `google` para Gemini ou `openrouter` para OpenRouter).
-5.  **Banco de Dados (`database/postgres.py`):** Implementa a conexão com o PostgreSQL usando SQLAlchemy e entrega ao planejador tabelas, colunas, comentários e chaves estrangeiras do schema público.
+5.  **Bancos de Dados (`database/`):** O `DATABASE_URL` aponta para o banco interno, usado por autenticação, perfis, conversas, histórico e catálogo. O schema e a execução das consultas usam um banco-alvo PostgreSQL separado, configurável por um admin na tela **Configurações**.
 
 ## 🚀 Instalação e Configuração
 
@@ -108,6 +108,24 @@ SUPABASE_ANON_KEY=sua_chave_anon_publica
 
 O cadastro exige confirmação de email e cria um perfil `pending`. Um admin precisa aprová-lo antes do acesso. Os papéis são `user`, `dev` e `admin`; os status são `pending`, `approved`, `rejected` e `disabled`. A chave `SUPABASE_ANON_KEY` deve permanecer no backend, nunca no navegador.
 
+### Banco interno e banco consultado
+
+A aplicação usa dois papéis de conexão:
+
+- `DATABASE_URL` (ou as variáveis `POSTGRES_*`) é o **banco interno**. Ele deve estar disponível na inicialização e guarda os perfis, conversas, histórico, favoritos e consultas compartilhadas.
+- O **banco consultado** é um PostgreSQL separado. Um usuário com papel `admin` deve abrir **Configurações**, informar uma connection string completa, como `postgresql://usuario:senha@host:5432/banco`, e clicar em **Testar e salvar conexão**. A API executa `SELECT 1` antes de ativá-la.
+
+A connection string do banco consultado é armazenada cifrada no banco interno e
+nunca é devolvida ao navegador. A tela mostra somente se existe uma conexão
+global configurada; para substituir a credencial, informe uma nova connection
+string. A configuração é global para todos os usuários aprovados.
+
+Se nenhum banco consultado estiver configurado, a autenticação, o health check e
+a persistência interna continuam disponíveis. Operações que precisam consultar
+dados — sincronização do schema, chat, rerun do histórico e execução de consultas
+compartilhadas — respondem `503 database_not_configured` até que um admin salve
+uma conexão válida.
+
 ## 🚢 Deploy em produção com Dokploy
 
 O repositório inclui um `docker-compose.yml` para publicar a API e o frontend
@@ -135,7 +153,9 @@ configure `OLLAMA_HOST=http://host.docker.internal:11434` e garanta que o
 Ollama aceite conexões do Docker. Para OpenRouter, use
 `LLM_PROVIDER=openrouter` e `OPENROUTER_API_KEY`. O serviço `web` expõe
 `/health`; o serviço `api` expõe o mesmo endpoint para os health checks do
-Compose.
+Compose. Depois do primeiro login, um admin deve configurar o banco consultado
+na tela **Configurações**; ele não precisa ser incluído no `.env` nem no
+Dokploy.
 
 ## 🏃 Como Usar
 
