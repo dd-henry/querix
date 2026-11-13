@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from api.app import APIError
 from api.config import Settings
 from api.dependencies import (
+    clear_target_database_caches,
     get_api_settings,
     get_predefined_query_repository,
     get_semantic_context,
@@ -24,12 +25,13 @@ def synchronize_schema(
     _profile: Dict[str, object] = Depends(require_approved_user),
     settings: Settings = Depends(get_api_settings),
 ) -> SchemaSyncResponse:
-    get_semantic_context.cache_clear()
-    get_translator.cache_clear()
+    clear_target_database_caches()
     get_predefined_query_repository.cache_clear()
     try:
-        get_semantic_context().get_profile()
+        get_semantic_context(settings).get_profile()
         get_translator(settings)
+    except APIError:
+        raise
     except Exception as exc:
         logger.exception("Schema synchronization failed.")
         raise APIError(

@@ -8,8 +8,8 @@ from api.app import APIError
 from api.config import Settings
 from api.dependencies import (
     get_api_settings,
-    get_db_adapter,
     get_predefined_query_repository,
+    get_target_db_adapter,
     require_approved_user,
     require_roles,
 )
@@ -243,7 +243,7 @@ def execute_predefined_query(
     repository: PredefinedQueryRepository = Depends(
         get_predefined_query_repository
     ),
-    database: PostgresAdapter = Depends(get_db_adapter),
+    database: PostgresAdapter = Depends(get_target_db_adapter),
     settings: Settings = Depends(get_api_settings),
 ) -> PredefinedQueryExecutionResponse:
     user_id = _owner_id(profile)

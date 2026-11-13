@@ -63,7 +63,7 @@ T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7 -> T8
 **Gate**: Full: `venv/bin/pytest -q api/tests/test_database_settings.py`
 - **Done when:** `GET` and `PUT /api/settings/database` implement the specified status, authorization, validation, test-before-save, and error contracts.
 
-#### T4: Route target operations through the configured adapter
+#### T4: Route target operations through the configured adapter ✅
 
 **Depends on**: T3
 **Where**: `api/dependencies.py`, `api/routes/predefined.py`, `api/routes/sync.py`, `api/app.py`, `api/tests/test_dependencies.py`, `api/tests/test_sync_routes.py`, `api/tests/test_predefined_routes.py`

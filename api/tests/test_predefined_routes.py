@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from api.config import Settings
 from api.dependencies import (
-    get_db_adapter,
     get_predefined_query_repository,
+    get_target_db_adapter,
     require_approved_user,
 )
 
@@ -65,7 +65,7 @@ def _client(repository, database=None, role="user"):
     )
     app.dependency_overrides[require_approved_user] = lambda: _profile(role)
     if database is not None:
-        app.dependency_overrides[get_db_adapter] = lambda: database
+        app.dependency_overrides[get_target_db_adapter] = lambda: database
     return TestClient(app)
 
 

@@ -4,7 +4,7 @@ from typing import Callable, Dict, Sequence
 from fastapi import Depends, Request
 
 from api.auth.session import SessionClaims, SessionError, require_session
-from api.config import Settings
+from api.config import Settings, get_settings
 from api.services.chat import ChatCancellationRegistry, ChatService
 from core.llm import create_chat_client
 from core.prompter import Prompter
@@ -49,6 +49,39 @@ def get_database_connection_repository(
 
 
 @lru_cache(maxsize=1)
+def _get_target_db_adapter(session_secret: str) -> PostgresAdapter:
+    repository = _get_database_connection_repository(session_secret)
+    connection_string = repository.get_connection_string()
+    if connection_string is None:
+        raise _api_error(
+            503,
+            "database_not_configured",
+            "Configure the target database before using data operations.",
+        )
+    try:
+        normalized = PostgresAdapter.validate_database_url(connection_string)
+    except ValueError as exc:
+        raise _api_error(
+            503,
+            "database_configuration_invalid",
+            "The target database configuration is invalid.",
+        ) from exc
+    return PostgresAdapter(database_url=normalized)
+
+
+def get_target_db_adapter(
+    settings: Settings = Depends(get_api_settings),
+) -> PostgresAdapter:
+    return _get_target_db_adapter(settings.session_secret)
+
+
+def clear_target_database_caches() -> None:
+    _get_target_db_adapter.cache_clear()
+    _get_semantic_context.cache_clear()
+    get_translator.cache_clear()
+
+
+@lru_cache(maxsize=1)
 def get_user_repository() -> UserRepository:
     return UserRepository(get_db_adapter())
 
@@ -69,8 +102,14 @@ def get_predefined_query_repository() -> PredefinedQueryRepository:
 
 
 @lru_cache(maxsize=1)
-def get_semantic_context() -> SemanticContextService:
-    return SemanticContextService(get_db_adapter())
+def _get_semantic_context(session_secret: str) -> SemanticContextService:
+    return SemanticContextService(_get_target_db_adapter(session_secret))
+
+
+def get_semantic_context(
+    settings: Settings = Depends(get_api_settings),
+) -> SemanticContextService:
+    return _get_semantic_context(settings.session_secret)
 
 
 @lru_cache(maxsize=1)
@@ -81,7 +120,7 @@ def get_chat_cancellation_registry() -> ChatCancellationRegistry:
 def validate_translation_plan(plan: QueryPlan) -> None:
     PlanValidator.validate_plan(
         plan,
-        get_semantic_context().get_profile(),
+        get_semantic_context(get_settings()).get_profile(),
     )
 
 
@@ -89,9 +128,14 @@ def validate_translation_plan(plan: QueryPlan) -> None:
 def get_translator(
     settings: Settings = Depends(get_api_settings),
 ) -> Translator:
-    database = get_db_adapter()
+    database = get_target_db_adapter(settings)
     prompter = Prompter()
     live_schema = database.get_schema_info()
+    semantic_context = get_semantic_context(settings)
+
+    def validate_plan(plan: QueryPlan) -> None:
+        PlanValidator.validate_plan(plan, semantic_context.get_profile())
+
     return Translator(
         system_prompt=prompter.build_system_prompt(live_schema=live_schema),
         planner_prompt=prompter.build_planner_prompt(live_schema=live_schema),
@@ -99,7 +143,7 @@ def get_translator(
             live_schema=live_schema
         ),
         model_name=settings.llm.model_name,
-        plan_validator=validate_translation_plan,
+        plan_validator=validate_plan,
         chat_client=create_chat_client(settings.llm),
     )
 
@@ -110,7 +154,7 @@ def get_chat_service(
         get_conversation_repository
     ),
     translator: Translator = Depends(get_translator),
-    database: PostgresAdapter = Depends(get_db_adapter),
+    database: PostgresAdapter = Depends(get_target_db_adapter),
     query_history_repository: QueryHistoryRepository = Depends(
         get_query_history_repository
     ),

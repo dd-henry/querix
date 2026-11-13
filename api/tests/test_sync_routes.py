@@ -43,6 +43,15 @@ def test_approved_user_can_sync_without_receiving_schema_contents(
 ):
     translator = Mock(return_value=object())
     catalog = Mock()
+    semantic_context = Mock()
+    semantic_context.get_profile.return_value = object()
+    cache_clear = Mock()
+    monkeypatch.setattr(sync_route, "clear_target_database_caches", cache_clear)
+    monkeypatch.setattr(
+        sync_route,
+        "get_semantic_context",
+        Mock(return_value=semantic_context),
+    )
     monkeypatch.setattr(sync_route, "get_translator", translator)
     monkeypatch.setattr(
         sync_route,
@@ -56,7 +65,7 @@ def test_approved_user_can_sync_without_receiving_schema_contents(
     assert response.status_code == 200
     assert response.json() == {"status": "synchronized"}
     assert "schema" not in response.json()
-    translator.cache_clear.assert_called_once_with()
+    cache_clear.assert_called_once_with()
     catalog.cache_clear.assert_called_once_with()
     translator.assert_called_once()
 
@@ -64,6 +73,15 @@ def test_approved_user_can_sync_without_receiving_schema_contents(
 def test_non_approved_user_cannot_sync(monkeypatch):
     translator = Mock()
     catalog = Mock()
+    semantic_context = Mock()
+    semantic_context.get_profile.return_value = object()
+    cache_clear = Mock()
+    monkeypatch.setattr(sync_route, "clear_target_database_caches", cache_clear)
+    monkeypatch.setattr(
+        sync_route,
+        "get_semantic_context",
+        Mock(return_value=semantic_context),
+    )
     monkeypatch.setattr(sync_route, "get_translator", translator)
     monkeypatch.setattr(
         sync_route,
@@ -77,13 +95,22 @@ def test_non_approved_user_cannot_sync(monkeypatch):
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "account_not_approved"
     assert translator.call_count == 0
-    translator.cache_clear.assert_not_called()
+    cache_clear.assert_not_called()
     catalog.cache_clear.assert_not_called()
 
 
 def test_sync_failure_returns_503_without_success_response(monkeypatch):
     translator = Mock(side_effect=RuntimeError("database offline"))
     catalog = Mock()
+    semantic_context = Mock()
+    semantic_context.get_profile.return_value = object()
+    cache_clear = Mock()
+    monkeypatch.setattr(sync_route, "clear_target_database_caches", cache_clear)
+    monkeypatch.setattr(
+        sync_route,
+        "get_semantic_context",
+        Mock(return_value=semantic_context),
+    )
     monkeypatch.setattr(sync_route, "get_translator", translator)
     monkeypatch.setattr(
         sync_route,
@@ -102,5 +129,5 @@ def test_sync_failure_returns_503_without_success_response(monkeypatch):
         }
     }
     assert response.json().get("status") != "synchronized"
-    translator.cache_clear.assert_called_once_with()
+    cache_clear.assert_called_once_with()
     catalog.cache_clear.assert_called_once_with()

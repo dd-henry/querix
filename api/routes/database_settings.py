@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from api.app import APIError
 from api.dependencies import (
+    clear_target_database_caches,
     get_database_connection_repository,
     require_roles,
 )
@@ -71,6 +72,7 @@ def save_database_connection(
     try:
         repository.save(normalized, _admin_id(profile))
         status = repository.get_status()
+        clear_target_database_caches()
     except Exception as exc:
         logger.exception("Target database configuration could not be saved.")
         raise APIError(

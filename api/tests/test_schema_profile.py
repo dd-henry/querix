@@ -141,6 +141,8 @@ def test_schema_sync_invalidates_semantic_context_cache(monkeypatch):
     semantic_context.return_value = semantic_context
     translator = Mock(return_value=object())
     catalog = Mock()
+    clear_caches = Mock()
+    monkeypatch.setattr(sync_route, "clear_target_database_caches", clear_caches)
     monkeypatch.setattr(sync_route, "get_semantic_context", semantic_context)
     monkeypatch.setattr(sync_route, "get_translator", translator)
     monkeypatch.setattr(
@@ -151,7 +153,7 @@ def test_schema_sync_invalidates_semantic_context_cache(monkeypatch):
 
     sync_route.synchronize_schema({"id": "profile"})
 
-    semantic_context.cache_clear.assert_called_once_with()
+    clear_caches.assert_called_once_with()
     semantic_context.get_profile.assert_called_once_with()
 
 
@@ -159,11 +161,15 @@ def test_schema_sync_builds_profile_after_cache_invalidation(monkeypatch):
     events = []
     semantic_context = Mock()
 
-    def get_semantic_context():
+    def get_semantic_context(_settings):
         events.append("build")
         return semantic_context
 
-    get_semantic_context.cache_clear = lambda: events.append("invalidate")
+    monkeypatch.setattr(
+        sync_route,
+        "clear_target_database_caches",
+        lambda: events.append("invalidate"),
+    )
     monkeypatch.setattr(sync_route, "get_semantic_context", get_semantic_context)
     monkeypatch.setattr(sync_route, "get_translator", Mock(return_value=object()))
     monkeypatch.setattr(

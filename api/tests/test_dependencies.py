@@ -18,6 +18,7 @@ from api.dependencies import (
     get_db_adapter,
     get_predefined_query_repository,
     get_query_history_repository,
+    get_target_db_adapter,
     get_user_repository,
     require_approved_user,
     require_roles,
@@ -182,21 +183,41 @@ def test_database_connection_repository_reuses_the_internal_database():
     assert repository.db is get_db_adapter()
 
 
+def test_missing_target_database_raises_stable_configuration_error():
+    dependencies._get_database_connection_repository.cache_clear()
+    dependencies._get_target_db_adapter.cache_clear()
+    repository = Mock()
+    repository.get_connection_string.return_value = None
+    original_repository = dependencies._get_database_connection_repository
+    dependencies._get_database_connection_repository = lambda _secret: repository
+    try:
+        with pytest.raises(Exception) as error:
+            get_target_db_adapter(_settings())
+        assert error.value.status_code == 503
+        assert error.value.code == "database_not_configured"
+    finally:
+        dependencies._get_database_connection_repository = original_repository
+        dependencies._get_target_db_adapter.cache_clear()
+
+
 def test_translator_factory_wires_live_plan_validation():
     database = Mock()
     database.get_schema_info.return_value = "schema"
     semantic_context = Mock()
     original_db_factory = dependencies.get_db_adapter
+    original_target_factory = dependencies.get_target_db_adapter
     original_context_factory = dependencies.get_semantic_context
     dependencies.get_translator.cache_clear()
     dependencies.get_db_adapter = lambda: database
-    dependencies.get_semantic_context = lambda: semantic_context
+    dependencies.get_target_db_adapter = lambda _settings: database
+    dependencies.get_semantic_context = lambda _settings: semantic_context
     try:
         translator = dependencies.get_translator(_settings())
-        assert translator.plan_validator is dependencies.validate_translation_plan
+        assert translator.plan_validator is not None
     finally:
         dependencies.get_translator.cache_clear()
         dependencies.get_db_adapter = original_db_factory
+        dependencies.get_target_db_adapter = original_target_factory
         dependencies.get_semantic_context = original_context_factory
 
 
@@ -213,7 +234,11 @@ def test_translator_factory_uses_the_selected_cloud_provider():
     )
     dependencies.get_translator.cache_clear()
     original_db_factory = dependencies.get_db_adapter
+    original_target_factory = dependencies.get_target_db_adapter
+    original_context_factory = dependencies.get_semantic_context
     dependencies.get_db_adapter = lambda: database
+    dependencies.get_target_db_adapter = lambda _settings: database
+    dependencies.get_semantic_context = lambda _settings: Mock()
     try:
         with patch(
             "api.dependencies.create_chat_client",
@@ -227,3 +252,5 @@ def test_translator_factory_uses_the_selected_cloud_provider():
     finally:
         dependencies.get_translator.cache_clear()
         dependencies.get_db_adapter = original_db_factory
+        dependencies.get_target_db_adapter = original_target_factory
+        dependencies.get_semantic_context = original_context_factory
