@@ -43,6 +43,7 @@ function createClient(
       me: vi.fn(),
       login: vi.fn(),
       signup: vi.fn(),
+      changePassword: vi.fn(),
       logout: vi.fn(),
     },
     conversations: {
@@ -76,6 +77,7 @@ function createClient(
       listUsers: vi.fn().mockResolvedValue({ profiles: [] }),
       updateStatus: vi.fn(),
       updateRole: vi.fn(),
+      resetPassword: vi.fn(),
     },
     settings: {
       database: {

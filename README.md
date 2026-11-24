@@ -108,6 +108,8 @@ SUPABASE_ANON_KEY=sua_chave_anon_publica
 
 O cadastro exige confirmação de email e cria um perfil `pending`. Um admin precisa aprová-lo antes do acesso. Os papéis são `user`, `dev` e `admin`; os status são `pending`, `approved`, `rejected` e `disabled`. A chave `SUPABASE_ANON_KEY` deve permanecer no backend, nunca no navegador.
 
+**Reset de senha pelo admin:** na tela de administração, o admin clica em "Resetar senha" e recebe uma senha temporária, que repassa ao usuário. Ao entrar com ela, o usuário é obrigado a definir uma nova senha antes de acessar o sistema (sem e-mail). Isso exige `SUPABASE_SERVICE_ROLE_KEY` no backend (nunca no frontend); a coluna `must_change_password` é criada automaticamente em `profiles`.
+
 ### Banco interno e banco consultado
 
 A aplicação usa dois papéis de conexão:

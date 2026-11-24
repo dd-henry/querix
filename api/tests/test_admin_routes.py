@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from api.config import Settings
+from api.routes.auth import get_auth_service
+from api.auth.service import AuthServiceError
 from api.dependencies import get_user_repository, require_approved_user
 from database.users import UserRepository
 
@@ -39,7 +41,7 @@ def _user():
     }
 
 
-def _client(repository, role="admin"):
+def _client(repository, role="admin", auth=None):
     app = create_app(
         Settings(
             web_origin="http://localhost:5173",
@@ -48,6 +50,8 @@ def _client(repository, role="admin"):
     )
     app.dependency_overrides[get_user_repository] = lambda: repository
     app.dependency_overrides[require_approved_user] = lambda: _profile(role)
+    if auth is not None:
+        app.dependency_overrides[get_auth_service] = lambda: auth
     return TestClient(app)
 
 
@@ -177,3 +181,56 @@ def test_last_admin_conflict_returns_409_without_database_mutation(
         "message": "The last approved admin cannot be removed.",
     }
     assert database.execute_command.call_count == 0
+
+
+def test_admin_reset_password_returns_temporary_password_and_flags_user():
+    repository = Mock()
+    repository.get_profile.return_value = _user()
+    auth = Mock()
+    client = _client(repository, auth=auth)
+
+    response = client.post(f"/api/admin/users/{TARGET_ID}/reset-password")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == TARGET_ID
+    assert len(body["temporary_password"]) >= 8
+    auth.set_password.assert_called_once_with(TARGET_ID, body["temporary_password"])
+    repository.set_must_change_password.assert_called_once_with(
+        UUID(TARGET_ID),
+        True,
+    )
+
+
+def test_admin_reset_password_reverts_flag_when_supabase_fails():
+    repository = Mock()
+    repository.get_profile.return_value = _user()
+    auth = Mock()
+    auth.set_password.side_effect = AuthServiceError(
+        "auth_not_configured",
+        "Configure SUPABASE_SERVICE_ROLE_KEY to reset passwords.",
+    )
+    client = _client(repository, auth=auth)
+
+    response = client.post(f"/api/admin/users/{TARGET_ID}/reset-password")
+
+    assert response.status_code == 503
+    assert repository.set_must_change_password.call_args_list[-1].args == (
+        UUID(TARGET_ID),
+        False,
+    )
+
+
+def test_admin_cannot_reset_own_password_and_non_admin_is_forbidden():
+    repository = Mock()
+    auth = Mock()
+    own = _client(repository, auth=auth).post(
+        f"/api/admin/users/{USER_ID}/reset-password"
+    )
+    forbidden = _client(repository, role="user", auth=auth).post(
+        f"/api/admin/users/{TARGET_ID}/reset-password"
+    )
+
+    assert own.status_code == 422
+    assert forbidden.status_code == 403
+    auth.set_password.assert_not_called()

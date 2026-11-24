@@ -43,6 +43,13 @@ class SignupRequest(BaseModel):
     password_confirmation: str
 
 
+class ChangePasswordRequest(BaseModel):
+    email: str
+    current_password: str
+    new_password: str
+    new_password_confirmation: str
+
+
 class ProfileResponse(BaseModel):
     id: str
     email: str
@@ -86,7 +93,10 @@ def _profile_response(profile: Dict[str, object]) -> ProfileResponse:
 
 
 def _raise_auth_failure(error: AuthServiceError) -> None:
-    status_code = 401 if error.code == "auth_failed" else 502
+    status_code = {
+        "auth_failed": 401,
+        "auth_not_configured": 503,
+    }.get(error.code, 502)
     raise APIError(status_code, error.code, error.message) from error
 
 
@@ -121,6 +131,67 @@ def login(
             "No approved profile is available for this account.",
         )
     _require_approved_profile(profile)
+    if bool(profile.get("must_change_password")):
+        raise APIError(
+            403,
+            "password_change_required",
+            "Defina uma nova senha para continuar.",
+        )
+    issue_session(response, identity.id, settings)
+    return _profile_response(profile)
+
+
+@router.post("/change-password", response_model=ProfileResponse)
+def change_password(
+    payload: ChangePasswordRequest,
+    response: Response,
+    settings: Settings = Depends(get_api_settings),
+    auth_service: SupabaseAuthService = Depends(get_auth_service),
+    repository: UserRepository = Depends(get_user_repository),
+) -> ProfileResponse:
+    try:
+        identity = auth_service.sign_in(payload.email, payload.current_password)
+    except AuthServiceError as exc:
+        _raise_auth_failure(exc)
+
+    profile = repository.get_profile(identity.id)
+    if profile is None:
+        raise APIError(
+            403,
+            "account_not_approved",
+            "No approved profile is available for this account.",
+        )
+    _require_approved_profile(profile)
+    if not bool(profile.get("must_change_password")):
+        raise APIError(
+            403,
+            "password_change_not_required",
+            "A troca de senha só está disponível após um reset do admin.",
+        )
+    if len(payload.new_password) < 8:
+        raise APIError(
+            422,
+            "validation_error",
+            "Password must contain at least 8 characters.",
+        )
+    if payload.new_password != payload.new_password_confirmation:
+        raise APIError(
+            422,
+            "validation_error",
+            "Password confirmation does not match.",
+        )
+    if payload.new_password == payload.current_password:
+        raise APIError(
+            422,
+            "validation_error",
+            "A nova senha deve ser diferente da senha temporária.",
+        )
+
+    try:
+        auth_service.set_password(identity.id, payload.new_password)
+    except AuthServiceError as exc:
+        _raise_auth_failure(exc)
+    repository.set_must_change_password(identity.id, False)
     issue_session(response, identity.id, settings)
     return _profile_response(profile)
 

@@ -859,7 +859,7 @@ def test_stored_execution_preserves_zero_rows_and_adds_truthful_diagnostic():
     assert "revenue" not in result.summary
 
 
-def test_stored_execution_reports_missing_expected_metric_without_fabricating_it():
+def test_stored_execution_ignores_plan_columns_missing_from_result():
     repository = MemoryConversationRepository(
         [
             _user_message(),
@@ -890,8 +890,7 @@ def test_stored_execution_reports_missing_expected_metric_without_fabricating_it
     )
 
     assert result.result["rows"] == [{"region": "Sul"}]
-    assert result.diagnostics["kind"] == "missing_expected_columns"
-    assert result.diagnostics["expected_columns"] == ["revenue"]
+    assert result.diagnostics is None
     assert result.summary == "A consulta retornou 1 linha(s)."
     assert "revenue" not in result.summary
     assert "999" not in result.summary

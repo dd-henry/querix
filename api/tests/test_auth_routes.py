@@ -213,3 +213,96 @@ def test_logout_clears_cookie_and_me_requires_session():
     logout = client.post("/api/auth/logout")
     assert logout.status_code == 200
     assert "Max-Age=0" in logout.headers["set-cookie"]
+
+
+def _reset_profile():
+    return {**_profile(), "must_change_password": True}
+
+
+def test_login_with_temporary_password_requires_change_without_session():
+    auth = Mock()
+    auth.sign_in.return_value = AuthUser(USER_ID, "user@example.com", True)
+    repository = Mock()
+    repository.get_profile.return_value = _reset_profile()
+    client, _auth, _repository = _client(auth, repository)
+
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "user@example.com", "password": "temp-pass"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "password_change_required"
+    assert "set-cookie" not in response.headers
+
+
+def test_change_password_updates_clears_flag_and_starts_session():
+    auth = Mock()
+    auth.sign_in.return_value = AuthUser(USER_ID, "user@example.com", True)
+    repository = Mock()
+    repository.get_profile.return_value = _reset_profile()
+    client, auth, repository = _client(auth, repository)
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "email": "user@example.com",
+            "current_password": "temp-pass",
+            "new_password": "new-password",
+            "new_password_confirmation": "new-password",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == _profile()
+    assert "ask_sql_session=" in response.headers["set-cookie"]
+    auth.set_password.assert_called_once_with(USER_ID, "new-password")
+    repository.set_must_change_password.assert_called_once_with(USER_ID, False)
+
+
+@pytest.mark.parametrize(
+    "new_password, confirmation",
+    [("short", "short"), ("new-password", "other-password"), ("temp-pass", "temp-pass")],
+)
+def test_change_password_rejects_invalid_new_password(new_password, confirmation):
+    auth = Mock()
+    auth.sign_in.return_value = AuthUser(USER_ID, "user@example.com", True)
+    repository = Mock()
+    repository.get_profile.return_value = _reset_profile()
+    client, auth, _repository = _client(auth, repository)
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "email": "user@example.com",
+            "current_password": "temp-pass",
+            "new_password": new_password,
+            "new_password_confirmation": confirmation,
+        },
+    )
+
+    assert response.status_code == 422
+    auth.set_password.assert_not_called()
+    assert "set-cookie" not in response.headers
+
+
+def test_change_password_is_unavailable_without_admin_reset():
+    auth = Mock()
+    auth.sign_in.return_value = AuthUser(USER_ID, "user@example.com", True)
+    repository = Mock()
+    repository.get_profile.return_value = _profile()
+    client, auth, _repository = _client(auth, repository)
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "email": "user@example.com",
+            "current_password": "password",
+            "new_password": "new-password",
+            "new_password_confirmation": "new-password",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "password_change_not_required"
+    auth.set_password.assert_not_called()

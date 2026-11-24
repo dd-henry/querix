@@ -33,7 +33,7 @@ def test_zero_rows_receive_a_truthful_diagnostic_without_invented_values():
     assert diagnostic.expected_columns == ()
 
 
-def test_missing_expected_columns_are_reported_without_rewriting_result():
+def test_missing_plan_columns_do_not_produce_diagnostics():
     result = {
         "columns": ["region"],
         "rows": [{"region": "Sul"}],
@@ -43,9 +43,7 @@ def test_missing_expected_columns_are_reported_without_rewriting_result():
 
     diagnostic = critique_result(result, _plan())
 
-    assert diagnostic is not None
-    assert diagnostic.kind == "missing_expected_columns"
-    assert diagnostic.expected_columns == ("revenue",)
+    assert diagnostic is None
 
 
 def test_interpretation_exposes_plan_and_temporal_assumptions():

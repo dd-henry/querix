@@ -118,6 +118,29 @@ export function UserAdminPanel({ client, role }: UserAdminPanelProps) {
     }
   };
 
+  const handleResetPassword = async (profile: AdminProfile) => {
+    if (
+      !window.confirm(
+        `Resetar a senha de ${profile.email}? A senha atual deixará de funcionar.`,
+      )
+    ) {
+      return;
+    }
+    setPendingAction(`reset:${profile.id}`);
+    setError("");
+    setFeedback("");
+    try {
+      const response = await client.admin.resetPassword(profile.id);
+      setFeedback(
+        `Senha temporária de ${profile.email}: ${response.temporary_password} — informe ao usuário; ele definirá uma nova senha no próximo login.`,
+      );
+    } catch (resetError: unknown) {
+      setError(errorMessage(resetError));
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const handleRoleUpdate = async (profile: AdminProfile) => {
     const nextRole = drafts[profile.id]?.role;
     if (!nextRole || !roleOptions.includes(nextRole)) {
@@ -235,6 +258,15 @@ export function UserAdminPanel({ client, role }: UserAdminPanelProps) {
                     onClick={() => void handleRoleUpdate(profile)}
                   >
                     Atualizar papel
+                  </button>
+                </div>
+                <div className="admin-panel__control">
+                  <button
+                    type="button"
+                    disabled={pendingAction !== null}
+                    onClick={() => void handleResetPassword(profile)}
+                  >
+                    Resetar senha de {profile.email}
                   </button>
                 </div>
               </li>

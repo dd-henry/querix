@@ -26,6 +26,7 @@ function createClient(
       ),
       login: vi.fn(),
       signup: vi.fn(),
+      changePassword: vi.fn(),
       logout: vi.fn().mockResolvedValue({ message: "Logged out." }),
       ...overrides,
     },
@@ -60,6 +61,7 @@ function createClient(
       listUsers: vi.fn().mockResolvedValue({ profiles: [] }),
       updateStatus: vi.fn(),
       updateRole: vi.fn(),
+      resetPassword: vi.fn(),
     },
     schema: {
       sync: vi.fn().mockResolvedValue({ status: "synchronized" }),
@@ -313,6 +315,45 @@ describe("AuthPage", () => {
     resolveLogin(approvedProfile);
     await waitFor(() =>
       expect(screen.getByTestId("chat")).toBeInTheDocument(),
+    );
+  });
+
+  it("asks for a new password after login with a temporary password", async () => {
+    const login = vi.fn().mockRejectedValue(
+      new ApiError(
+        "password_change_required",
+        "Defina uma nova senha para continuar.",
+        403,
+      ),
+    );
+    const changePassword = vi.fn().mockResolvedValue(approvedProfile);
+    renderPage(createClient({ login, changePassword }));
+    await waitForLoginPage();
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "user@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "temp-1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await screen.findByLabelText("Nova senha");
+    fireEvent.change(screen.getByLabelText("Nova senha"), {
+      target: { value: "new-password" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirmar nova senha"), {
+      target: { value: "new-password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar e entrar" }));
+
+    await waitFor(() =>
+      expect(changePassword).toHaveBeenCalledWith({
+        email: "user@example.com",
+        current_password: "temp-1234",
+        new_password: "new-password",
+        new_password_confirmation: "new-password",
+      }),
     );
   });
 });

@@ -51,3 +51,10 @@ class AdminRoleResponse(BaseModel):
 
     id: UUID
     role: AdminRole
+
+
+class AdminPasswordResetResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    temporary_password: str

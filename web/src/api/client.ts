@@ -42,6 +42,18 @@ export interface SignupInput extends LoginInput {
   password_confirmation: string;
 }
 
+export interface ChangePasswordInput {
+  email: string;
+  current_password: string;
+  new_password: string;
+  new_password_confirmation: string;
+}
+
+export interface PasswordResetResponse {
+  id: string;
+  temporary_password: string;
+}
+
 export interface SignupResponse {
   message: string;
 }
@@ -347,6 +359,11 @@ export function createApiClient({
           method: "POST",
           body: input,
         }),
+      changePassword: (input: ChangePasswordInput) =>
+        request<Profile>("/api/auth/change-password", {
+          method: "POST",
+          body: input,
+        }),
       logout: () =>
         request<MessageResponse>("/api/auth/logout", {
           method: "POST",
@@ -570,6 +587,14 @@ export function createApiClient({
             },
           ),
           "admin role update",
+        ),
+      resetPassword: async (userId: string) =>
+        requireResponse(
+          await request<PasswordResetResponse>(
+            `/api/admin/users/${encodeURIComponent(userId)}/reset-password`,
+            { method: "POST" },
+          ),
+          "admin password reset",
         ),
     },
     schema: {

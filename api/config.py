@@ -59,6 +59,7 @@ class Settings:
     postgres_dbname: Optional[str] = None
     supabase_url: Optional[str] = None
     supabase_anon_key: Optional[str] = field(default=None, repr=False)
+    supabase_service_role_key: Optional[str] = field(default=None, repr=False)
     session_max_age_seconds: int = 8 * 60 * 60
     cookie_secure: bool = False
     result_limit: int = 5_000
@@ -87,6 +88,7 @@ class Settings:
             postgres_dbname=environ.get("POSTGRES_DBNAME") or None,
             supabase_url=environ.get("SUPABASE_URL") or None,
             supabase_anon_key=environ.get("SUPABASE_ANON_KEY") or None,
+            supabase_service_role_key=environ.get("SUPABASE_SERVICE_ROLE_KEY") or None,
             session_max_age_seconds=_positive_integer(
                 environ, "SESSION_MAX_AGE_SECONDS", 8 * 60 * 60
             ),

@@ -13,6 +13,7 @@ import {
   ApiError,
   createApiClient,
   type ApiClient,
+  type ChangePasswordInput,
   type LoginInput,
   type Profile,
   type SignupInput,
@@ -34,6 +35,7 @@ export type AuthContextValue = AuthState & {
   client: ApiClient;
   login: (input: LoginInput) => Promise<Profile>;
   signup: (input: SignupInput) => Promise<SignupResponse | undefined>;
+  changePassword: (input: ChangePasswordInput) => Promise<Profile>;
   logout: () => Promise<void>;
   setUnsentText: (text: string) => void;
 };
@@ -199,6 +201,22 @@ export function AuthProvider({
     [client],
   );
 
+  const changePassword = useCallback(
+    async (input: ChangePasswordInput) => {
+      const profile = await client.auth.changePassword(input);
+      if (!profile) {
+        throw new ApiError(
+          "invalid_response",
+          "The API returned an empty password change response.",
+          502,
+        );
+      }
+      setProfile(profile);
+      return profile;
+    },
+    [client, setProfile],
+  );
+
   const logout = useCallback(async () => {
     try {
       await client.auth.logout();
@@ -220,10 +238,11 @@ export function AuthProvider({
       client,
       login,
       signup,
+      changePassword,
       logout,
       setUnsentText,
     }),
-    [client, login, logout, setUnsentText, signup, state],
+    [changePassword, client, login, logout, setUnsentText, signup, state],
   );
 
   return (

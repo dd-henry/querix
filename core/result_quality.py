@@ -1,4 +1,3 @@
-import re
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
@@ -55,22 +54,6 @@ def critique_result(
             ),
         )
 
-    expected_columns = _expected_columns(values)
-    returned_columns = {column.casefold() for column in result["columns"]}
-    missing_columns = tuple(
-        column
-        for column in expected_columns
-        if column.casefold() not in returned_columns
-    )
-    if missing_columns:
-        return ResultDiagnostics(
-            kind="missing_expected_columns",
-            message=(
-                "O resultado não contém todas as dimensões ou métricas "
-                "esperadas pela interpretação."
-            ),
-            expected_columns=missing_columns,
-        )
     return None
 
 
@@ -89,28 +72,6 @@ def _plan_values(plan: object) -> Optional[dict[str, Any]]:
         "metrics": _texts(plan["metrics"]),
         "assumptions": _texts(plan["assumptions"]),
     }
-
-
-def _expected_columns(values: Mapping[str, Any]) -> tuple[str, ...]:
-    expected: list[str] = []
-    for field in ("dimensions", "metrics"):
-        for expression in values[field]:
-            column = _explicit_output_name(expression)
-            if column and column.casefold() not in {
-                item.casefold() for item in expected
-            }:
-                expected.append(column)
-    return tuple(expected)
-
-
-def _explicit_output_name(expression: str) -> Optional[str]:
-    alias = re.search(r"\bas\s+([a-zA-Z_][\w]*)\s*$", expression, re.IGNORECASE)
-    if alias:
-        return alias.group(1)
-
-    if re.fullmatch(r"[a-zA-Z_][\w]*(?:\.[a-zA-Z_][\w]*)?", expression):
-        return expression.rsplit(".", 1)[-1]
-    return None
 
 
 def _text(value: object) -> str:

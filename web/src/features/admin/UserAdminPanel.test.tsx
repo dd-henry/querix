@@ -27,6 +27,7 @@ function createClient(
       me: vi.fn(),
       login: vi.fn(),
       signup: vi.fn(),
+      changePassword: vi.fn(),
       logout: vi.fn(),
     },
     conversations: {
@@ -65,6 +66,10 @@ function createClient(
       updateRole: vi.fn().mockResolvedValue({
         id: profile.id,
         role: "admin",
+      }),
+      resetPassword: vi.fn().mockResolvedValue({
+        id: profile.id,
+        temporary_password: "temp-1234",
       }),
       ...overrides,
     },
@@ -117,6 +122,22 @@ describe("UserAdminPanel", () => {
       expect(client.admin.updateRole).toHaveBeenCalledWith("user-1", "admin"),
     );
     expect(screen.getByRole("heading", { name: "User" })).toBeInTheDocument();
+  });
+
+  it("resets a password and shows the temporary password once", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const client = createClient();
+    render(<UserAdminPanel client={client} role="admin" />);
+
+    await screen.findByRole("heading", { name: "User" });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Resetar senha de user@example.com" }),
+    );
+
+    await waitFor(() =>
+      expect(client.admin.resetPassword).toHaveBeenCalledWith("user-1"),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("temp-1234");
   });
 
   it("rejects unsupported status values before calling the API", async () => {

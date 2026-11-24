@@ -18,6 +18,7 @@ describe("App", () => {
           }),
         login: () => Promise.reject(new Error("not used")),
         signup: () => Promise.reject(new Error("not used")),
+        changePassword: () => Promise.reject(new Error("not used")),
         logout: () => Promise.resolve({ message: "Logged out." }),
       },
       conversations: {
@@ -51,6 +52,7 @@ describe("App", () => {
         listUsers: () => Promise.resolve({ profiles: [] }),
         updateStatus: () => Promise.reject(new Error("not used")),
         updateRole: () => Promise.reject(new Error("not used")),
+        resetPassword: () => Promise.reject(new Error("not used")),
       },
       schema: {
         sync: () => Promise.resolve({ status: "synchronized" }),

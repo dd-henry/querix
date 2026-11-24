@@ -45,6 +45,7 @@ class SupabaseAuthService:
             )
         self._url = settings.supabase_url
         self._anon_key = settings.supabase_anon_key
+        self._service_role_key = settings.supabase_service_role_key
         self._client_factory = client_factory
 
     def _new_client(self):
@@ -122,4 +123,22 @@ class SupabaseAuthService:
             raise AuthServiceError(
                 "signout_failed",
                 "Signout request failed.",
+            ) from exc
+
+    def set_password(self, user_id: str, password: str) -> None:
+        if not self._service_role_key:
+            raise AuthServiceError(
+                "auth_not_configured",
+                "Configure SUPABASE_SERVICE_ROLE_KEY to reset passwords.",
+            )
+        client = self._client_factory(self._url, self._service_role_key)
+        try:
+            client.auth.admin.update_user_by_id(
+                user_id,
+                {"password": password},
+            )
+        except Exception as exc:
+            raise AuthServiceError(
+                "password_update_failed",
+                "Password update request failed.",
             ) from exc

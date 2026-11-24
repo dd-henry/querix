@@ -29,6 +29,12 @@ class UserRepository:
             )
             """
         )
+        self.db.execute_command(
+            """
+            ALTER TABLE public.profiles
+            ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE
+            """
+        )
 
     def create_pending_profile(self, user_id, email, name):
         self.db.execute_command(
@@ -42,7 +48,8 @@ class UserRepository:
 
     def get_profile(self, user_id):
         result = self.db.execute_query(
-            "SELECT id, email, name, role, status FROM public.profiles WHERE id = :id",
+            "SELECT id, email, name, role, status, must_change_password "
+            "FROM public.profiles WHERE id = :id",
             {"id": str(user_id)},
         )
         if result.empty:
@@ -50,6 +57,12 @@ class UserRepository:
         profile = result.iloc[0].to_dict()
         profile["id"] = str(profile["id"])
         return profile
+
+    def set_must_change_password(self, user_id, required):
+        self.db.execute_command(
+            "UPDATE public.profiles SET must_change_password = :required WHERE id = :id",
+            {"id": str(user_id), "required": bool(required)},
+        )
 
     def list_profiles(self):
         result = self.db.execute_query(
