@@ -171,11 +171,29 @@ def test_repository_factories_reuse_the_lazy_database_adapter():
     assert get_user_repository().db is database
     assert isinstance(get_user_repository(), UserRepository)
     assert isinstance(get_conversation_repository(), ConversationRepository)
-    assert isinstance(get_query_history_repository(), QueryHistoryRepository)
+    with patch.object(ConversationRepository, "initialize") as initialize_conversations:
+        with patch.object(QueryHistoryRepository, "initialize") as initialize_history:
+            assert isinstance(get_query_history_repository(), QueryHistoryRepository)
+            assert isinstance(get_query_history_repository(), QueryHistoryRepository)
+    initialize_conversations.assert_called_once_with()
+    initialize_history.assert_called_once_with()
     assert isinstance(
         get_predefined_query_repository(),
         PredefinedQueryRepository,
     )
+
+
+def test_history_initialization_failure_is_not_cached():
+    get_query_history_repository.cache_clear()
+    with patch.object(ConversationRepository, "initialize"):
+        with patch.object(
+            QueryHistoryRepository, "initialize", side_effect=[RuntimeError("offline"), None]
+        ) as initialize:
+            with pytest.raises(RuntimeError, match="offline"):
+                get_query_history_repository()
+            assert isinstance(get_query_history_repository(), QueryHistoryRepository)
+    assert initialize.call_count == 2
+    get_query_history_repository.cache_clear()
 
 
 def test_database_connection_repository_reuses_the_internal_database():

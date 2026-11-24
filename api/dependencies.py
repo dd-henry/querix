@@ -103,7 +103,11 @@ def get_conversation_repository() -> ConversationRepository:
 
 @lru_cache(maxsize=1)
 def get_query_history_repository() -> QueryHistoryRepository:
-    return QueryHistoryRepository(get_db_adapter())
+    database = get_db_adapter()
+    ConversationRepository(database).initialize()
+    repository = QueryHistoryRepository(database)
+    repository.initialize()
+    return repository
 
 
 @lru_cache(maxsize=1)

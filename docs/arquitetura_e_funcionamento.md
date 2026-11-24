@@ -50,6 +50,7 @@ A comunicação com o banco de dados ocorre através do padrão *Adapter*.
 - Cada sessão tem um UUID, o `user_id` proprietário, título, estado de favorito e horários de criação e atividade. O proprietário referencia `auth.users`; as operações de listar, carregar, adicionar mensagem, favoritar e excluir filtram pelo usuário autenticado.
 - Cada mensagem tem um ID ordenável, `request_id`, papel (`user` ou `assistant`), conteúdo, SQL, erro e metadados. A chave única `(session_id, request_id, role)` impede que um rerun grave novamente o mesmo lado do turno. Mensagens são excluídas em cascata com a sessão.
 - O histórico `ask_sql_query_history` permanece separado e tem um `session_id` anulável com exclusão em cascata. Assim, consultas executadas podem ser acessadas pelo histórico próprio, enquanto registros legados sem sessão continuam sem vínculo.
+- No primeiro uso do histórico em cada processo da API, os repositórios de conversas e histórico inicializam suas tabelas e índices e adicionam a coluna `session_id` caso esteja ausente. Essa inicialização não remove registros antigos; o usuário do banco interno precisa de permissões para essas operações de schema.
 - Linhas retornadas pelo banco não são gravadas nessas tabelas. Ao reabrir uma conversa, o SQL aparece sem resultados persistidos e o frontend oferece a ação `Reexecutar consulta` para buscar dados atuais.
 - A listagem remove sessões não favoritas sem atividade há pelo menos um ano antes de apresentar as conversas do proprietário. Sessões favoritas não entram nessa limpeza.
 

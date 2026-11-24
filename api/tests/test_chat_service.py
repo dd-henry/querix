@@ -10,6 +10,7 @@ from api.services.chat import (
     ChatServiceError,
 )
 from core.semantic_context import SemanticContextService
+from database.query_history import QueryHistoryRepository
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
 CONVERSATION_ID = UUID("00000000-0000-0000-0000-000000000002")
@@ -721,6 +722,27 @@ def test_stored_execution_is_read_only_bounded_and_records_history():
         session_id=CONVERSATION_ID,
     )
     assert repository.update_calls[-1][3] == "Aqui estão os resultados da consulta:"
+
+
+def test_stored_execution_records_history_using_real_repository():
+    conversations = MemoryConversationRepository(
+        [_user_message(), _assistant_message()]
+    )
+    target_database = Mock()
+    target_database.execute_read_only_query.return_value = pd.DataFrame(
+        [{"total": 12}]
+    )
+    internal_database = Mock()
+    history = QueryHistoryRepository(internal_database)
+    service = _service(conversations, FakeTranslator(), target_database, history)
+
+    result = service.execute_stored_query(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    assert result.status == "executed"
+    assert not result.warnings
+    _, params = internal_database.execute_command.call_args.args
+    assert params["user_id"] == USER_ID
+    assert params["session_id"] == str(CONVERSATION_ID)
 
 
 def test_stored_execution_preserves_plan_warnings():

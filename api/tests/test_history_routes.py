@@ -13,6 +13,7 @@ from api.dependencies import (
     require_approved_user,
 )
 from api.services.chat import ChatService
+from database.query_history import QueryHistoryRepository
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
 OTHER_USER_ID = "00000000-0000-0000-0000-000000000009"
@@ -244,6 +245,66 @@ def test_foreign_history_mutation_returns_404_without_mutation():
         "message": "History record not found.",
     }
     assert history.pin_calls == []
+
+
+def test_real_history_repository_supports_owner_scoped_routes():
+    database = Mock()
+    database.execute_query.return_value = pd.DataFrame(
+        [{key: value for key, value in _record().items() if key != "owner_id"}]
+    )
+    client = _client(QueryHistoryRepository(database))
+
+    assert client.get("/api/history").status_code == 200
+    assert client.patch("/api/history/41", json={"is_pinned": True}).status_code == 200
+    assert client.delete("/api/history/41").status_code == 200
+    for call in database.execute_query.call_args_list:
+        assert call.args[1]["user_id"] == USER_ID
+    for call in database.execute_command.call_args_list:
+        assert call.args[1]["user_id"] == USER_ID
+
+
+def test_real_history_repository_rejects_foreign_record():
+    database = Mock()
+    database.execute_query.return_value = pd.DataFrame()
+    client = _client(QueryHistoryRepository(database))
+
+    assert client.patch("/api/history/41", json={"is_pinned": True}).status_code == 404
+    assert client.delete("/api/history/41").status_code == 404
+    database.execute_command.assert_not_called()
+    for call in database.execute_query.call_args_list:
+        assert call.args[1] == {"user_id": USER_ID, "history_id": 41}
+
+
+def test_rerun_with_real_history_repository():
+    internal_database = Mock()
+    internal_database.execute_query.return_value = pd.DataFrame(
+        [{key: value for key, value in _record().items() if key != "owner_id"}]
+    )
+    history = QueryHistoryRepository(internal_database)
+    target_database = Mock()
+    target_database.execute_read_only_query.return_value = pd.DataFrame(
+        [{"total": 12}]
+    )
+    service = ChatService(
+        MemoryConversationRepository(),
+        Mock(),
+        target_database,
+        query_history_repository=history,
+    )
+    client = _client(history, service)
+
+    response = client.post("/api/history/41/rerun", json=_rerun_payload())
+
+    assert response.status_code == 200
+    assert response.json()["result"]["rows"] == [{"total": 12}]
+    assert not response.json()["warnings"]
+    assert internal_database.execute_query.call_args.args[1] == {
+        "user_id": USER_ID,
+        "history_id": 41,
+    }
+    assert internal_database.execute_command.call_args.args[1]["session_id"] == str(
+        CONVERSATION_ID
+    )
 
 
 def test_rerun_uses_stored_sql_in_the_active_conversation():

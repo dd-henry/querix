@@ -16,6 +16,7 @@ Os fluxos de conversa usam serviços externos simulados para que os testes valid
 
 - **`test_conversations.py`:** verifica escopo por proprietário, gravação idempotente e ordenada, falhas de persistência, favoritos, expiração, exclusão e o limite de seis turnos, incluindo a exclusão do turno em retry do contexto.
 - **`test_query_history.py`:** verifica o vínculo anulável da conversa, exclusão em cascata, deduplicação dentro de cada sessão e compatibilidade com registros legados sem sessão.
+- **`api/tests/test_history_routes.py` e `api/tests/test_chat_service.py`:** incluem verificações das rotas e do serviço usando o repositório de histórico concreto, com o adaptador de banco simulado, para detectar incompatibilidades entre as interfaces.
 - **`test_translator.py` e `test_llm.py`:** verificam contexto em ordem, limite de seis turnos, comportamento com contexto ausente ou vazio, seleção do provedor, adaptação dos payloads do Gemini e do streaming SSE do OpenRouter, além dos erros do LLM.
 - **`test_postgres.py`:** verifica o uso de transações somente de leitura no retry e o retorno da contagem de linhas dos comandos.
 
