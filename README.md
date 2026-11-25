@@ -1,6 +1,6 @@
 <div align="center">
 
-# Ask SQL
+# Querix
 
 **Perguntas em linguagem natural. Consultas SQL. Dados para apoiar decisões.**
 
@@ -31,7 +31,7 @@ em consultas PostgreSQL e apresentar os resultados de forma interativa.
 ## Visão geral
 
 Consultar dados em um banco relacional costuma exigir conhecimento de SQL, da
-estrutura das tabelas e das regras de negócio. O Ask SQL procura reduzir essa
+estrutura das tabelas e das regras de negócio. O Querix procura reduzir essa
 barreira: a pessoa descreve o que deseja saber e a aplicação utiliza um modelo
 de linguagem (*LLM*) para planejar e gerar uma consulta SQL.
 

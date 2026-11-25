@@ -28,7 +28,7 @@ export function App({ client }: AppProps) {
           blockedView={(message) => (
             <main className="app-shell">
               <section className="welcome-card" aria-labelledby="app-title">
-                <p className="eyebrow">Ask SQL</p>
+                <p className="eyebrow">Querix</p>
                 <h1 id="app-title">Acesso pendente</h1>
                 <p>{message}</p>
                 <button type="button" onClick={() => void auth.logout()}>

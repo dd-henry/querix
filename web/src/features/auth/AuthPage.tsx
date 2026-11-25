@@ -223,7 +223,7 @@ export function AuthPage() {
   return (
     <main className="app-shell">
       <section className="welcome-card" aria-labelledby="auth-title">
-        <p className="eyebrow">Ask SQL</p>
+        <p className="eyebrow">Querix</p>
         <h1 id="auth-title">
           {mode === "login"
             ? "Entrar para continuar"

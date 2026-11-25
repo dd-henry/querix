@@ -50,7 +50,7 @@ export function AppShell({
         aria-label="Navegação principal"
       >
         <div className="app-sidebar__brand">
-          <p className="eyebrow">Ask SQL</p>
+          <p className="eyebrow">Querix</p>
           <p>{profile.name}</p>
         </div>
         <div className="app-sidebar__content">{sidebarContent}</div>

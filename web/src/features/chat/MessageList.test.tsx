@@ -176,9 +176,9 @@ describe("MessageList", () => {
 
     expect(items).toEqual([
       "VocêShow revenue",
-      "Ask SQLSQL gerado para revisão.",
+      "QuerixSQL gerado para revisão.",
       "VocêShow profit",
-      "Ask SQLResultado calculado.",
+      "QuerixResultado calculado.",
       "Resultado da consulta",
     ]);
   });

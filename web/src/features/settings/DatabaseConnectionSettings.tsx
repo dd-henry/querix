@@ -75,7 +75,7 @@ export function DatabaseConnectionSettings({
     >
       <div>
         <p className="eyebrow">Banco de dados</p>
-        <h2 id="database-connection-title">Conexão consultada pelo Ask SQL</h2>
+        <h2 id="database-connection-title">Conexão consultada pelo Querix</h2>
         <p>
           Informe uma connection string PostgreSQL. Ela será testada antes de
           ser salva e nunca será exibida novamente.

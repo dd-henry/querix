@@ -57,7 +57,7 @@ export function MessageList({
                 data-message-status={message.status}
               >
                 <p className="chat-message__author">
-                  {message.role === "user" ? "Você" : "Ask SQL"}
+                  {message.role === "user" ? "Você" : "Querix"}
                 </p>
                 {isPending ? (
                   <p className="chat-message__pending" role="presentation">

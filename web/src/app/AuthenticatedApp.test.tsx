@@ -143,7 +143,7 @@ describe("AuthenticatedApp", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "Conexão consultada pelo Ask SQL",
+        name: "Conexão consultada pelo Querix",
       }),
     ).toBeInTheDocument();
   });
@@ -166,7 +166,7 @@ describe("AuthenticatedApp", () => {
 
     expect(
       screen.queryByRole("heading", {
-        name: "Conexão consultada pelo Ask SQL",
+        name: "Conexão consultada pelo Querix",
       }),
     ).not.toBeInTheDocument();
     expect(

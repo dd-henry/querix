@@ -98,6 +98,11 @@ function switchToSignup() {
 }
 
 describe("AuthPage", () => {
+  it("shows the Querix name on the authentication screen", async () => {
+    renderPage(createClient());
+    expect(await screen.findByText("Querix")).toBeInTheDocument();
+  });
+
   it("shows and hides the login password without submitting the form", async () => {
     const login = vi.fn();
     renderPage(createClient({ login }));

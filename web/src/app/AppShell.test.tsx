@@ -36,6 +36,7 @@ describe("AppShell", () => {
   it("renders one sidebar, one chat region, and an announced status", () => {
     renderShell();
 
+    expect(screen.getByText("Querix")).toBeInTheDocument();
     expect(screen.getAllByRole("complementary")).toHaveLength(1);
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(screen.getByRole("region", { name: "Chat" })).toHaveTextContent(
