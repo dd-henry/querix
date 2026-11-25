@@ -184,6 +184,37 @@ function messagesFromConversation(detail: ConversationDetail): ChatMessage[] {
   });
 }
 
+function restoreSessionResults(
+  messages: ChatMessage[],
+  cached: ChatMessage[] | undefined,
+): ChatMessage[] {
+  const cachedByRequest = new Map(
+    cached?.map((message) => [message.requestId, message]),
+  );
+  return messages.map((message) => {
+    const previous = cachedByRequest.get(message.requestId);
+    if (
+      message.role !== "assistant" ||
+      !previous ||
+      previous.sql !== message.sql
+    ) {
+      return message;
+    }
+    return {
+      ...message,
+      content: previous.content,
+      status: previous.status,
+      result: previous.result,
+      insights: previous.insights,
+      summary: previous.summary,
+      chart: previous.chart,
+      interpretation: previous.interpretation,
+      diagnostics: previous.diagnostics,
+      reviewState: previous.reviewState,
+    };
+  });
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -266,6 +297,22 @@ export function useChat({
   const [error, setError] = useState<string | null>(null);
   const conversationIdRef = useRef(initialConversationId);
   const activeRequestRef = useRef<ActiveRequest | null>(null);
+  const sessionResultsRef = useRef(new Map<string, ChatMessage[]>());
+  const navigationRef = useRef(0);
+
+  const cacheSessionResults = useCallback(() => {
+    const id = conversationIdRef.current;
+    if (id) {
+      sessionResultsRef.current.set(
+        id,
+        messages.filter(
+          (message) =>
+            message.role === "assistant" &&
+            (message.result || message.insights?.length),
+        ),
+      );
+    }
+  }, [messages]);
 
   const updateAssistant = useCallback(
     (
@@ -451,6 +498,7 @@ export function useChat({
       }
 
       setError(null);
+      navigationRef.current += 1;
       const nextConversationId =
         conversationIdRef.current ?? createId();
       const requestId = createId();
@@ -552,6 +600,7 @@ export function useChat({
       const activeConversationId = conversationIdRef.current;
 
       setError(null);
+      navigationRef.current += 1;
       updateAssistant(requestId, (message) => ({
         ...message,
         content: "Executando a consulta...",
@@ -584,6 +633,7 @@ export function useChat({
 
   const cancelReview = useCallback(
     (requestId: string) => {
+      navigationRef.current += 1;
       updateAssistant(requestId, (message) => ({
         ...message,
         reviewState: "cancelled",
@@ -616,6 +666,7 @@ export function useChat({
       }
 
       setError(null);
+      navigationRef.current += 1;
       updateAssistant(requestId, (message) => ({
         ...message,
         content: "Tentando novamente...",
@@ -656,20 +707,33 @@ export function useChat({
         setError("Aguarde a solicitação atual terminar.");
         return false;
       }
+      cacheSessionResults();
+      const navigation = ++navigationRef.current;
       setError(null);
       try {
         const detail = await client.conversations.get(normalizedId);
+        if (navigation !== navigationRef.current || activeRequestRef.current) {
+          return false;
+        }
         conversationIdRef.current = detail.id;
         setConversationId(detail.id);
-        setMessages(messagesFromConversation(detail));
+        setMessages(
+          restoreSessionResults(
+            messagesFromConversation(detail),
+            sessionResultsRef.current.get(detail.id),
+          ),
+        );
         return true;
       } catch (conversationError: unknown) {
+        if (navigation !== navigationRef.current) {
+          return false;
+        }
         const described = describeError(conversationError);
         setError(described.message);
         return false;
       }
     },
-    [client],
+    [cacheSessionResults, client],
   );
 
   const newConversation = useCallback(() => {
@@ -677,15 +741,18 @@ export function useChat({
       setError("Aguarde a solicitação atual terminar.");
       return false;
     }
+    cacheSessionResults();
+    navigationRef.current += 1;
     const nextConversationId = createId();
     conversationIdRef.current = nextConversationId;
     setConversationId(nextConversationId);
     setMessages([]);
     setError(null);
     return true;
-  }, []);
+  }, [cacheSessionResults]);
 
   const appendChatResponse = useCallback((response: ChatResponse) => {
+    navigationRef.current += 1;
     conversationIdRef.current = response.conversation_id;
     setConversationId(response.conversation_id);
     setMessages((current) => [
@@ -700,6 +767,7 @@ export function useChat({
       if (activeConversationId && activeConversationId !== response.conversation_id) {
         return;
       }
+      navigationRef.current += 1;
       conversationIdRef.current = response.conversation_id;
       setConversationId(response.conversation_id);
       setMessages((current) => [

@@ -147,6 +147,10 @@ function Harness({
       <button onClick={() => void chat.openConversation("conversation-1")}>
         open
       </button>
+      <button onClick={() => void chat.openConversation("conversation-2")}>
+        open-second
+      </button>
+      <button onClick={() => chat.newConversation()}>new</button>
       <button onClick={() => chat.appendPredefinedResult({
         query_id: 7,
         conversation_id: "conversation-1",
@@ -249,6 +253,100 @@ describe("useChat", () => {
       sql: "SELECT 1", reexecuteAvailable: true,
     })));
     expect(readMessages()[1]).not.toHaveProperty("result");
+  });
+
+  it("keeps a shared result when switching conversations without re-executing", async () => {
+    const first = restoredConversation();
+    const second = { ...restoredConversation(), id: "conversation-2", messages: [] };
+    const client = createClient();
+    vi.mocked(client.conversations.get).mockImplementation(async (id) =>
+      id === "conversation-1" ? first : second,
+    );
+    render(<Harness client={client} />);
+    fireEvent.click(screen.getByRole("button", { name: "append-shared" }));
+    fireEvent.click(screen.getByRole("button", { name: "open-second" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("conversation")).toHaveTextContent("conversation-2"),
+    );
+    expect(readMessages()).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(expect.objectContaining({
+        result: expect.objectContaining({ rows: [{ total: 12 }] }),
+      })),
+    );
+    expect(client.chat.execute).not.toHaveBeenCalled();
+    expect(client.predefined.execute).not.toHaveBeenCalled();
+  });
+
+  it("keeps re-executed results and insights when opening a new conversation", async () => {
+    const client = createClient({
+      execute: vi.fn().mockResolvedValue({
+        ...reviewResponse,
+        status: "executed",
+        content: "Resultado atualizado.",
+        result: { columns: ["total"], rows: [{ total: 4 }], row_count: 1, truncated: false },
+        insights: [{ key: "summary", title: "Resumo", summary: "Total de 4." }],
+      }),
+    });
+    vi.mocked(client.conversations.get).mockResolvedValue(restoredConversation());
+    render(<Harness client={client} />);
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() => expect(readMessages()).toHaveLength(2));
+    fireEvent.click(screen.getByRole("button", { name: "confirm" }));
+    await waitFor(() => expect(readMessages()[1]).toHaveProperty("result"));
+
+    fireEvent.click(screen.getByRole("button", { name: "new" }));
+    expect(readMessages()).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() =>
+      expect(readMessages()[1]).toEqual(expect.objectContaining({
+        content: "Resultado atualizado.",
+        result: expect.objectContaining({ rows: [{ total: 4 }] }),
+        insights: [{ key: "summary", title: "Resumo", summary: "Total de 4." }],
+      })),
+    );
+    expect(client.chat.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not restore a cached result for changed SQL or after remounting", async () => {
+    const detail = restoredConversation();
+    const client = createClient();
+    vi.mocked(client.conversations.get).mockResolvedValue(detail);
+    const { unmount } = render(<Harness client={client} />);
+    fireEvent.click(screen.getByRole("button", { name: "append-shared" }));
+    fireEvent.click(screen.getByRole("button", { name: "new" }));
+    detail.messages[1].sql = "SELECT 2";
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() => expect(readMessages()[1]).toHaveProperty("sql", "SELECT 2"));
+    expect(readMessages()[1]).not.toHaveProperty("result");
+
+    unmount();
+    detail.messages[1].sql = "SELECT 1";
+    render(<Harness client={client} />);
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    await waitFor(() => expect(readMessages()).toHaveLength(2));
+    expect(readMessages()[1]).not.toHaveProperty("result");
+  });
+
+  it("does not let a delayed conversation load replace a newer selection", async () => {
+    const first = deferred<ConversationDetail>();
+    const client = createClient();
+    vi.mocked(client.conversations.get).mockImplementation((id) =>
+      id === "conversation-1"
+        ? first.promise
+        : Promise.resolve({ ...restoredConversation(), id: "conversation-2", messages: [] }),
+    );
+    render(<Harness client={client} />);
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+    fireEvent.click(screen.getByRole("button", { name: "open-second" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("conversation")).toHaveTextContent("conversation-2"),
+    );
+    await act(async () => first.resolve(restoredConversation()));
+    expect(screen.getByTestId("conversation")).toHaveTextContent("conversation-2");
+    expect(readMessages()).toEqual([]);
   });
 
   it("creates one user message and one pending assistant for a send", async () => {
