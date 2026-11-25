@@ -1131,6 +1131,40 @@ textarea:focus-visible {
   color: #6b7280;
 }
 
+.password-field {
+  position: relative;
+}
+
+.auth-form .password-field input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 0.4rem;
+  color: #cbd5e1;
+  background: transparent;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: #fff;
+  background: #374151;
+}
+
+.password-toggle svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
 .auth-form > button[type="submit"] {
   width: 100%;
   margin-top: 1rem;

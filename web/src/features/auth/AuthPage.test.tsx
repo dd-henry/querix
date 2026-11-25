@@ -98,6 +98,43 @@ function switchToSignup() {
 }
 
 describe("AuthPage", () => {
+  it("shows and hides the login password without submitting the form", async () => {
+    const login = vi.fn();
+    renderPage(createClient({ login }));
+    await waitForLoginPage();
+    const password = screen.getByLabelText("Senha");
+    fireEvent.change(password, { target: { value: "my-password" } });
+
+    expect(password).toHaveAttribute("type", "password");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar senha" }));
+    expect(password).toHaveAttribute("type", "text");
+    expect(password).toHaveValue("my-password");
+    expect(login).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar senha" }));
+    expect(password).toHaveAttribute("type", "password");
+  });
+
+  it("controls signup passwords independently and hides them after switching tabs", async () => {
+    renderPage(createClient());
+    await waitForLoginPage();
+    switchToSignup();
+    const password = screen.getByLabelText("Senha");
+    const confirmation = screen.getByLabelText("Confirmar senha");
+
+    expect(password).toHaveAttribute("type", "password");
+    expect(confirmation).toHaveAttribute("type", "password");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar senha" }));
+    expect(password).toHaveAttribute("type", "text");
+    expect(confirmation).toHaveAttribute("type", "password");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar confirmar senha" }));
+    expect(confirmation).toHaveAttribute("type", "text");
+    fireEvent.click(screen.getByRole("tab", { name: "Entrar" }));
+    expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "password");
+    switchToSignup();
+    expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Confirmar senha")).toHaveAttribute("type", "password");
+  });
+
   it("does not call the API for empty signup name or email", async () => {
     const signup = vi.fn();
     renderPage(createClient({ signup }));
@@ -339,6 +376,15 @@ describe("AuthPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
     await screen.findByLabelText("Nova senha");
+    const newPassword = screen.getByLabelText("Nova senha");
+    const confirmation = screen.getByLabelText("Confirmar nova senha");
+    expect(newPassword).toHaveAttribute("type", "password");
+    expect(confirmation).toHaveAttribute("type", "password");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar nova senha" }));
+    expect(newPassword).toHaveAttribute("type", "text");
+    expect(confirmation).toHaveAttribute("type", "password");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar confirmar nova senha" }));
+    expect(confirmation).toHaveAttribute("type", "text");
     fireEvent.change(screen.getByLabelText("Nova senha"), {
       target: { value: "new-password" },
     });

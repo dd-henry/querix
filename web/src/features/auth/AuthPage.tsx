@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../app/AuthProvider";
@@ -12,6 +12,35 @@ type Feedback = {
   kind: "error" | "success";
   message: string;
 };
+
+function PasswordInput({
+  description,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { description: string }) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="password-field">
+      <input {...props} type={visible ? "text" : "password"} />
+      <button
+        type="button"
+        className="password-toggle"
+        aria-label={`${visible ? "Ocultar" : "Mostrar"} ${description}`}
+        aria-pressed={visible}
+        aria-controls={props.id}
+        onClick={() => setVisible((previous) => !previous)}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          aria-hidden="true">
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+          <circle cx="12" cy="12" r="3" />
+          {visible ? <path d="M4 4 20 20" /> : null}
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -242,10 +271,11 @@ export function AuthPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
             <label htmlFor="login-password">Senha</label>
-            <input
+            <PasswordInput
+              key="login-password"
               id="login-password"
               name="password"
-              type="password"
+              description="senha"
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -262,10 +292,11 @@ export function AuthPage() {
             onSubmit={submitChangePassword}
           >
             <label htmlFor="change-new-password">Nova senha</label>
-            <input
+            <PasswordInput
+              key="change-new-password"
               id="change-new-password"
               name="new_password"
-              type="password"
+              description="nova senha"
               autoComplete="new-password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
@@ -273,10 +304,11 @@ export function AuthPage() {
             <label htmlFor="change-password-confirmation">
               Confirmar nova senha
             </label>
-            <input
+            <PasswordInput
+              key="change-password-confirmation"
               id="change-password-confirmation"
               name="new_password_confirmation"
-              type="password"
+              description="confirmar nova senha"
               autoComplete="new-password"
               value={passwordConfirmation}
               onChange={(event) => setPasswordConfirmation(event.target.value)}
@@ -321,10 +353,11 @@ export function AuthPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
             <label htmlFor="signup-password">Senha</label>
-            <input
+            <PasswordInput
+              key="signup-password"
               id="signup-password"
               name="password"
-              type="password"
+              description="senha"
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -332,10 +365,11 @@ export function AuthPage() {
             <label htmlFor="signup-password-confirmation">
               Confirmar senha
             </label>
-            <input
+            <PasswordInput
+              key="signup-password-confirmation"
               id="signup-password-confirmation"
               name="password_confirmation"
-              type="password"
+              description="confirmar senha"
               autoComplete="new-password"
               value={passwordConfirmation}
               onChange={(event) => setPasswordConfirmation(event.target.value)}
