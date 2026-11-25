@@ -25,6 +25,10 @@ const query: PredefinedQuery = {
 
 const executionResponse: PredefinedExecutionResponse = {
   query_id: 7,
+  conversation_id: "conversation-1",
+  request_id: "request-1",
+  name: query.name,
+  sql: query.sql,
   result: {
     columns: ["total"],
     rows: [{ total: 12 }],
@@ -92,6 +96,28 @@ function createClient(
 }
 
 describe("PredefinedQueriesPanel", () => {
+  it("executes within the active conversation", async () => {
+    const client = createClient();
+    render(
+      <PredefinedQueriesPanel
+        client={client}
+        role="user"
+        conversationId="conversation-1"
+        onExecutionResult={vi.fn()}
+      />,
+    );
+    await screen.findByRole("heading", { name: query.name });
+    fireEvent.click(screen.getByRole("button", { name: "Executar" }));
+    fireEvent.change(screen.getByLabelText("Mês *"), {
+      target: { value: "2025-01" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Executar consulta" }));
+
+    await waitFor(() => expect(client.predefined.execute).toHaveBeenCalledWith(
+      7, { month: "2025-01" }, "conversation-1",
+    ));
+  });
+
   it("searches on submit without duplicate requests and renders an empty result", async () => {
     const empty: PredefinedListResponse = { queries: [] };
     const list = vi

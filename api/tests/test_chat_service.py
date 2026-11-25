@@ -724,6 +724,33 @@ def test_stored_execution_is_read_only_bounded_and_records_history():
     assert repository.update_calls[-1][3] == "Aqui estão os resultados da consulta:"
 
 
+def test_stored_shared_query_reexecutes_with_original_parameters():
+    sql = "SELECT total FROM sales WHERE status = :status"
+    repository = MemoryConversationRepository(
+        [
+            _user_message(),
+            _assistant_message(
+                sql=sql,
+                metadata={"source": "predefined", "parameters": {"status": "paid"}},
+            ),
+        ]
+    )
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame([{"total": 12}])
+    history = Mock()
+
+    result = _service(
+        repository, FakeTranslator(), database, history
+    ).execute_stored_query(USER_ID, CONVERSATION_ID, REQUEST_ID)
+
+    assert result.result["rows"] == [{"total": 12}]
+    database.execute_read_only_query.assert_called_once_with(sql, {"status": "paid"})
+    history.record.assert_called_once_with(
+        USER_ID, "Show revenue", sql, "predefined", {"status": "paid"},
+        session_id=CONVERSATION_ID,
+    )
+
+
 def test_stored_execution_records_history_using_real_repository():
     conversations = MemoryConversationRepository(
         [_user_message(), _assistant_message()]

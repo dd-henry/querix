@@ -13,6 +13,7 @@ import {
 export interface PredefinedQueriesPanelProps {
   client: ApiClient;
   role: UserRole;
+  conversationId?: string;
   onExecutionResult: (response: PredefinedExecutionResponse) => void;
 }
 
@@ -71,6 +72,7 @@ function parametersForRequest(value: string): Array<Record<string, unknown>> {
 export function PredefinedQueriesPanel({
   client,
   role,
+  conversationId,
   onExecutionResult,
 }: PredefinedQueriesPanelProps) {
   const [queries, setQueries] = useState<PredefinedQuery[]>([]);
@@ -161,7 +163,9 @@ export function PredefinedQueriesPanel({
     setParameterError("");
     setError("");
     try {
-      const response = await client.predefined.execute(query.id, values);
+      const response = conversationId
+        ? await client.predefined.execute(query.id, values, conversationId)
+        : await client.predefined.execute(query.id, values);
       onExecutionResult(response);
       setFeedback("Consulta compartilhada executada.");
       setParameterQueryId(null);

@@ -95,6 +95,57 @@ class ConversationRepository:
             },
         )
 
+    def record_predefined_execution(
+        self, user_id, session_id, request_id, prompt, sql, parameters
+    ):
+        metadata = json.dumps(
+            {"source": "predefined", "parameters": parameters}, ensure_ascii=False
+        )
+        count = self.db.execute_command(
+            """
+            WITH target AS (
+                INSERT INTO ask_sql_conversation_sessions (id, user_id, title)
+                VALUES (CAST(:session_id AS uuid), CAST(:user_id AS uuid), :title)
+                ON CONFLICT (id) DO UPDATE
+                SET last_activity = GREATEST(
+                    ask_sql_conversation_sessions.last_activity, NOW()
+                )
+                WHERE ask_sql_conversation_sessions.user_id = EXCLUDED.user_id
+                RETURNING id
+            ), user_message AS (
+                INSERT INTO ask_sql_conversation_messages
+                    (session_id, request_id, role, content)
+                SELECT id, CAST(:request_id AS uuid), 'user', :prompt
+                FROM target
+                RETURNING session_id
+            ), assistant_message AS (
+                INSERT INTO ask_sql_conversation_messages
+                    (session_id, request_id, role, content, sql, metadata)
+                SELECT session_id, CAST(:request_id AS uuid), 'assistant',
+                       :content, :sql, CAST(:metadata AS jsonb)
+                FROM user_message
+                RETURNING session_id
+            )
+            INSERT INTO ask_sql_query_history
+                (user_id, prompt, sql, parameters, source, session_id)
+            SELECT CAST(:user_id AS uuid), :prompt, :sql,
+                   CAST(:parameters AS jsonb), 'predefined', session_id
+            FROM assistant_message
+            """,
+            {
+                "user_id": str(user_id),
+                "session_id": str(session_id),
+                "request_id": str(request_id),
+                "title": prompt[:80],
+                "prompt": prompt,
+                "content": "Resultado da consulta compartilhada.",
+                "sql": sql,
+                "metadata": metadata,
+                "parameters": json.dumps(parameters, ensure_ascii=False),
+            },
+        )
+        return count == 1
+
     def append_message(
         self,
         user_id,

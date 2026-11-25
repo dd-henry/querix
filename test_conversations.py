@@ -52,6 +52,36 @@ def test_create_with_user_message_rejects_empty_prompt(db):
     db.execute_command.assert_not_called()
 
 
+def test_shared_execution_records_scoped_messages_and_history_atomically(db):
+    db.execute_command.return_value = 1
+    saved = ConversationRepository(db).record_predefined_execution(
+        "user-id", "session-id", "request-id", "Vendas",
+        "SELECT total FROM sales WHERE status = :status", {"status": "paid"},
+    )
+
+    assert saved is True
+    db.execute_command.assert_called_once()
+    sql, parameters = db.execute_command.call_args.args
+    assert "ask_sql_conversation_sessions.user_id = EXCLUDED.user_id" in sql
+    assert "FROM user_message" in sql
+    assert "FROM assistant_message" in sql
+    assert "ask_sql_query_history" in sql
+    assert parameters["user_id"] == "user-id"
+    assert parameters["session_id"] == "session-id"
+    assert json.loads(parameters["metadata"]) == {
+        "source": "predefined", "parameters": {"status": "paid"}
+    }
+    assert json.loads(parameters["parameters"]) == {"status": "paid"}
+    assert "rows" not in parameters
+
+
+def test_shared_execution_cannot_record_into_another_users_session(db):
+    db.execute_command.return_value = 0
+    assert not ConversationRepository(db).record_predefined_execution(
+        "user-id", "session-id", "request-id", "Vendas", "SELECT 1", {}
+    )
+
+
 def test_append_message_is_owner_scoped_and_idempotent(db):
     repository = ConversationRepository(db)
 

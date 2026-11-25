@@ -208,6 +208,8 @@ histórico e favoritos são vinculados ao UUID do usuário autenticado.
 As mensagens, os metadados e o SQL permitem retomar conversas; as linhas dos
 resultados não são guardadas na conversa. Ao reexecutar, o usuário obtém dados
 atuais, que podem ser diferentes dos resultados anteriores.
+Consultas compartilhadas executadas também são registradas no histórico e na
+conversa ativa, com seus parâmetros; se não houver conversa, uma é criada.
 
 ## Estrutura do projeto
 

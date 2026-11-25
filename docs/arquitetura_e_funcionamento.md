@@ -52,6 +52,7 @@ A comunicação com o banco de dados ocorre através do padrão *Adapter*.
 - O histórico `ask_sql_query_history` permanece separado e tem um `session_id` anulável com exclusão em cascata. Assim, consultas executadas podem ser acessadas pelo histórico próprio, enquanto registros legados sem sessão continuam sem vínculo.
 - No primeiro uso do histórico em cada processo da API, os repositórios de conversas e histórico inicializam suas tabelas e índices e adicionam a coluna `session_id` caso esteja ausente. Essa inicialização não remove registros antigos; o usuário do banco interno precisa de permissões para essas operações de schema.
 - Linhas retornadas pelo banco não são gravadas nessas tabelas. Ao reabrir uma conversa, o SQL aparece sem resultados persistidos e o frontend oferece a ação `Reexecutar consulta` para buscar dados atuais.
+- Consultas compartilhadas bem-sucedidas registram mensagens e histórico na conversa ativa (ou em uma nova), preservando SQL e parâmetros sem armazenar as linhas retornadas.
 - A listagem remove sessões não favoritas sem atividade há pelo menos um ano antes de apresentar as conversas do proprietário. Sessões favoritas não entram nessa limpeza.
 
 ## Fluxo Completo de Operação

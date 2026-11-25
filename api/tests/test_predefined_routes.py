@@ -8,7 +8,9 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from api.config import Settings
 from api.dependencies import (
+    get_conversation_repository,
     get_predefined_query_repository,
+    get_query_history_repository,
     get_target_db_adapter,
     require_approved_user,
 )
@@ -64,9 +66,106 @@ def _client(repository, database=None, role="user"):
         lambda: repository
     )
     app.dependency_overrides[require_approved_user] = lambda: _profile(role)
+    app.dependency_overrides[get_conversation_repository] = lambda: Mock()
+    app.dependency_overrides[get_query_history_repository] = lambda: Mock()
     if database is not None:
         app.dependency_overrides[get_target_db_adapter] = lambda: database
     return TestClient(app)
+
+
+def test_execution_saves_conversation_and_history_without_result_data():
+    repository = Mock()
+    repository.get.return_value = _query()
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame([{"total": 12}])
+    client = _client(repository, database)
+    conversations = Mock()
+    conversations.record_predefined_execution.return_value = True
+    client.app.dependency_overrides[get_conversation_repository] = lambda: conversations
+    session_id = "00000000-0000-0000-0000-000000000123"
+
+    response = client.post(
+        "/api/predefined-queries/7/execute",
+        json={"parameters": {"status": "paid"}, "conversation_id": session_id},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["conversation_id"] == session_id
+    assert payload["name"] == "Revenue"
+    assert payload["result"]["rows"] == [{"total": 12}]
+    args = conversations.record_predefined_execution.call_args.args
+    assert str(args[0]) == USER_ID
+    assert str(args[1]) == session_id
+    assert str(args[2]) == payload["request_id"]
+    assert args[3:] == (
+        "Revenue", "SELECT total FROM sales WHERE status = :status", {"status": "paid"}
+    )
+
+
+def test_execution_reports_persistence_failure():
+    repository = Mock()
+    repository.get.return_value = _query()
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame()
+    client = _client(repository, database)
+    conversations = Mock()
+    conversations.record_predefined_execution.side_effect = RuntimeError("storage unavailable")
+    client.app.dependency_overrides[get_conversation_repository] = lambda: conversations
+
+    response = client.post(
+        "/api/predefined-queries/7/execute",
+        json={"parameters": {"status": "paid"}},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "storage_unavailable"
+
+
+def test_execution_rejects_conversation_owned_by_another_user():
+    repository = Mock()
+    repository.get.return_value = _query()
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame()
+    client = _client(repository, database)
+    conversations = Mock()
+    conversations.record_predefined_execution.return_value = False
+    client.app.dependency_overrides[get_conversation_repository] = lambda: conversations
+
+    response = client.post(
+        "/api/predefined-queries/7/execute",
+        json={
+            "parameters": {"status": "paid"},
+            "conversation_id": "00000000-0000-0000-0000-000000000123",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
+
+
+def test_empty_result_creates_a_conversation_and_is_recorded():
+    repository = Mock()
+    repository.get.return_value = _query()
+    database = Mock()
+    database.execute_read_only_query.return_value = pd.DataFrame(columns=["total"])
+    client = _client(repository, database)
+    conversations = Mock()
+    conversations.record_predefined_execution.return_value = True
+    client.app.dependency_overrides[get_conversation_repository] = lambda: conversations
+
+    response = client.post(
+        "/api/predefined-queries/7/execute",
+        json={"parameters": {"status": "paid"}},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["result"]["rows"] == []
+    assert payload["result"]["row_count"] == 0
+    args = conversations.record_predefined_execution.call_args.args
+    assert str(args[1]) == payload["conversation_id"]
+    assert str(args[2]) == payload["request_id"]
 
 
 def test_search_returns_owner_favorite_state_and_trimmed_search():

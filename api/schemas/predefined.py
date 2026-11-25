@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -61,6 +62,7 @@ class PredefinedQueryExecuteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     parameters: Dict[str, Any] = Field(default_factory=dict)
+    conversation_id: Optional[UUID] = None
 
 
 class PredefinedQueryMutationResponse(BaseModel):
@@ -73,4 +75,8 @@ class PredefinedQueryExecutionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query_id: int
+    conversation_id: UUID
+    request_id: UUID
+    name: str
+    sql: str
     result: Dict[str, Any]

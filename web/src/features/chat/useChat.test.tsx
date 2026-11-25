@@ -147,6 +147,16 @@ function Harness({
       <button onClick={() => void chat.openConversation("conversation-1")}>
         open
       </button>
+      <button onClick={() => chat.appendPredefinedResult({
+        query_id: 7,
+        conversation_id: "conversation-1",
+        request_id: "request-1",
+        name: "Revenue",
+        sql: "SELECT 1",
+        result: { columns: ["total"], rows: [{ total: 12 }], row_count: 1, truncated: false },
+      })}>
+        append-shared
+      </button>
     </>
   );
 }
@@ -211,6 +221,36 @@ afterEach(() => {
 });
 
 describe("useChat", () => {
+  it("uses the persisted conversation and request for a shared result", () => {
+    render(<Harness client={createClient()} />);
+    fireEvent.click(screen.getByRole("button", { name: "append-shared" }));
+
+    expect(screen.getByTestId("conversation")).toHaveTextContent("conversation-1");
+    expect(readMessages()).toEqual([
+      expect.objectContaining({ requestId: "request-1", role: "user", content: "Revenue" }),
+      expect.objectContaining({
+        requestId: "request-1",
+        role: "assistant",
+        sql: "SELECT 1",
+        result: expect.objectContaining({ rows: [{ total: 12 }] }),
+      }),
+    ]);
+  });
+
+  it("restores shared SQL without results and offers re-execution", async () => {
+    const detail = restoredConversation();
+    detail.messages[1].metadata = { source: "predefined", parameters: { status: "paid" } };
+    const client = createClient();
+    vi.mocked(client.conversations.get).mockResolvedValue(detail);
+    render(<Harness client={client} />);
+    fireEvent.click(screen.getByRole("button", { name: "open" }));
+
+    await waitFor(() => expect(readMessages()[1]).toEqual(expect.objectContaining({
+      sql: "SELECT 1", reexecuteAvailable: true,
+    })));
+    expect(readMessages()[1]).not.toHaveProperty("result");
+  });
+
   it("creates one user message and one pending assistant for a send", async () => {
     const request = deferred<ChatResponse>();
     const translate = vi.fn().mockReturnValue(request.promise);

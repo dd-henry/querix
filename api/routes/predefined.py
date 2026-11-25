@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict, List
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import ValidationError
@@ -8,7 +9,9 @@ from api.app import APIError
 from api.config import Settings
 from api.dependencies import (
     get_api_settings,
+    get_conversation_repository,
     get_predefined_query_repository,
+    get_query_history_repository,
     get_target_db_adapter,
     require_approved_user,
     require_roles,
@@ -25,7 +28,9 @@ from api.schemas.predefined import (
 )
 from api.serializers.results import serialize_dataframe
 from database.postgres import PostgresAdapter
+from database.conversations import ConversationRepository
 from database.predefined_queries import PredefinedQueryRepository
+from database.query_history import QueryHistoryRepository
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +250,8 @@ def execute_predefined_query(
     ),
     database: PostgresAdapter = Depends(get_target_db_adapter),
     settings: Settings = Depends(get_api_settings),
+    conversations: ConversationRepository = Depends(get_conversation_repository),
+    _history: QueryHistoryRepository = Depends(get_query_history_repository),
 ) -> PredefinedQueryExecutionResponse:
     user_id = _owner_id(profile)
     query = _owned_query(repository, user_id, query_id)
@@ -277,7 +284,26 @@ def execute_predefined_query(
             "database_unavailable",
             "The database is unavailable.",
         ) from exc
+    conversation_id = payload.conversation_id or uuid4()
+    request_id = uuid4()
+    try:
+        saved = conversations.record_predefined_execution(
+            user_id, conversation_id, request_id, query.name, sql, parameters
+        )
+    except Exception as exc:
+        logger.exception("Could not save shared query execution.")
+        raise APIError(
+            503,
+            "storage_unavailable",
+            "A consulta foi executada, mas não foi salva no histórico e na conversa.",
+        ) from exc
+    if not saved:
+        raise APIError(404, "not_found", "Conversation not found.")
     return PredefinedQueryExecutionResponse(
         query_id=query.id,
+        conversation_id=conversation_id,
+        request_id=request_id,
+        name=query.name,
+        sql=sql,
         result=result,
     )

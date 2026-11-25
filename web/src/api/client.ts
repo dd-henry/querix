@@ -158,6 +158,10 @@ export interface PredefinedWriteInput {
 
 export interface PredefinedExecutionResponse {
   query_id: number;
+  conversation_id: string;
+  request_id: string;
+  name: string;
+  sql: string;
   result: ChatResultPayload;
 }
 
@@ -548,13 +552,14 @@ export function createApiClient({
       execute: async (
         queryId: number,
         parameters: Record<string, unknown>,
+        conversationId?: string,
       ) =>
         requireResponse(
           await request<PredefinedExecutionResponse>(
             `/api/predefined-queries/${queryId}/execute`,
             {
               method: "POST",
-              body: { parameters },
+              body: { parameters, conversation_id: conversationId },
             },
           ),
           "shared query execution",

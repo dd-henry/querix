@@ -57,6 +57,7 @@ export function AuthenticatedApp({
   onSignOut,
 }: AuthenticatedAppProps) {
   const [activePanel, setActivePanel] = useState<ActivePanel>("chat");
+  const [conversationRefreshKey, setConversationRefreshKey] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
   const chat = useChat({ client, reviewMode: false });
   const copy = panelCopy[activePanel];
@@ -100,8 +101,10 @@ export function AuthenticatedApp({
       <PredefinedQueriesPanel
         client={client}
         role={profile.role}
+        conversationId={chat.conversationId}
         onExecutionResult={(response) => {
           chat.appendPredefinedResult(response);
+          setConversationRefreshKey((current) => current + 1);
           setActivePanel("chat");
         }}
       />
@@ -128,6 +131,7 @@ export function AuthenticatedApp({
           <ConversationSidebar
             client={client}
             selectedConversationId={chat.conversationId}
+            refreshKey={conversationRefreshKey}
             onSelect={(conversationId) => {
               chat.openConversation(conversationId);
               selectPanel("chat", closeSidebar);

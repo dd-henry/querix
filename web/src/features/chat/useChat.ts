@@ -696,17 +696,26 @@ export function useChat({
 
   const appendPredefinedResult = useCallback(
     (response: PredefinedExecutionResponse) => {
-      const activeConversationId =
-        conversationIdRef.current ?? createId();
-      conversationIdRef.current = activeConversationId;
-      setConversationId(activeConversationId);
+      const activeConversationId = conversationIdRef.current;
+      if (activeConversationId && activeConversationId !== response.conversation_id) {
+        return;
+      }
+      conversationIdRef.current = response.conversation_id;
+      setConversationId(response.conversation_id);
       setMessages((current) => [
         ...current,
         {
-          requestId: createId(),
+          requestId: response.request_id,
+          role: "user",
+          content: response.name,
+          warnings: [],
+        },
+        {
+          requestId: response.request_id,
           role: "assistant",
           content: "Resultado da consulta compartilhada.",
           status: "executed",
+          sql: response.sql,
           result: response.result,
           retryable: false,
           warnings: [],

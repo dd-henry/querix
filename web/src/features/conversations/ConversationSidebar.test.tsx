@@ -102,6 +102,15 @@ function createClient(
 }
 
 describe("ConversationSidebar", () => {
+  it("refreshes the list after a shared query is saved", async () => {
+    const list = vi.fn().mockResolvedValue(conversations);
+    const client = createClient(list);
+    const { rerender } = render(<ConversationSidebar client={client} refreshKey={0} />);
+    await screen.findByRole("button", { name: "Abrir conversa Pedidos em aberto" });
+    rerender(<ConversationSidebar client={client} refreshKey={1} />);
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+  });
+
   it("renders grouped conversations and requests the browser timezone", async () => {
     const list = vi.fn().mockResolvedValue(conversations);
     render(<ConversationSidebar client={createClient(list)} />);

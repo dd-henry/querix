@@ -10,6 +10,7 @@ import {
 export interface ConversationSidebarProps {
   client: ApiClient;
   selectedConversationId?: string;
+  refreshKey?: number;
   onSelect?: (conversationId: string) => void;
   onNewConversation?: () => void;
   onCloseMobile?: () => void;
@@ -52,6 +53,7 @@ function removeConversation(
 export function ConversationSidebar({
   client,
   selectedConversationId,
+  refreshKey,
   onSelect,
   onNewConversation,
   onCloseMobile,
@@ -86,7 +88,7 @@ export function ConversationSidebar({
 
   useEffect(() => {
     void loadConversations();
-  }, [loadConversations]);
+  }, [loadConversations, refreshKey]);
 
   useEffect(() => {
     setSelectedId(selectedConversationId ?? null);
