@@ -32,7 +32,7 @@ textarea {
 }
 
 .app-shell--authenticated {
-  grid-template-columns: minmax(15rem, 18rem) 1fr;
+  grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
   place-items: stretch;
   padding: 0;
 }
@@ -255,7 +255,7 @@ textarea {
 }
 
 .authenticated-panel {
-  width: min(100%, 72rem);
+  width: min(100%, 84rem);
   min-width: 0;
   margin: 0 auto;
 }
@@ -614,17 +614,22 @@ select:disabled {
 
 .chat-workspace {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   min-height: 100%;
 }
 
 .message-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 0.75rem;
 }
 
 .message-list__items {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 0.9rem;
 }
 
@@ -783,6 +788,8 @@ select:disabled {
 .chat-interpretation,
 .chat-diagnostics {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 0.75rem;
   padding: 1rem;
   border: 1px solid #4b5563;
@@ -806,6 +813,8 @@ select:disabled {
   border-radius: 0.55rem;
   background: #111827;
   color: #dbeafe;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .chat-review__actions {
@@ -819,6 +828,56 @@ select:disabled {
   justify-content: space-between;
   gap: 1rem;
   color: #cbd5e1;
+}
+
+.chat-result,
+.chat-result__sql {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.chat-result__sql summary {
+  width: fit-content;
+  color: #bfdbfe;
+  cursor: pointer;
+}
+
+.chat-result__sql pre {
+  max-height: 20rem;
+  overflow: auto;
+  margin: 0.6rem 0;
+  padding: 0.9rem;
+  border: 1px solid #475569;
+  border-radius: 0.55rem;
+  background: #111827;
+  color: #dbeafe;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-result__summary p {
+  margin: 0 0 0.4rem;
+}
+
+.chat-result__summary button {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #64748b;
+  border-radius: 0.45rem;
+  color: #dbeafe;
+  background: #334155;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.chat-result__summary button:hover {
+  background: #475569;
+}
+
+.chat-result__summary button:focus-visible,
+.chat-result__sql summary:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
 }
 
 .chat-insights {
@@ -948,6 +1007,8 @@ select:disabled {
 
 .chat-insight {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 0.65rem;
   padding: 0.9rem;
   border: 1px solid #3b82f6;
@@ -966,6 +1027,8 @@ select:disabled {
 }
 
 .chat-result__table-wrapper {
+  min-width: 0;
+  max-width: 100%;
   overflow: auto;
   border: 1px solid #374151;
   border-radius: 0.55rem;

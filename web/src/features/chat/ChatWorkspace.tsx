@@ -240,7 +240,11 @@ function SummaryView({ summary }: { summary: string }) {
   return (
     <div className="chat-result__summary">
       <p>{expanded ? summary : `${preview}…`}</p>
-      <button type="button" onClick={() => setExpanded((current) => !current)}>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+      >
         {expanded ? "Mostrar menos" : "Ler resumo completo"}
       </button>
     </div>

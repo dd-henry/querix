@@ -48,6 +48,68 @@ async function openChat(page: Page) {
   ).toBeVisible();
 }
 
+for (const viewport of [
+  { width: 1680, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  test(`keeps chat width stable for long SQL at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await mockAuthenticatedPage(page);
+    const sql = `SELECT ${"long_identifier".repeat(150)} FROM sales`;
+    const summary = `${"Resumo da consulta. ".repeat(20)}Fim.`;
+    await page.route("**/api/chat/translate", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...reviewResponse,
+          status: "executed",
+          content: "Resultado da consulta.",
+          sql,
+          summary,
+          result: {
+            columns: ["label", "total"],
+            rows: [{ label: "Janeiro", total: 12 }],
+            row_count: 1,
+            truncated: false,
+          },
+        }),
+      });
+    });
+    await openChat(page);
+    await page.getByLabel("Pergunte sobre seus dados").fill("Total de vendas");
+    await page.getByRole("button", { name: "Enviar pergunta" }).click();
+    const result = page.getByRole("region", { name: "Resultados da consulta" });
+    await expect(result).toBeVisible();
+    const panel = page.locator(".authenticated-panel");
+    const table = result.getByRole("table");
+    const measure = async () => ({
+      panel: await panel.boundingBox(),
+      result: await result.boundingBox(),
+      table: await table.boundingBox(),
+      documentWidth: await page.evaluate(() => document.documentElement.scrollWidth),
+    });
+    const before = await measure();
+    await result.getByText("Ver SQL executado").click();
+    await expect(result.locator("pre")).toHaveText(sql);
+    const after = await measure();
+    expect(before.panel).not.toBeNull();
+    expect(after.panel!.width).toBeCloseTo(before.panel!.width, 1);
+    expect(after.panel!.x).toBeCloseTo(before.panel!.x, 1);
+    expect(after.result!.width).toBeCloseTo(before.result!.width, 1);
+    expect(after.table!.width).toBeCloseTo(before.table!.width, 1);
+    expect(after.documentWidth).toBeLessThanOrEqual(viewport.width);
+    expect(await result.locator("pre").evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+
+    const expand = result.getByRole("button", { name: "Ler resumo completo" });
+    await expect(expand).toHaveAttribute("aria-expanded", "false");
+    await expect(expand).toHaveCSS("background-color", "rgb(51, 65, 85)");
+    await expand.click();
+    await expect(result.getByRole("button", { name: "Mostrar menos" })).toHaveAttribute("aria-expanded", "true");
+    await expect(result).toContainText(summary);
+  });
+}
+
 test("keeps one user and assistant message during a double-clicked send", async ({
   page,
 }) => {
