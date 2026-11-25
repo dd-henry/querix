@@ -1,274 +1,452 @@
-# Ask-SQL 🤖
+<div align="center">
 
-> Converse com seu banco de dados usando linguagem natural.
+# Ask SQL
 
-O **Ask-SQL** é uma ferramenta interativa que traduz perguntas em linguagem natural para consultas SQL, permitindo que você explore seus dados sem precisar escrever código SQL. A aplicação pode utilizar um modelo local via **Ollama**, o **Gemini** via Google AI Studio ou qualquer modelo compatível disponível no **OpenRouter**, conecta-se a um banco de dados **PostgreSQL** para executar as consultas e exibe os resultados de forma amigável.
+**Perguntas em linguagem natural. Consultas SQL. Dados para apoiar decisões.**
 
-## ✨ Recursos
+Uma aplicação web que utiliza modelos de linguagem para transformar perguntas
+em consultas PostgreSQL e apresentar os resultados de forma interativa.
 
-*   **Tradução de Linguagem Natural para SQL:** Faça perguntas como "quantos usuários se cadastraram no último mês?" e obtenha a consulta SQL correspondente.
-*   **Execução Direta no Banco de Dados:** Conecta-se ao seu banco de dados PostgreSQL para executar as consultas geradas.
-*   **Consultas Compartilhadas:** Desenvolvedores e DBAs podem cadastrar, editar e excluir consultas somente de leitura para toda a equipe, com tags, parâmetros e favoritos por usuário.
-*   **Histórico personalizado de consultas:** Cada usuário pode consultar, fixar, excluir e executar novamente consultas anteriores sem misturar dados entre contas.
-*   **Conversas privadas e retomáveis:** Cada usuário aprovado pode iniciar conversas separadas, retomar sessões anteriores e favoritar as mais importantes.
-*   **Arquitetura Modular:** Código organizado em componentes com responsabilidades claras, facilitando a manutenção e extensão.
-*   **Engenharia de Prompt Avançada:** Utiliza o esquema atual, os relacionamentos, DDLs e regras de negócio para gerar planos sem SQL específico de um nicho.
-*   **Suíte de Testes Abrangente:** Inclui testes unitários e de integração para garantir a qualidade e a confiabilidade do código.
+`React` · `TypeScript` · `FastAPI` · `PostgreSQL` · `Supabase Auth` · `LLM`
 
-## 🏗️ Arquitetura e Fluxo de Dados
+</div>
 
-O projeto é construído com uma arquitetura modular, garantindo que cada componente tenha uma única responsabilidade.
+---
+
+## Sumário
+
+- [Visão geral](#visão-geral)
+- [Funcionalidades](#funcionalidades)
+- [Como funciona](#como-funciona)
+- [Arquitetura](#arquitetura)
+- [Decisões arquiteturais](#decisões-arquiteturais)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Executando localmente](#executando-localmente)
+- [Configuração](#configuração)
+- [Publicação com Docker e Dokploy](#publicação-com-docker-e-dokploy)
+- [Testes e avaliação](#testes-e-avaliação)
+- [Segurança, privacidade e limitações](#segurança-privacidade-e-limitações)
+- [Documentação complementar](#documentação-complementar)
+
+## Visão geral
+
+Consultar dados em um banco relacional costuma exigir conhecimento de SQL, da
+estrutura das tabelas e das regras de negócio. O Ask SQL procura reduzir essa
+barreira: a pessoa descreve o que deseja saber e a aplicação utiliza um modelo
+de linguagem (*LLM*) para planejar e gerar uma consulta SQL.
+
+O SQL é produzido com base no esquema do banco consultado e em contextos
+opcionais fornecidos pela organização. O resultado pode ser apresentado em
+tabela, com resumo, gráfico e exportação CSV, conforme os dados e a resposta
+gerada.
+
+> **Exemplo:** “Quais foram as vendas do mês de agosto?” pode dar origem a uma
+> consulta agregada sobre os dados disponíveis. A consulta e sua interpretação
+> dependem do esquema, do contexto e do modelo configurado.
+
+O projeto é uma ferramenta de apoio à análise, **não uma garantia de correção
+dos resultados**. Consultas e conclusões devem ser revisadas, especialmente
+quando utilizadas em decisões importantes.
+
+## Funcionalidades
+
+| Recurso | Descrição |
+|---|---|
+| Perguntas em linguagem natural | Tradução de perguntas para SQL usando Ollama, Gemini ou OpenRouter. |
+| Revisão do SQL | Possibilidade de revisar a consulta antes de executá-la; a execução automática também pode ser escolhida. |
+| Resultados | Exibição em tabela, resumo breve, gráficos quando aplicáveis e exportação CSV. |
+| Conversas | Retomada de conversas, contexto de turnos anteriores e favoritos individuais. |
+| Histórico | Listagem, fixação, exclusão e reexecução de consultas por usuário. |
+| Consultas compartilhadas | Catálogo de consultas cadastradas com busca, favoritos individuais e parâmetros. |
+| Administração | Aprovação de usuários, definição de papéis e configuração global do banco consultado. |
+| Contexto adicional | Inclusão opcional de DDLs e regras de negócio para orientar o modelo. |
+
+## Como funciona
 
 ```mermaid
-graph TD
-    A[Usuário via React] --> B(web/);
-    B --> N(FastAPI api/);
-    N --> C{Prompter};
-    D[Schema e relacionamentos do Banco] --> C;
-    E[Regras de Negócio] --> C;
-    C --> F{Translator (Ollama, Gemini ou OpenRouter)};
-    F --> G[Consulta SQL Gerada];
-    G --> H{Executor (Postgres)};
-    H --> I[Resultados (DataFrame)];
-    I --> B;
-    B --> A;
+sequenceDiagram
+    actor U as Usuário
+    participant W as Frontend React
+    participant A as API FastAPI
+    participant I as Banco interno
+    participant D as Banco consultado
+    participant L as Provedor LLM
+
+    U->>W: Faz uma pergunta
+    W->>A: Envia pergunta e contexto da conversa
+    A->>I: Consulta e registra mensagens
+    A->>D: Obtém esquema e relacionamentos
+    A->>L: Envia contexto para planejamento
+    L-->>A: Retorna plano analítico em JSON
+    A->>A: Valida o plano contra o esquema
+    A->>L: Solicita SQL para o plano validado
+    L-->>A: Retorna SQL e metadados
+    A-->>W: Apresenta SQL para revisão, quando habilitada
+    U->>W: Autoriza execução
+    W->>A: Solicita execução
+    A->>D: Executa consulta em transação somente leitura
+    D-->>A: Retorna dados
+    A->>L: Solicita resumo do resultado
+    A->>I: Registra consulta no histórico
+    A-->>W: Retorna dados, resumo e avisos
+    W-->>U: Exibe resultado e opções de exportação
 ```
 
-1.  **Interface web (`web/`):** Frontend React + TypeScript + Vite. Mantém o estado do chat no navegador e chama a API por cookie de sessão.
-2.  **API (`api/`):** Backend FastAPI que expõe autenticação, conversas, chat, histórico, consultas compartilhadas, administração e sincronização do schema.
-3.  **Engenharia de Prompt (`core/prompter.py`):** Monta o "System Prompt" com estratégias analíticas genéricas, data de referência, regras de negócio, DDLs, tabelas, colunas e relacionamentos atuais. O código não contém SQL de um domínio específico.
-4.  **Motor de Tradução (`core/translator.py`):** Comunica-se com o provedor LLM configurado em todas as perguntas, enviando o contexto da conversa e tratando a resposta estruturada sem interceptar vocabulário de negócio. O provedor é selecionado por `LLM_PROVIDER` (`local` para Ollama, `google` para Gemini ou `openrouter` para OpenRouter).
-5.  **Bancos de Dados (`database/`):** O `DATABASE_URL` aponta para o banco interno, usado por autenticação, perfis, conversas, histórico e catálogo. O schema e a execução das consultas usam um banco-alvo PostgreSQL separado, configurável por um admin na tela **Configurações**.
+O diagrama representa o caminho com revisão habilitada. Sem revisão, o fluxo
+prossegue para a execução automaticamente. A aplicação também pode executar
+consultas complementares, quando propostas e validadas, e tentar reparar uma
+consulta após falha do banco.
 
-## 🚀 Instalação e Configuração
+### Etapas principais
 
-Siga os passos abaixo para configurar o ambiente de desenvolvimento.
+1. **Contexto:** a API coleta o esquema do banco consultado e combina essas
+   informações com instruções, data de referência, DDLs e regras opcionais.
+2. **Planejamento:** o LLM retorna uma representação estruturada da intenção,
+   tabelas, dimensões, métricas e filtros. O plano é validado contra o esquema.
+3. **Geração:** o LLM recebe o plano e produz SQL e metadados. O sistema valida
+   a forma do SQL antes de permitir sua execução.
+4. **Revisão e execução:** o SQL pode ser revisado na interface e é executado
+   pelo PostgreSQL em uma transação somente leitura.
+5. **Apresentação:** os dados retornados são serializados e apresentados ao
+   usuário. O LLM tenta produzir um resumo; se essa etapa falhar, a aplicação
+   utiliza um resumo neutro baseado na quantidade de linhas.
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone <url-do-seu-repositorio>
-    cd ask-sql
-    ```
+O sistema utiliza até seis turnos anteriores concluídos da conversa como
+contexto. Ao reabrir uma conversa, as mensagens e o SQL são recuperados, mas
+as linhas dos resultados não são persistidas na conversa: é necessário
+reexecutar a consulta para obter os dados atuais.
 
-2.  **Crie e ative um ambiente virtual:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate
-    ```
+## Arquitetura
 
-3.  **Instale as dependências:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Configure as variáveis de ambiente:**
-    Crie um arquivo `.env` na raiz do projeto e adicione as credenciais do seu banco de dados e a URL do Ollama.
-    ```env
-    DB_HOST=localhost
-    DB_PORT=5432
-    DB_USER=seu_usuario
-    DB_PASSWORD=sua_senha
-    DB_NAME=seu_banco
-    OLLAMA_API_URL=http://localhost:11434
-    LLM_PROVIDER=local
-    OLLAMA_MODEL=qwen2.5-coder:7b
-    GEMINI_MODEL=gemini-flash-latest
-    GEMINI_MAX_RETRIES=2
-    GEMINI_API_KEY=
-    OPENROUTER_MODEL=openai/gpt-4o-mini
-    OPENROUTER_MAX_RETRIES=2
-    OPENROUTER_API_KEY=
-    LLM_REQUEST_TIMEOUT_SECONDS=180
-    ASK_SQL_USER=nome.do.usuario
-    ASK_SQL_ROLE=viewer
-    ```
-
-`LLM_PROVIDER=local` mantém o fluxo atual com Ollama. Para testar o Gemini, use
-`LLM_PROVIDER=google`, informe `GEMINI_API_KEY` e reinicie a API. A chave deve
-permanecer somente no ambiente do backend, nunca no frontend ou em commits.
-Falhas transitórias do Gemini recebem até `GEMINI_MAX_RETRIES` novas tentativas
-com backoff; erros permanentes continuam sendo apresentados como falha do
-provedor.
-
-Para testar um modelo do OpenRouter, use `LLM_PROVIDER=openrouter`, informe
-`OPENROUTER_API_KEY` e o identificador do modelo em `OPENROUTER_MODEL`. O
-identificador usa o formato publicado pelo OpenRouter, como
-`openai/gpt-4o-mini`. A chave permanece somente no ambiente do backend.
-Cada chamada ao provedor usa 180 segundos por padrão; ajuste
-`LLM_REQUEST_TIMEOUT_SECONDS` se o modelo ou a rede exigirem mais tempo.
-Falhas transitórias respeitam o cabeçalho `Retry-After` do OpenRouter antes de
-tentar novamente, evitando novas chamadas durante uma janela de rate limit.
-
-Configure também o Supabase Auth:
-
-```env
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua_chave_anon_publica
+```mermaid
+flowchart LR
+    U[Usuário] --> W[Frontend<br/>React + TypeScript]
+    W -->|HTTP / JSON| A[API<br/>FastAPI]
+    A --> AUTH[Supabase Auth]
+    A --> I[(PostgreSQL<br/>banco interno)]
+    A --> C[Contexto e validação<br/>Prompter · Plano · Translator]
+    C --> L[LLM<br/>Ollama · Gemini · OpenRouter]
+    A --> D[(PostgreSQL<br/>banco consultado)]
+    D -->|Esquema e relacionamentos| C
 ```
 
-O cadastro exige confirmação de email e cria um perfil `pending`. Um admin precisa aprová-lo antes do acesso. Os papéis são `user`, `dev` e `admin`; os status são `pending`, `approved`, `rejected` e `disabled`. A chave `SUPABASE_ANON_KEY` deve permanecer no backend, nunca no navegador.
+| Camada | Responsabilidade |
+|---|---|
+| **Interface** | Interação, estado da conversa, administração e apresentação de resultados. |
+| **API** | Autenticação, autorização, orquestração do chat, rotas e contratos HTTP. |
+| **Núcleo** | Construção de contexto, interpretação temporal, planejamento, validação e integração com LLM. |
+| **Persistência** | Acesso PostgreSQL e repositórios para perfis, conversas, histórico, catálogo e configuração. |
+| **Serviços externos** | Supabase Auth para identidade e um provedor de modelo de linguagem para tradução e resumo. |
 
-**Reset de senha pelo admin:** na tela de administração, o admin clica em "Resetar senha" e recebe uma senha temporária, que repassa ao usuário. Ao entrar com ela, o usuário é obrigado a definir uma nova senha antes de acessar o sistema (sem e-mail). Isso exige `SUPABASE_SERVICE_ROLE_KEY` no backend (nunca no frontend); a coluna `must_change_password` é criada automaticamente em `profiles`.
+### Dois papéis de banco de dados
 
-### Banco interno e banco consultado
+- **Banco interno:** armazena perfis, conversas, histórico, consultas
+  compartilhadas e a configuração cifrada da conexão consultada. É indicado
+  por `DATABASE_URL` ou pelas variáveis `POSTGRES_*` e deve ser compatível com
+  o projeto Supabase utilizado, incluindo o schema `auth`.
+- **Banco consultado:** é o PostgreSQL cujos dados a aplicação analisa. Um
+  administrador configura sua connection string na interface. Essa
+  configuração é **global** e armazenada no banco interno.
 
-A aplicação usa dois papéis de conexão:
+São responsabilidades distintas, mas podem apontar para a mesma instância;
+separá-las ajuda a limitar permissões e a evitar confusão entre dados da
+aplicação e dados analisados. Alterar a conexão global afeta todos os usuários
+que compartilham o mesmo banco interno.
 
-- `DATABASE_URL` (ou as variáveis `POSTGRES_*`) é o **banco interno**. Ele deve estar disponível na inicialização e guarda os perfis, conversas, histórico, favoritos e consultas compartilhadas.
-- O **banco consultado** é um PostgreSQL separado. Um usuário com papel `admin` deve abrir **Configurações**, informar uma connection string completa, como `postgresql://usuario:senha@host:5432/banco`, e clicar em **Testar e salvar conexão**. A API executa `SELECT 1` antes de ativá-la.
+## Decisões arquiteturais
 
-A connection string do banco consultado é armazenada cifrada no banco interno e
-nunca é devolvida ao navegador. A tela mostra somente se existe uma conexão
-global configurada; para substituir a credencial, informe uma nova connection
-string. A configuração é global para todos os usuários aprovados.
+As decisões abaixo descrevem a implementação atual e seus compromissos; não
+representam resultados experimentais ou uma garantia de segurança.
 
-Se nenhum banco consultado estiver configurado, a autenticação, o health check e
-a persistência interna continuam disponíveis. Operações que precisam consultar
-dados — sincronização do schema, chat, rerun do histórico e execução de consultas
-compartilhadas — respondem `503 database_not_configured` até que um admin salve
-uma conexão válida.
+### 1. Separar interface, API e núcleo de tradução
 
-## 🚢 Deploy em produção com Dokploy
+O frontend React concentra a experiência de uso; a API FastAPI expõe os fluxos
+e aplica as regras de acesso; o núcleo concentra prompts, planejamento e
+validação. Essa divisão facilita a evolução e os testes de cada parte, ao custo
+de manter contratos explícitos entre frontend e backend.
 
-O repositório inclui um `docker-compose.yml` para publicar a API e o frontend
-como serviços separados, sem expor as portas internas. No Dokploy, crie uma
-aplicação Compose separada da aplicação existente e use a raiz do repositório
-como caminho de build. Aponte o domínio para o serviço `web` na porta `80`;
-por exemplo, `https://ask-sql.seu-dominio.dev`. O frontend encaminha `/api`
-internamente para o serviço `api` na porta `8000`.
+### 2. Planejar antes de gerar SQL
 
-Configure as variáveis do backend no ambiente do Dokploy, nunca no repositório:
+Em vez de depender apenas de uma resposta SQL livre, o fluxo solicita primeiro
+um plano estruturado e valida referências ao esquema. Isso torna a intenção mais
+observável e permite apontar inconsistências antes da execução. Relações
+inferidas entre colunas existentes podem gerar avisos; a validação não comprova
+que a interpretação de negócio ou o resultado estão corretos.
 
-```env
-WEB_ORIGIN=https://ask-sql.seu-dominio.dev
-COOKIE_SECURE=true
-SESSION_SECRET=um-segredo-aleatorio-com-mais-de-32-caracteres
-DATABASE_URL=postgresql+psycopg2://usuario:senha@host:5432/banco
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua_chave_anon_publica
-LLM_PROVIDER=google
-GEMINI_API_KEY=sua_chave
+### 3. Construir contexto a partir do esquema
+
+Tabelas, colunas e relacionamentos são obtidos do banco consultado, sem um
+gerador específico para um domínio de negócio. Arquivos opcionais em
+`context/ddls/` (`.sql`) e `context/business_rules/` (`.md` ou `.txt`)
+complementam o prompt. A qualidade da resposta continua dependendo da
+qualidade do esquema, do contexto e do modelo.
+
+### 4. Permitir diferentes provedores de LLM
+
+Uma interface comum permite escolher Ollama, Gemini ou OpenRouter por
+configuração, sem mudar o fluxo de uso. Isso permite comparar modelos locais e
+serviços externos, mas introduz diferenças de latência, custo, disponibilidade,
+privacidade e qualidade das respostas.
+
+### 5. Isolar acesso a dados em adaptadores e repositórios
+
+O adaptador PostgreSQL utiliza SQLAlchemy e pandas; repositórios organizam a
+persistência por responsabilidade. Leituras e alterações usam métodos
+separados, e valores são vinculados como parâmetros nas operações dos
+repositórios. Para consultas executadas sobre o banco consultado, a aplicação
+utiliza uma transação somente leitura.
+
+### 6. Autenticar com Supabase e manter sessão na aplicação
+
+O Supabase Auth valida a identidade; um perfil no banco interno determina papel
+e status de aprovação. Após o login, a API emite um cookie de sessão assinado,
+`HttpOnly` e `SameSite=Lax`; `Secure` deve ser habilitado em HTTPS. Conversas,
+histórico e favoritos são vinculados ao UUID do usuário autenticado.
+
+### 7. Preservar SQL e contexto, não as linhas retornadas
+
+As mensagens, os metadados e o SQL permitem retomar conversas; as linhas dos
+resultados não são guardadas na conversa. Ao reexecutar, o usuário obtém dados
+atuais, que podem ser diferentes dos resultados anteriores.
+
+## Estrutura do projeto
+
+```text
+ask-sql/
+├── api/                 # Rotas, autenticação, contratos e serviços FastAPI
+├── core/                # LLM, prompts, planos e validação
+├── database/            # Adaptador PostgreSQL e repositórios
+├── web/                 # Interface React, testes e configuração Vite
+├── evaluation/          # Contrato e métricas para avaliação de consultas
+├── docs/                # Documentação técnica complementar
+├── context/             # DDLs e regras opcionais, quando fornecidos
+├── docker-compose.yml   # Serviços da API e do frontend
+├── requirements.txt     # Dependências Python da aplicação
+└── pytest.ini           # Configuração e marcação dos testes
 ```
 
-Para usar o Ollama instalado no mesmo VPS, mantenha `LLM_PROVIDER=local`,
-configure `OLLAMA_HOST=http://host.docker.internal:11434` e garanta que o
-Ollama aceite conexões do Docker. Para OpenRouter, use
-`LLM_PROVIDER=openrouter` e `OPENROUTER_API_KEY`. O serviço `web` expõe
-`/health`; o serviço `api` expõe o mesmo endpoint para os health checks do
-Compose. Depois do primeiro login, um admin deve configurar o banco consultado
-na tela **Configurações**; ele não precisa ser incluído no `.env` nem no
-Dokploy.
+Os diretórios de `context/` são opcionais e podem ser criados conforme a
+necessidade; seu conteúdo pode conter informações sensíveis do domínio.
 
-## 🏃 Como Usar
+## Executando localmente
 
-### Frontend web React + API FastAPI
+### Pré-requisitos
 
-O frontend e a API são processos independentes. Em desenvolvimento, o Vite usa a porta `5173` e encaminha `/api` para a API na porta `8000`.
+- Python e um ambiente virtual. A imagem da API utiliza Python 3.12.
+- Node.js e npm. A imagem de build do frontend utiliza Node.js 22.
+- Um projeto Supabase com Auth e PostgreSQL para o banco interno.
+- Um PostgreSQL acessível para consulta.
+- Ollama acessível com o modelo escolhido **ou** credenciais de Gemini ou
+  OpenRouter.
 
-1. Configure no `.env` as variáveis da API:
+### 1. Instale as dependências
 
-```env
+```bash
+git clone https://github.com/dd-henry/querix.git
+cd querix
+
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+npm --prefix web ci
+```
+
+Para executar os testes Python, é necessário que `pytest` esteja instalado no
+ambiente; ele não está listado em `requirements.txt`.
+
+### 2. Configure a API
+
+Crie um arquivo `.env` na raiz, usando valores do seu ambiente:
+
+```dotenv
 WEB_ORIGIN=http://127.0.0.1:5173
-SESSION_SECRET=gere-um-segredo-aleatorio-com-mais-de-32-caracteres
-DATABASE_URL=postgresql+psycopg2://usuario@127.0.0.1:5432/banco
+SESSION_SECRET=substitua_por_um_segredo_aleatorio_forte
+COOKIE_SECURE=false
+
+DATABASE_URL=postgresql://usuario:senha@host:5432/banco_interno
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_ANON_KEY=sua_chave_anon_publica
-OLLAMA_API_URL=http://127.0.0.1:11434
+SUPABASE_ANON_KEY=sua_chave_anon
+
 LLM_PROVIDER=local
+OLLAMA_HOST=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen2.5-coder:7b
-GEMINI_MODEL=gemini-flash-latest
-GEMINI_MAX_RETRIES=2
-GEMINI_API_KEY=
-OPENROUTER_MODEL=openai/gpt-4o-mini
-OPENROUTER_MAX_RETRIES=2
-OPENROUTER_API_KEY=
-LLM_REQUEST_TIMEOUT_SECONDS=180
 ```
 
-`DATABASE_URL` pode ser substituída pelos campos `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DBNAME`. Em desenvolvimento local, mantenha `COOKIE_SECURE=false`; ative-o somente quando a aplicação estiver atrás de HTTPS. Nunca coloque `SESSION_SECRET`, credenciais do banco ou a chave `service_role` do Supabase no frontend.
+Nunca versione `.env` ou compartilhe credenciais. O arquivo representa o banco
+**interno**; a conexão do banco consultado é configurada posteriormente pela
+interface. Opções adicionais estão em [Configuração](#configuração).
 
-2. Inicie a API em um terminal:
+### 3. Prepare o banco interno
+
+Antes do primeiro cadastro, o banco interno deve ter as tabelas da aplicação e
+ser compatível com o projeto Supabase. Os repositórios oferecem métodos
+`initialize()` com o DDL necessário, porém **não há uma migração central
+automática para todos os repositórios**. O histórico e as conversas são
+inicializados no primeiro uso do histórico; a configuração do banco consultado
+também possui inicialização própria. Perfis e catálogo devem estar preparados
+previamente.
+
+Para uma **instalação nova e isolada**, com as permissões adequadas, é possível
+inicializar os repositórios abaixo:
+
+```bash
+venv/bin/python - <<'PY'
+from database.postgres import PostgresAdapter
+from database.users import UserRepository
+from database.conversations import ConversationRepository
+from database.query_history import QueryHistoryRepository
+from database.predefined_queries import PredefinedQueryRepository
+
+db = PostgresAdapter()
+UserRepository(db).initialize()
+ConversationRepository(db).initialize()
+QueryHistoryRepository(db).initialize()
+PredefinedQueryRepository(db).initialize()
+PY
+```
+
+Para um banco existente ou de produção, revise o DDL e faça backup antes de
+aplicar mudanças. O usuário do banco interno precisa das permissões necessárias
+para criar ou alterar tabelas e índices. A migração `must_change_password` faz
+parte de `UserRepository.initialize()`; ela **não é aplicada automaticamente
+no início da API**.
+
+### 4. Inicie os serviços
+
+Em um terminal:
 
 ```bash
 venv/bin/uvicorn api.app:create_app --factory --host 127.0.0.1 --port 8000 --reload
 ```
 
-3. Instale as dependências do frontend uma vez e inicie-o em outro terminal:
+Em outro:
 
 ```bash
-npm --prefix web install
 npm --prefix web run dev
 ```
 
-Abra <http://127.0.0.1:5173>. O navegador conversa apenas com o frontend; o proxy do Vite encaminha as chamadas `/api` para `127.0.0.1:8000`, preservando o cookie de sessão.
+Abra <http://127.0.0.1:5173>. O Vite encaminha `/api` para a API local na
+porta `8000`. A documentação interativa da API fica em
+<http://127.0.0.1:8000/docs>.
 
-Para validar o frontend:
+### 5. Crie o primeiro administrador e configure o banco consultado
+
+1. Cadastre uma conta e confirme o e-mail conforme a configuração do Supabase.
+2. Com o banco interno preparado, execute uma única vez:
+
+   ```bash
+   venv/bin/python bootstrap_admin.py email@empresa.com
+   ```
+
+   O comando promove o perfil informado somente se ainda não existir um
+   administrador. Em um banco compartilhado, a operação afeta esse ambiente.
+3. Entre na aplicação. Em **Configurações**, informe a connection string do
+   banco consultado e use **Testar e salvar conexão**. A API testa a conexão
+   antes de salvá-la.
+4. Sincronize o esquema quando necessário e faça uma pergunta ou execute uma
+   consulta compartilhada.
+
+## Configuração
+
+| Variável | Finalidade | Padrão / observação |
+|---|---|---|
+| `WEB_ORIGIN` | Origem permitida do frontend. | Obrigatória; deve corresponder à URL usada no navegador. |
+| `SESSION_SECRET` | Assinatura dos cookies e derivação da chave que cifra a conexão consultada. | Obrigatória; mantenha privada e estável. |
+| `COOKIE_SECURE` | Ativa o atributo `Secure` do cookie. | `false` na API; use `true` em HTTPS. |
+| `SESSION_MAX_AGE_SECONDS` | Validade da sessão. | `28800` segundos. |
+| `DATABASE_URL` | Conexão PostgreSQL interna. | Pode ser substituída por `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DBNAME`. |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Integração de autenticação. | Necessárias para login e cadastro. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Operação administrativa de reset de senha. | Opcional para os demais fluxos; somente no backend. |
+| `LLM_PROVIDER` | Escolhe o provedor. | `local`, `google` ou `openrouter`; padrão `local`. |
+| `OLLAMA_HOST`, `OLLAMA_MODEL` | Endereço e modelo do Ollama. | Modelo padrão: `qwen2.5-coder:7b`. |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Credencial e modelo Gemini. | Chave necessária quando `LLM_PROVIDER=google`. |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Credencial e modelo OpenRouter. | Chave necessária quando `LLM_PROVIDER=openrouter`. |
+| `GEMINI_MAX_RETRIES`, `OPENROUTER_MAX_RETRIES` | Novas tentativas para falhas transitórias. | `2` para cada provedor. |
+| `LLM_REQUEST_TIMEOUT_SECONDS` | Tempo máximo configurado para chamadas a Gemini e OpenRouter. | `180` segundos; não configura o timeout do cliente Ollama. |
+| `RESULT_LIMIT`, `PROMPT_LIMIT` | Limites de linhas na resposta e tamanho do prompt. | `5000` e `2000`, respectivamente. |
+
+Trocar `SESSION_SECRET` invalida os cookies existentes **e impede a leitura da
+connection string cifrada com o segredo anterior**. Planeje a rotação e a
+reconfiguração do banco consultado antes de alterar esse valor.
+
+## Publicação com Docker e Dokploy
+
+O [`docker-compose.yml`](docker-compose.yml) constrói dois serviços: `api`
+(FastAPI) e `web` (build React servido por Nginx). O Nginx encaminha `/api`
+para a API na rede interna. Ambos expõem `/health` para verificações básicas.
+
+Para publicar no Dokploy:
+
+1. Configure uma aplicação Compose apontando para este repositório e use a raiz
+   como contexto de build.
+2. Configure as variáveis no ambiente do serviço, incluindo `WEB_ORIGIN` com a
+   URL HTTPS pública e `COOKIE_SECURE=true`. Mantenha segredos fora do Git.
+3. Prepare ou migre o banco interno **antes** de disponibilizar uma versão que
+   dependa de novas tabelas ou colunas.
+4. Aponte o domínio ao serviço `web`, porta `80`, e execute o deploy.
+5. Confirme o estado da aplicação, o login e a conexão consultada. Se usar um
+   modelo externo, valide a configuração e o tratamento de dados com o provedor.
+
+O endpoint `/health` confirma que a API está respondendo, mas não garante que
+Supabase, bancos e LLM estejam disponíveis. O deploy automático depende da
+configuração do provedor Git e do webhook no ambiente de hospedagem.
+
+## Testes e avaliação
 
 ```bash
+# Backend sem integração externa
+venv/bin/pytest -m "not integration" -q
+
+# Teste marcado de integração com Ollama
+venv/bin/pytest -m integration -q
+
+# Frontend: tipos, lint e testes unitários
 npm --prefix web run check
+
+# Build e testes de navegador
 npm --prefix web run build
 npm --prefix web run e2e
 ```
 
-Os testes E2E usam fixtures HTTP do Playwright e iniciam o servidor Vite automaticamente; a API real não precisa estar ativa para essa suíte.
+Os testes Python e do frontend usam mocks em grande parte dos fluxos. Os
+testes Playwright usam principalmente respostas HTTP simuladas; eles não
+substituem uma validação com bancos, Supabase e LLM reais. Testes de
+integração dependem dos serviços externos correspondentes.
 
-### Conversas e histórico de consultas
+O módulo [`evaluation/query_benchmark.py`](evaluation/query_benchmark.py)
+agrega métricas a partir de resultados previamente registrados, como taxa de
+consultas executáveis, cobertura de colunas esperadas, resultados vazios e
+latência. Ele **não executa consultas nem avalia automaticamente a correção
+semântica**. Para o TCC, resultados e métricas devem ser coletados e relatados
+com metodologia e evidências próprias.
 
-Use **＋ Nova conversa** na barra lateral para começar um chat em branco. A conversa é salva quando você envia a primeira mensagem e recebe um título baseado nesse prompt. As conversas pertencem à sua conta; ao selecionar uma conversa salva, o chat restaura as mensagens, o SQL e os erros anteriores.
+## Segurança, privacidade e limitações
 
-Os resultados das consultas, incluindo as linhas retornadas, não são salvos na conversa. O SQL de uma conversa reaberta é exibido, mas não é executado automaticamente. Use a ação de execução apresentada com o SQL para buscar resultados atuais.
+- **Acesso ao banco:** use uma conta com os menores privilégios necessários,
+  preferencialmente somente leitura. Validação de SQL e transação somente
+  leitura são camadas de proteção, não uma substituição para permissões,
+  isolamento e controles no PostgreSQL.
+- **Dados enviados ao modelo:** o contexto pode incluir esquema, regras de
+  negócio e trechos da conversa. Para produzir o resumo, o resultado retornado
+  também é enviado ao provedor configurado. Com serviços externos, considere
+  políticas de privacidade, dados pessoais e requisitos da organização.
+- **Resultados grandes:** `RESULT_LIMIT` limita as linhas serializadas na
+  resposta, mas a consulta é carregada em um DataFrame antes desse corte. Isso
+  não impede, por si só, consumo elevado de memória.
+- **Precisão:** LLMs podem interpretar perguntas incorretamente, gerar SQL
+  inadequado ou produzir resumos imprecisos. Revise consultas e resultados.
+- **Senha:** o reset por administrador gera uma senha temporária para outro
+  usuário e exige a chave `SUPABASE_SERVICE_ROLE_KEY`. O administrador não
+  pode resetar a própria conta nesse fluxo. **Sessões anteriores não são
+  invalidadas pelo reset**; avalie esse risco antes de usar o recurso.
+- **Operação:** confirme migrações, permissões, backups e recuperação antes de
+  implantar. O projeto não oferece garantia de disponibilidade apenas pelo
+  fato de os testes isolados ou o health check passarem.
 
-O **Histórico de consultas** é separado das conversas: reúne consultas executadas e permite fixar, excluir ou executá-las novamente. Ao excluir uma conversa após confirmar, as mensagens e os registros do histórico vinculados a ela também são excluídos; registros antigos sem vínculo com uma conversa são preservados.
+## Documentação complementar
 
-Você pode favoritar conversas para mantê-las. Conversas não favoritas sem atividade por um ano são removidas quando o histórico de conversas é aberto. A exclusão manual também exige confirmação.
-
-## ✅ Estratégia de Testes
-
-O projeto utiliza `pytest` para garantir a qualidade do código, com uma clara separação entre testes unitários e de integração.
-
-### Testes Unitários
-Valida a lógica interna dos componentes de forma isolada, usando *mocks* para simular dependências externas.
-
-
-### Testes de Integração
-Valida o fluxo completo, envolvendo a comunicação real com a API do Ollama.
-
-### Benchmark de qualidade
-
-O benchmark de consultas é genérico e trabalha apenas com perguntas, colunas
-esperadas, restrições opcionais de linhas e resultados registrados. Ele mede
-taxa de consultas executáveis, cobertura de colunas esperadas, taxa de
-resultados vazios e latência sem embutir SQL ou depender de um banco de
-produção. Consulte [`docs/avaliacao_consultas.md`](docs/avaliacao_consultas.md)
-para o contrato e um exemplo.
-
-
-### Executando os Testes
-
-Graças às configurações no arquivo `pytest.ini`, você pode executar diferentes suítes de teste:
-
-    ```bash
-    pytest -v
-    ```
-    ```bash
-    pytest -m "not integration" -v
-    ```
-    ```bash
-    pytest -m "integration" -v
-    ```
-
-### Consultas compartilhadas
-
-Consultas compartilhadas aparecem na barra lateral e são executadas diretamente com parâmetros vinculados pelo SQLAlchemy. O SQL cadastrado deve começar com `SELECT` ou `WITH` e não pode conter múltiplas instruções. Para cadastrar parâmetros, use JSON no formato:
-
-```json
-[{"name": "status", "label": "Status", "required": true}]
-```
-
-O SQL correspondente pode usar `:status`. Favoritos são individuais por UUID autenticado; a consulta e seus metadados são compartilhados com todos os usuários aprovados.
-
-Para promover o primeiro admin, crie uma conta pela tela de cadastro, confirme o email e execute uma única vez:
-
-```bash
-./venv/bin/python bootstrap_admin.py email@empresa.com
-```
+- [Arquitetura e funcionamento](docs/arquitetura_e_funcionamento.md)
+- [Estratégia de testes](docs/testes.md)
+- [Avaliação de consultas analíticas](docs/avaliacao_consultas.md)
+- [PostgreSQL MCP no VS Code](docs/postgres-mcp.md)
+- Documentação interativa da API: `/docs`, com a API em execução.

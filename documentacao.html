@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Documentação técnica do Ask SQL: funcionamento, arquitetura, instalação e decisões de projeto.">
+<title>Ask SQL — Documentação do projeto</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--surface:#121e30;--muted:#a9bad0;--text:#eaf1fa;--line:#263951;--accent:#5eead4;--blue:#8ebdff}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:2rem}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.7 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:#c8ddff}
+a:focus-visible,summary:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.skip{position:absolute;left:-10000px;top:1rem}
+.skip:focus{left:1rem;z-index:10;background:#12243a;padding:.7rem}
+.hero{position:relative;overflow:hidden;padding:5.5rem max(1.5rem,calc((100vw - 1300px)/2)) 4.5rem;border-bottom:1px solid var(--line);background:radial-gradient(ellipse at 86% 20%,#154b5a 0,transparent 37%),radial-gradient(ellipse at 60% 100%,#1d345d 0,transparent 48%),#0e1a2c}
+.eyebrow{display:inline-block;margin:0 0 1.2rem;color:var(--accent);font-size:.72rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+.hero h1{font-size:clamp(3.2rem,7vw,5.7rem);line-height:1;letter-spacing:-.06em;margin:0 0 1.25rem}
+.hero .lead{max-width:48rem;margin:0;color:#e3ecf7;font-size:clamp(1.12rem,2.4vw,1.48rem);line-height:1.55}
+.hero .subtitle{max-width:48rem;color:#adc0d6;margin:1rem 0 1.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.55rem}
+.chips span{padding:.25rem .7rem;border:1px solid #3c5973;border-radius:99px;background:#172b3f;color:#c6d9e8;font-size:.76rem;font-weight:650}
+.layout{max-width:1350px;margin:auto;padding:3rem 1.5rem 6rem;display:grid;grid-template-columns:220px minmax(0,1fr);gap:4rem}
+.sidebar{position:sticky;top:2rem;align-self:start;max-height:calc(100vh - 4rem);overflow:auto}
+.sidebar-title{margin:0 0 .7rem;color:#7690aa;font-size:.68rem;letter-spacing:.16em;font-weight:800;text-transform:uppercase}
+.sidebar nav{display:grid;gap:.15rem}
+.sidebar a{display:block;color:#a8bed2;text-decoration:none;padding:.35rem .65rem;border-left:2px solid #273c51;font-size:.82rem;line-height:1.4}
+.sidebar a:hover{color:var(--accent);border-color:var(--accent)}
+.sidebar .source{display:inline-block;margin:.9rem 0 0 .65rem;color:var(--blue);font-size:.8rem}
+main{min-width:0;max-width:900px}
+h2{margin:4rem 0 1rem;font-size:clamp(1.65rem,3vw,2.15rem);line-height:1.2;letter-spacing:-.035em;color:#f5f9ff}
+main>h2:first-child{margin-top:0}
+h2:before{content:"";display:block;width:2.5rem;height:3px;margin-bottom:1rem;background:var(--accent);border-radius:1rem}
+h3{margin:2.2rem 0 .65rem;font-size:1.13rem;line-height:1.4;color:#edf6ff}
+p,li{color:#c3d0df}
+p{margin:.8rem 0 1.1rem}
+ul,ol{padding-left:1.45rem}
+li{padding-left:.2rem;margin:.4rem 0}
+strong{color:#eff7ff}
+blockquote{margin:1.5rem 0;padding:.6rem 1.2rem;border-left:3px solid var(--accent);border-radius:0 .55rem .55rem 0;background:#112b35}
+blockquote p{margin:.5rem 0}
+code{padding:.12rem .32rem;border-radius:.3rem;background:#1a2b3f;color:#b9ddff;font: .88em ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{overflow:auto;padding:1.15rem;border:1px solid var(--line);border-radius:.7rem;background:#0a1525;line-height:1.6}
+pre code{padding:0;background:none;color:#cce2f8;font-size:.84rem;white-space:pre}
+table{display:block;width:100%;overflow-x:auto;border-collapse:collapse;border:1px solid var(--line);border-radius:.7rem;background:#101d2e;font-size:.9rem}
+th,td{text-align:left;padding:.8rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:#b4f2e6;background:#142b3a}
+td{color:#c3d0df}
+tr:last-child td{border-bottom:0}
+.layer-name{display:flex;align-items:center;justify-content:space-between;gap:.8rem}
+.layer-button{flex:none;display:inline-grid;place-items:center;width:2rem;height:2rem;padding:0;border:1px solid #477d87;border-radius:50%;background:#17384a;color:var(--accent);font:600 1.25rem/1 system-ui,sans-serif;cursor:pointer}
+.layer-button:hover{background:#24505c;color:white}
+.layer-dialog{width:min(720px,calc(100% - 2rem));max-height:min(85vh,850px);padding:0;border:1px solid #41647a;border-radius:1rem;background:#121e30;color:var(--text);box-shadow:0 1.5rem 5rem #0009}
+.layer-dialog::backdrop{background:#030912cc}
+.layer-dialog__header{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.5rem;border-bottom:1px solid var(--line);background:#121e30}
+.layer-dialog__header h3{margin:0;font-size:1.15rem}
+.layer-dialog__close{flex:none;padding:.45rem .8rem;border:1px solid #477d87;border-radius:.5rem;background:#17384a;color:#eaf1fa;font:inherit;cursor:pointer}
+.layer-dialog__close:hover{background:#24505c}
+.layer-dialog__body{padding:1rem 1.5rem 1.5rem}
+.layer-dialog__body h4{margin:1.3rem 0 .4rem;color:#b4f2e6}
+.layer-dialog__body pre{margin:.65rem 0 1rem}
+.layer-dialog__body .source-path{font-size:.85rem}
+.diagram{margin:1.5rem 0;padding:1.25rem;border:1px solid #2d4960;border-radius:.9rem;background:linear-gradient(145deg,#132739,#101b2c)}
+.diagram figcaption{font-size:.76rem;color:var(--accent);font-weight:750;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem}
+.sequence-svg{display:block;width:100%;height:auto;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.sequence-lifeline{stroke:#47758a;stroke-width:1.5;stroke-dasharray:5 6}
+.sequence-participant{fill:#173248;stroke:#5a9a9d;stroke-width:1.5}
+.sequence-label{fill:#eaf1fa;text-anchor:middle;font-size:15px;font-weight:650}
+.sequence-message{stroke:#94d9d2;stroke-width:1.5;fill:none}
+.sequence-arrowhead{fill:#94d9d2}
+.sequence-text{fill:#dcebf5;text-anchor:middle;font-size:15px}
+.sequence-self{text-anchor:start}
+.architecture-flow{display:flex;align-items:center;gap:.65rem;overflow:auto;padding:.5rem 0 1rem}
+.architecture-node,.architecture-services>div{border:1px solid #365a6e;border-radius:.6rem;background:#173248;padding:.85rem;min-width:130px}
+.architecture-node b,.architecture-services b{display:block;color:#eff8ff;font-size:.82rem}
+.architecture-node span,.architecture-services span{display:block;color:#a8c0d0;font-size:.72rem}
+.architecture-node--primary{border-color:#43baa9;background:#12413f}
+.architecture-services{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:.5rem;min-width:330px}
+.architecture-services>div{background:#122739}
+.architecture-arrow{color:var(--accent);font-size:1.3rem}
+details{margin-top:1rem;color:#a6bacd;font-size:.8rem}
+summary{cursor:pointer;color:#a8cfff}
+footer{border-top:1px solid var(--line);padding:2rem 1.5rem;text-align:center;color:#8ca3b8;font-size:.8rem}
+@media(max-width:850px){.layout{grid-template-columns:1fr;gap:2.5rem}.sidebar{position:static;max-height:none}.sidebar nav{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.hero{padding-top:4rem;padding-bottom:3rem}}
+@media(max-width:520px){.layout{padding:2rem 1rem 4rem}.hero{padding-left:1rem;padding-right:1rem}}
+@media print{:root{color-scheme:light}body{background:white;color:#111;font-size:10pt}.hero{background:white;color:#111;padding:1rem;border-bottom:1px solid #bbb}.hero h1,.hero .lead{color:#111}.hero .subtitle,.eyebrow{color:#333}.chips span{background:white;color:#333;border-color:#aaa}.layout{display:block;padding:1rem}.sidebar{display:none}main{max-width:none}h2,h3,strong{color:#111}p,li,td{color:#222}a{color:#111}pre,.diagram,table,blockquote{background:white;color:#111;border-color:#bbb;break-inside:avoid}code,pre code{background:white;color:#222}th{background:#eee;color:#111}.architecture-node,.architecture-services>div{background:white;border-color:#aaa}.architecture-node b,.architecture-services b,.architecture-node span,.architecture-services span,.sequence-route{color:#222}footer{color:#555}}
+@media print{.sequence-participant{fill:white;stroke:#333}.sequence-label,.sequence-text{fill:#111}.sequence-lifeline,.sequence-message{stroke:#333}.sequence-arrowhead{fill:#333}}
+</style>
+</head>
+<body>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<header class="hero">
+<p class="eyebrow">Documentação técnica · Projeto de TCC</p>
+<h1>Ask SQL<span style="color:#5eead4">.</span></h1>
+<p class="lead">Perguntas em linguagem natural. Consultas SQL. Dados para apoiar decisões.</p>
+<p class="subtitle">Conheça a arquitetura, o funcionamento e as decisões por trás de uma aplicação que aproxima linguagem natural e bancos de dados.</p>
+<div class="chips"><span>React</span><span>TypeScript</span><span>FastAPI</span><span>PostgreSQL</span><span>Supabase Auth</span><span>LLM</span></div>
+</header>
+<div class="layout">
+<aside class="sidebar"><p class="sidebar-title">Nesta página</p><nav aria-label="Navegação da documentação"><a href="#visão-geral">Visão geral</a><a href="#funcionalidades">Funcionalidades</a><a href="#como-funciona">Como funciona</a><a href="#arquitetura">Arquitetura</a><a href="#decisões-arquiteturais">Decisões arquiteturais</a><a href="#estrutura-do-projeto">Estrutura do projeto</a><a href="#executando-localmente">Executando localmente</a><a href="#configuração">Configuração</a><a href="#publicação-com-docker-e-dokploy">Publicação com Docker e Dokploy</a><a href="#testes-e-avaliação">Testes e avaliação</a><a href="#segurança-privacidade-e-limitações">Segurança, privacidade e limitações</a><a href="#documentação-complementar">Documentação complementar</a></nav><a class="source" href="README.md">Ver README original ↗</a></aside>
+<main id="conteudo"><h2 id="visão-geral">Visão geral</h2>
+<p>Consultar dados em um banco relacional costuma exigir conhecimento de SQL, da
+estrutura das tabelas e das regras de negócio. O Ask SQL procura reduzir essa
+barreira: a pessoa descreve o que deseja saber e a aplicação utiliza um modelo
+de linguagem (<em>LLM</em>) para planejar e gerar uma consulta SQL.</p>
+<p>O SQL é produzido com base no esquema do banco consultado e em contextos
+opcionais fornecidos pela organização. O resultado pode ser apresentado em
+tabela, com resumo, gráfico e exportação CSV, conforme os dados e a resposta
+gerada.</p>
+<blockquote>
+<p><strong>Exemplo:</strong> “Quais foram as vendas do mês de agosto?” pode dar origem a uma
+consulta agregada sobre os dados disponíveis. A consulta e sua interpretação
+dependem do esquema, do contexto e do modelo configurado.</p>
+</blockquote>
+<p>O projeto é uma ferramenta de apoio à análise, <strong>não uma garantia de correção
+dos resultados</strong>. Consultas e conclusões devem ser revisadas, especialmente
+quando utilizadas em decisões importantes.</p>
+<h2 id="funcionalidades">Funcionalidades</h2>
+<table>
+<thead>
+<tr>
+<th>Recurso</th>
+<th>Descrição</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Perguntas em linguagem natural</td>
+<td>Tradução de perguntas para SQL usando Ollama, Gemini ou OpenRouter.</td>
+</tr>
+<tr>
+<td>Revisão do SQL</td>
+<td>Possibilidade de revisar a consulta antes de executá-la; a execução automática também pode ser escolhida.</td>
+</tr>
+<tr>
+<td>Resultados</td>
+<td>Exibição em tabela, resumo breve, gráficos quando aplicáveis e exportação CSV.</td>
+</tr>
+<tr>
+<td>Conversas</td>
+<td>Retomada de conversas, contexto de turnos anteriores e favoritos individuais.</td>
+</tr>
+<tr>
+<td>Histórico</td>
+<td>Listagem, fixação, exclusão e reexecução de consultas por usuário.</td>
+</tr>
+<tr>
+<td>Consultas compartilhadas</td>
+<td>Catálogo de consultas cadastradas com busca, favoritos individuais e parâmetros.</td>
+</tr>
+<tr>
+<td>Administração</td>
+<td>Aprovação de usuários, definição de papéis e configuração global do banco consultado.</td>
+</tr>
+<tr>
+<td>Contexto adicional</td>
+<td>Inclusão opcional de DDLs e regras de negócio para orientar o modelo.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="como-funciona">Como funciona</h2>
+<figure class="diagram"><figcaption>Fluxo com revisão de SQL</figcaption><div class="sequence-container"><svg class="sequence-svg" viewBox="0 0 1090 1135" role="img" aria-labelledby="sequence-title sequence-desc" xmlns="http://www.w3.org/2000/svg"><title id="sequence-title">Sequência de uma consulta com revisão</title><desc id="sequence-desc">Diagrama de interações entre usuário, frontend, API, bancos de dados e provedor LLM. A descrição detalhada está abaixo.</desc><defs><marker id="sequence-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="sequence-arrowhead" d="M 0 0 L 10 5 L 0 10 z"/></marker></defs><line class="sequence-lifeline" x1="95" y1="65" x2="95" y2="1085"/><rect class="sequence-participant" x="20" y="16" width="150" height="44" rx="6"/><text class="sequence-label" x="95" y="43">Usuário</text><rect class="sequence-participant" x="20" y="1085" width="150" height="44" rx="6"/><text class="sequence-label" x="95" y="1112">Usuário</text><line class="sequence-lifeline" x1="275" y1="65" x2="275" y2="1085"/><rect class="sequence-participant" x="200" y="16" width="150" height="44" rx="6"/><text class="sequence-label" x="275" y="43">Frontend React</text><rect class="sequence-participant" x="200" y="1085" width="150" height="44" rx="6"/><text class="sequence-label" x="275" y="1112">Frontend React</text><line class="sequence-lifeline" x1="455" y1="65" x2="455" y2="1085"/><rect class="sequence-participant" x="380" y="16" width="150" height="44" rx="6"/><text class="sequence-label" x="455" y="43">API FastAPI</text><rect class="sequence-participant" x="380" y="1085" width="150" height="44" rx="6"/><text class="sequence-label" x="455" y="1112">API FastAPI</text><line class="sequence-lifeline" x1="635" y1="65" x2="635" y2="1085"/><rect class="sequence-participant" x="560" y="16" width="150" height="44" rx="6"/><text class="sequence-label" x="635" y="43">Banco interno</text><rect class="sequence-participant" x="560" y="1085" width="150" height="44" rx="6"/><text class="sequence-label" x="635" y="1112">Banco interno</text><line class="sequence-lifeline" x1="815" y1="65" x2="815" y2="1085"/><rect class="sequence-participant" x="740" y="16" width="150" height="44" rx="6"/><text class="sequence-label" x="815" y="43">Banco consultado</text><rect class="sequence-participant" x="740" y="1085" width="150" height="44" rx="6"/><text class="sequence-label" x="815" y="1112">Banco consultado</text><line class="sequence-lifeline" x1="995" y1="65" x2="995" y2="1085"/><rect class="sequence-participant" x="920" y="16" width="150" height="44" rx="6"/><text class="sequence-label" x="995" y="43">Provedor LLM</text><rect class="sequence-participant" x="920" y="1085" width="150" height="44" rx="6"/><text class="sequence-label" x="995" y="1112">Provedor LLM</text><line class="sequence-message" x1="95" y1="105" x2="275" y2="105" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="185.0" y="95">Faz uma pergunta</text><line class="sequence-message" x1="275" y1="160" x2="455" y2="160" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="365.0" y="150">Envia pergunta e contexto da conversa</text><line class="sequence-message" x1="455" y1="215" x2="635" y2="215" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="545.0" y="205">Consulta e registra mensagens</text><line class="sequence-message" x1="455" y1="270" x2="815" y2="270" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="635.0" y="260">Obtém esquema e relacionamentos</text><line class="sequence-message" x1="455" y1="325" x2="995" y2="325" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="725.0" y="315">Envia contexto para planejamento</text><line class="sequence-message" x1="995" y1="380" x2="455" y2="380" stroke-dasharray="6 5" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="725.0" y="370">Retorna plano analítico em JSON</text><path class="sequence-message" d="M 455 435 h 55 v 22 h -55" marker-end="url(#sequence-arrow)"/><text class="sequence-text sequence-self" x="523" y="440">Valida o plano contra o esquema</text><line class="sequence-message" x1="455" y1="490" x2="995" y2="490" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="725.0" y="480">Solicita SQL para o plano validado</text><line class="sequence-message" x1="995" y1="545" x2="455" y2="545" stroke-dasharray="6 5" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="725.0" y="535">Retorna SQL e metadados</text><line class="sequence-message" x1="455" y1="600" x2="275" y2="600" stroke-dasharray="6 5" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="365.0" y="590">Apresenta SQL para revisão, quando habilitada</text><line class="sequence-message" x1="95" y1="655" x2="275" y2="655" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="185.0" y="645">Autoriza execução</text><line class="sequence-message" x1="275" y1="710" x2="455" y2="710" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="365.0" y="700">Solicita execução</text><line class="sequence-message" x1="455" y1="765" x2="815" y2="765" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="635.0" y="755">Executa consulta em transação somente leitura</text><line class="sequence-message" x1="815" y1="820" x2="455" y2="820" stroke-dasharray="6 5" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="635.0" y="810">Retorna dados</text><line class="sequence-message" x1="455" y1="875" x2="995" y2="875" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="725.0" y="865">Solicita resumo do resultado</text><line class="sequence-message" x1="455" y1="930" x2="635" y2="930" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="545.0" y="920">Registra consulta no histórico</text><line class="sequence-message" x1="455" y1="985" x2="275" y2="985" stroke-dasharray="6 5" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="365.0" y="975">Retorna dados, resumo e avisos</text><line class="sequence-message" x1="275" y1="1040" x2="95" y2="1040" stroke-dasharray="6 5" marker-end="url(#sequence-arrow)"/><text class="sequence-text" x="185.0" y="1030">Exibe resultado e opções de exportação</text></svg></div><details><summary>Ver descrição das etapas</summary><ol><li><strong>Usuário → Frontend React:</strong> Faz uma pergunta</li><li><strong>Frontend React → API FastAPI:</strong> Envia pergunta e contexto da conversa</li><li><strong>API FastAPI → Banco interno:</strong> Consulta e registra mensagens</li><li><strong>API FastAPI → Banco consultado:</strong> Obtém esquema e relacionamentos</li><li><strong>API FastAPI → Provedor LLM:</strong> Envia contexto para planejamento</li><li><strong>Provedor LLM → API FastAPI:</strong> Retorna plano analítico em JSON</li><li><strong>API FastAPI → API FastAPI:</strong> Valida o plano contra o esquema</li><li><strong>API FastAPI → Provedor LLM:</strong> Solicita SQL para o plano validado</li><li><strong>Provedor LLM → API FastAPI:</strong> Retorna SQL e metadados</li><li><strong>API FastAPI → Frontend React:</strong> Apresenta SQL para revisão, quando habilitada</li><li><strong>Usuário → Frontend React:</strong> Autoriza execução</li><li><strong>Frontend React → API FastAPI:</strong> Solicita execução</li><li><strong>API FastAPI → Banco consultado:</strong> Executa consulta em transação somente leitura</li><li><strong>Banco consultado → API FastAPI:</strong> Retorna dados</li><li><strong>API FastAPI → Provedor LLM:</strong> Solicita resumo do resultado</li><li><strong>API FastAPI → Banco interno:</strong> Registra consulta no histórico</li><li><strong>API FastAPI → Frontend React:</strong> Retorna dados, resumo e avisos</li><li><strong>Frontend React → Usuário:</strong> Exibe resultado e opções de exportação</li></ol></details><details><summary>Ver código Mermaid</summary><pre><code>sequenceDiagram
+    actor U as Usuário
+    participant W as Frontend React
+    participant A as API FastAPI
+    participant I as Banco interno
+    participant D as Banco consultado
+    participant L as Provedor LLM
+
+    U-&gt;&gt;W: Faz uma pergunta
+    W-&gt;&gt;A: Envia pergunta e contexto da conversa
+    A-&gt;&gt;I: Consulta e registra mensagens
+    A-&gt;&gt;D: Obtém esquema e relacionamentos
+    A-&gt;&gt;L: Envia contexto para planejamento
+    L--&gt;&gt;A: Retorna plano analítico em JSON
+    A-&gt;&gt;A: Valida o plano contra o esquema
+    A-&gt;&gt;L: Solicita SQL para o plano validado
+    L--&gt;&gt;A: Retorna SQL e metadados
+    A--&gt;&gt;W: Apresenta SQL para revisão, quando habilitada
+    U-&gt;&gt;W: Autoriza execução
+    W-&gt;&gt;A: Solicita execução
+    A-&gt;&gt;D: Executa consulta em transação somente leitura
+    D--&gt;&gt;A: Retorna dados
+    A-&gt;&gt;L: Solicita resumo do resultado
+    A-&gt;&gt;I: Registra consulta no histórico
+    A--&gt;&gt;W: Retorna dados, resumo e avisos
+    W--&gt;&gt;U: Exibe resultado e opções de exportação</code></pre></details></figure>
+
+<p>O diagrama representa o caminho com revisão habilitada. Sem revisão, o fluxo
+prossegue para a execução automaticamente. A aplicação também pode executar
+consultas complementares, quando propostas e validadas, e tentar reparar uma
+consulta após falha do banco.</p>
+<h3 id="etapas-principais">Etapas principais</h3>
+<ol>
+<li><strong>Contexto:</strong> a API coleta o esquema do banco consultado e combina essas
+   informações com instruções, data de referência, DDLs e regras opcionais.</li>
+<li><strong>Planejamento:</strong> o LLM retorna uma representação estruturada da intenção,
+   tabelas, dimensões, métricas e filtros. O plano é validado contra o esquema.</li>
+<li><strong>Geração:</strong> o LLM recebe o plano e produz SQL e metadados. O sistema valida
+   a forma do SQL antes de permitir sua execução.</li>
+<li><strong>Revisão e execução:</strong> o SQL pode ser revisado na interface e é executado
+   pelo PostgreSQL em uma transação somente leitura.</li>
+<li><strong>Apresentação:</strong> os dados retornados são serializados e apresentados ao
+   usuário. O LLM tenta produzir um resumo; se essa etapa falhar, a aplicação
+   utiliza um resumo neutro baseado na quantidade de linhas.</li>
+</ol>
+<p>O sistema utiliza até seis turnos anteriores concluídos da conversa como
+contexto. Ao reabrir uma conversa, as mensagens e o SQL são recuperados, mas
+as linhas dos resultados não são persistidas na conversa: é necessário
+reexecutar a consulta para obter os dados atuais.</p>
+<h2 id="arquitetura">Arquitetura</h2>
+<figure class="diagram"><figcaption>Componentes e integrações</figcaption>
+<div class="architecture-flow" role="img" aria-label="Usuário acessa o frontend, que acessa a API. A API integra Supabase Auth, banco interno, núcleo de tradução e banco consultado. O núcleo usa um provedor LLM e recebe o esquema do banco consultado.">
+  <div class="architecture-node"><b>Usuário</b><span>Pergunta e revisão</span></div>
+  <span class="architecture-arrow" aria-hidden="true">→</span>
+  <div class="architecture-node"><b>Frontend</b><span>React · TypeScript</span></div>
+  <span class="architecture-arrow" aria-hidden="true">→</span>
+  <div class="architecture-node architecture-node--primary"><b>API</b><span>FastAPI</span></div>
+  <span class="architecture-arrow" aria-hidden="true">→</span>
+  <div class="architecture-services">
+    <div><b>Supabase Auth</b><span>Identidade</span></div>
+    <div><b>Banco interno</b><span>Perfis e persistência</span></div>
+    <div><b>Núcleo de tradução</b><span>Contexto · plano · validação ↔ LLM</span></div>
+    <div><b>Banco consultado</b><span>Dados e esquema → núcleo</span></div>
+  </div>
+</div><details><summary>Ver código Mermaid</summary><pre><code>flowchart LR
+    U[Usuário] --&gt; W[Frontend&lt;br/&gt;React + TypeScript]
+    W --&gt;|HTTP / JSON| A[API&lt;br/&gt;FastAPI]
+    A --&gt; AUTH[Supabase Auth]
+    A --&gt; I[(PostgreSQL&lt;br/&gt;banco interno)]
+    A --&gt; C[Contexto e validação&lt;br/&gt;Prompter · Plano · Translator]
+    C --&gt; L[LLM&lt;br/&gt;Ollama · Gemini · OpenRouter]
+    A --&gt; D[(PostgreSQL&lt;br/&gt;banco consultado)]
+    D --&gt;|Esquema e relacionamentos| C</code></pre></details></figure>
+
+<table>
+<thead>
+<tr>
+<th>Camada</th>
+<th>Responsabilidade</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><div class="layer-name"><strong>Interface</strong><button class="layer-button" type="button" data-dialog="layer-interface" aria-label="Ver código da camada Interface" aria-haspopup="dialog">+</button></div></td>
+<td>Interação, estado da conversa, administração e apresentação de resultados.</td>
+</tr>
+<tr>
+<td><div class="layer-name"><strong>API</strong><button class="layer-button" type="button" data-dialog="layer-api" aria-label="Ver código da camada API" aria-haspopup="dialog">+</button></div></td>
+<td>Autenticação, autorização, orquestração do chat, rotas e contratos HTTP.</td>
+</tr>
+<tr>
+<td><div class="layer-name"><strong>Núcleo</strong><button class="layer-button" type="button" data-dialog="layer-core" aria-label="Ver código da camada Núcleo" aria-haspopup="dialog">+</button></div></td>
+<td>Construção de contexto, interpretação temporal, planejamento, validação e integração com LLM.</td>
+</tr>
+<tr>
+<td><div class="layer-name"><strong>Persistência</strong><button class="layer-button" type="button" data-dialog="layer-persistence" aria-label="Ver código da camada Persistência" aria-haspopup="dialog">+</button></div></td>
+<td>Acesso PostgreSQL e repositórios para perfis, conversas, histórico, catálogo e configuração.</td>
+</tr>
+<tr>
+<td><div class="layer-name"><strong>Serviços externos</strong><button class="layer-button" type="button" data-dialog="layer-services" aria-label="Ver código da camada Serviços externos" aria-haspopup="dialog">+</button></div></td>
+<td>Supabase Auth para identidade e um provedor de modelo de linguagem para tradução e resumo.</td>
+</tr>
+</tbody>
+</table>
+<p>Selecione <strong>+</strong> em uma camada para ver trechos reais do projeto e sua relação com a arquitetura.</p>
+<noscript><p>Os exemplos de código nos modais precisam de JavaScript habilitado.</p></noscript>
+<dialog class="layer-dialog" id="layer-interface" aria-labelledby="layer-interface-title">
+<div class="layer-dialog__header"><h3 id="layer-interface-title">Interface · apresentação do resultado</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
+<div class="layer-dialog__body">
+<p>A interface React apresenta a quantidade de linhas, o resumo e o SQL retornados para a conversa.</p>
+<p class="source-path">Fonte: <a href="web/src/features/chat/ChatWorkspace.tsx">web/src/features/chat/ChatWorkspace.tsx</a> · trecho de <code>ResultView</code></p>
+<pre><code>      &lt;div className="chat-result__header"&gt;
+        &lt;h3&gt;Resultados&lt;/h3&gt;
+        &lt;span&gt;{result.row_count} linha(s)&lt;/span&gt;
+      &lt;/div&gt;
+      {message.summary ? (
+        &lt;p className="chat-result__summary"&gt;{message.summary}&lt;/p&gt;
+      ) : null}
+      {message.sql ? (
+        &lt;details className="chat-result__sql"&gt;
+          &lt;summary&gt;Ver SQL executado&lt;/summary&gt;
+          &lt;pre&gt;{message.sql}&lt;/pre&gt;
+        &lt;/details&gt;
+      ) : null}</code></pre>
+</div></dialog>
+<dialog class="layer-dialog" id="layer-api" aria-labelledby="layer-api-title">
+<div class="layer-dialog__header"><h3 id="layer-api-title">API · tradução da pergunta</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
+<div class="layer-dialog__body">
+<p>A rota recebe a pergunta, exige um usuário aprovado e encaminha a solicitação ao serviço de chat.</p>
+<p class="source-path">Fonte: <a href="api/routes/chat_translate.py">api/routes/chat_translate.py</a> · trecho de <code>translate_chat</code></p>
+<pre><code>@router.post("/translate", response_model=ChatResponse)
+def translate_chat(
+    payload: ChatTranslateRequest,
+    profile: Dict[str, object] = Depends(require_approved_user),
+    service: ChatService = Depends(get_chat_service),
+) -&gt; ChatResponse:
+    if not payload.prompt.strip():
+        raise APIError(
+            422,
+            "validation_error",
+            "Prompt must contain between 1 and 2,000 characters.",
+        )
+    try:
+        result = service.translate_prompt(
+            _owner_id(profile),
+            payload.conversation_id,
+            payload.request_id,
+            payload.prompt,
+            review_mode=payload.review_mode,
+        )</code></pre>
+</div></dialog>
+<dialog class="layer-dialog" id="layer-core" aria-labelledby="layer-core-title">
+<div class="layer-dialog__header"><h3 id="layer-core-title">Núcleo · contexto para o modelo</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
+<div class="layer-dialog__body">
+<p>O gerador de prompts acrescenta o esquema atual, DDLs e regras de negócio quando disponíveis, para orientar o modelo.</p>
+<p class="source-path">Fonte: <a href="core/prompter.py">core/prompter.py</a> · trecho de <code>build_system_prompt</code></p>
+<pre><code>        if live_schema:
+            system_prompt += "=== CONTEXTO: ESQUEMA ATUAL DO BANCO DE DADOS ===\n"
+            system_prompt += f"{live_schema}\n"
+
+        if ddls_content:
+            system_prompt += "=== CONTEXTO: ESQUEMA DO BANCO DE DADOS (DDLs) ===\n"
+            system_prompt += f"{ddls_content}\n"
+
+        if rules_content:
+            system_prompt += "=== CONTEXTO: REGRAS DE NEGÓCIO ===\n"
+            system_prompt += f"{rules_content}\n"
+
+        return system_prompt.strip()</code></pre>
+</div></dialog>
+<dialog class="layer-dialog" id="layer-persistence" aria-labelledby="layer-persistence-title">
+<div class="layer-dialog__header"><h3 id="layer-persistence-title">Persistência · consulta somente leitura</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
+<div class="layer-dialog__body">
+<p>O adaptador PostgreSQL executa consultas nesse caminho dentro de uma transação somente leitura e devolve um DataFrame.</p>
+<p class="source-path">Fonte: <a href="database/postgres.py">database/postgres.py</a> · trecho de <code>execute_read_only_query</code></p>
+<pre><code>    def execute_read_only_query(self, sql: str, params=None) -&gt; pd.DataFrame:
+        """Executa uma consulta dentro de uma transação PostgreSQL somente leitura."""
+        self.connect()
+        try:
+            with self.engine.connect() as connection:
+                with connection.begin():
+                    connection.execute(text("SET TRANSACTION READ ONLY"))
+                    return pd.read_sql(text(sql), connection, params=params or {})</code></pre>
+</div></dialog>
+<dialog class="layer-dialog" id="layer-services" aria-labelledby="layer-services-title">
+<div class="layer-dialog__header"><h3 id="layer-services-title">Serviços externos · autenticação e LLM</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
+<div class="layer-dialog__body">
+<h4>Autenticação com Supabase</h4>
+<p>O serviço encaminha as credenciais ao Supabase e transforma falhas em erros próprios da aplicação.</p>
+<p class="source-path">Fonte: <a href="api/auth/service.py">api/auth/service.py</a> · trecho de <code>sign_in</code></p>
+<pre><code>    def sign_in(self, email: str, password: str) -&gt; AuthUser:
+        client = self._new_client()
+        try:
+            response = client.auth.sign_in_with_password(
+                {"email": email.strip(), "password": password}
+            )
+        except Exception as exc:
+            raise AuthServiceError(
+                "auth_failed",
+                "Authentication request failed.",
+            ) from exc</code></pre>
+<h4>Configuração do provedor de linguagem</h4>
+<p>O projeto valida a seleção entre Ollama local, Gemini e OpenRouter antes de configurar a integração.</p>
+<p class="source-path">Fonte: <a href="core/llm.py">core/llm.py</a> · trecho de <code>LLMConfig.from_env</code></p>
+<pre><code>        provider = environ.get("LLM_PROVIDER", "local").strip().lower()
+        if provider not in {"local", "google", "openrouter"}:
+            raise LLMConfigurationError(
+                "LLM_PROVIDER must be 'local', 'google' or 'openrouter'."
+            )</code></pre>
+</div></dialog>
+<h3 id="dois-papéis-de-banco-de-dados">Dois papéis de banco de dados</h3>
+<ul>
+<li><strong>Banco interno:</strong> armazena perfis, conversas, histórico, consultas
+  compartilhadas e a configuração cifrada da conexão consultada. É indicado
+  por <code>DATABASE_URL</code> ou pelas variáveis <code>POSTGRES_*</code> e deve ser compatível com
+  o projeto Supabase utilizado, incluindo o schema <code>auth</code>.</li>
+<li><strong>Banco consultado:</strong> é o PostgreSQL cujos dados a aplicação analisa. Um
+  administrador configura sua connection string na interface. Essa
+  configuração é <strong>global</strong> e armazenada no banco interno.</li>
+</ul>
+<p>São responsabilidades distintas, mas podem apontar para a mesma instância;
+separá-las ajuda a limitar permissões e a evitar confusão entre dados da
+aplicação e dados analisados. Alterar a conexão global afeta todos os usuários
+que compartilham o mesmo banco interno.</p>
+<h2 id="decisões-arquiteturais">Decisões arquiteturais</h2>
+<p>As decisões abaixo descrevem a implementação atual e seus compromissos; não
+representam resultados experimentais ou uma garantia de segurança.</p>
+<h3 id="1-separar-interface-api-e-núcleo-de-tradução">1. Separar interface, API e núcleo de tradução</h3>
+<p>O frontend React concentra a experiência de uso; a API FastAPI expõe os fluxos
+e aplica as regras de acesso; o núcleo concentra prompts, planejamento e
+validação. Essa divisão facilita a evolução e os testes de cada parte, ao custo
+de manter contratos explícitos entre frontend e backend.</p>
+<h3 id="2-planejar-antes-de-gerar-sql">2. Planejar antes de gerar SQL</h3>
+<p>Em vez de depender apenas de uma resposta SQL livre, o fluxo solicita primeiro
+um plano estruturado e valida referências ao esquema. Isso torna a intenção mais
+observável e permite apontar inconsistências antes da execução. Relações
+inferidas entre colunas existentes podem gerar avisos; a validação não comprova
+que a interpretação de negócio ou o resultado estão corretos.</p>
+<h3 id="3-construir-contexto-a-partir-do-esquema">3. Construir contexto a partir do esquema</h3>
+<p>Tabelas, colunas e relacionamentos são obtidos do banco consultado, sem um
+gerador específico para um domínio de negócio. Arquivos opcionais em
+<code>context/ddls/</code> (<code>.sql</code>) e <code>context/business_rules/</code> (<code>.md</code> ou <code>.txt</code>)
+complementam o prompt. A qualidade da resposta continua dependendo da
+qualidade do esquema, do contexto e do modelo.</p>
+<h3 id="4-permitir-diferentes-provedores-de-llm">4. Permitir diferentes provedores de LLM</h3>
+<p>Uma interface comum permite escolher Ollama, Gemini ou OpenRouter por
+configuração, sem mudar o fluxo de uso. Isso permite comparar modelos locais e
+serviços externos, mas introduz diferenças de latência, custo, disponibilidade,
+privacidade e qualidade das respostas.</p>
+<h3 id="5-isolar-acesso-a-dados-em-adaptadores-e-repositórios">5. Isolar acesso a dados em adaptadores e repositórios</h3>
+<p>O adaptador PostgreSQL utiliza SQLAlchemy e pandas; repositórios organizam a
+persistência por responsabilidade. Leituras e alterações usam métodos
+separados, e valores são vinculados como parâmetros nas operações dos
+repositórios. Para consultas executadas sobre o banco consultado, a aplicação
+utiliza uma transação somente leitura.</p>
+<h3 id="6-autenticar-com-supabase-e-manter-sessão-na-aplicação">6. Autenticar com Supabase e manter sessão na aplicação</h3>
+<p>O Supabase Auth valida a identidade; um perfil no banco interno determina papel
+e status de aprovação. Após o login, a API emite um cookie de sessão assinado,
+<code>HttpOnly</code> e <code>SameSite=Lax</code>; <code>Secure</code> deve ser habilitado em HTTPS. Conversas,
+histórico e favoritos são vinculados ao UUID do usuário autenticado.</p>
+<h3 id="7-preservar-sql-e-contexto-não-as-linhas-retornadas">7. Preservar SQL e contexto, não as linhas retornadas</h3>
+<p>As mensagens, os metadados e o SQL permitem retomar conversas; as linhas dos
+resultados não são guardadas na conversa. Ao reexecutar, o usuário obtém dados
+atuais, que podem ser diferentes dos resultados anteriores.</p>
+<h2 id="estrutura-do-projeto">Estrutura do projeto</h2>
+<pre><code class="language-text">ask-sql/
+├── api/                 # Rotas, autenticação, contratos e serviços FastAPI
+├── core/                # LLM, prompts, planos e validação
+├── database/            # Adaptador PostgreSQL e repositórios
+├── web/                 # Interface React, testes e configuração Vite
+├── evaluation/          # Contrato e métricas para avaliação de consultas
+├── docs/                # Documentação técnica complementar
+├── context/             # DDLs e regras opcionais, quando fornecidos
+├── docker-compose.yml   # Serviços da API e do frontend
+├── requirements.txt     # Dependências Python da aplicação
+└── pytest.ini           # Configuração e marcação dos testes
+</code></pre>
+<p>Os diretórios de <code>context/</code> são opcionais e podem ser criados conforme a
+necessidade; seu conteúdo pode conter informações sensíveis do domínio.</p>
+<h2 id="executando-localmente">Executando localmente</h2>
+<h3 id="pré-requisitos">Pré-requisitos</h3>
+<ul>
+<li>Python e um ambiente virtual. A imagem da API utiliza Python 3.12.</li>
+<li>Node.js e npm. A imagem de build do frontend utiliza Node.js 22.</li>
+<li>Um projeto Supabase com Auth e PostgreSQL para o banco interno.</li>
+<li>Um PostgreSQL acessível para consulta.</li>
+<li>Ollama acessível com o modelo escolhido <strong>ou</strong> credenciais de Gemini ou
+  OpenRouter.</li>
+</ul>
+<h3 id="1-instale-as-dependências">1. Instale as dependências</h3>
+<pre><code class="language-bash">git clone https://github.com/dd-henry/querix.git
+cd querix
+
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+npm --prefix web ci
+</code></pre>
+<p>Para executar os testes Python, é necessário que <code>pytest</code> esteja instalado no
+ambiente; ele não está listado em <code>requirements.txt</code>.</p>
+<h3 id="2-configure-a-api">2. Configure a API</h3>
+<p>Crie um arquivo <code>.env</code> na raiz, usando valores do seu ambiente:</p>
+<pre><code class="language-dotenv">WEB_ORIGIN=http://127.0.0.1:5173
+SESSION_SECRET=substitua_por_um_segredo_aleatorio_forte
+COOKIE_SECURE=false
+
+DATABASE_URL=postgresql://usuario:senha@host:5432/banco_interno
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua_chave_anon
+
+LLM_PROVIDER=local
+OLLAMA_HOST=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5-coder:7b
+</code></pre>
+<p>Nunca versione <code>.env</code> ou compartilhe credenciais. O arquivo representa o banco
+<strong>interno</strong>; a conexão do banco consultado é configurada posteriormente pela
+interface. Opções adicionais estão em <a href="#configuração">Configuração</a>.</p>
+<h3 id="3-prepare-o-banco-interno">3. Prepare o banco interno</h3>
+<p>Antes do primeiro cadastro, o banco interno deve ter as tabelas da aplicação e
+ser compatível com o projeto Supabase. Os repositórios oferecem métodos
+<code>initialize()</code> com o DDL necessário, porém <strong>não há uma migração central
+automática para todos os repositórios</strong>. O histórico e as conversas são
+inicializados no primeiro uso do histórico; a configuração do banco consultado
+também possui inicialização própria. Perfis e catálogo devem estar preparados
+previamente.</p>
+<p>Para uma <strong>instalação nova e isolada</strong>, com as permissões adequadas, é possível
+inicializar os repositórios abaixo:</p>
+<pre><code class="language-bash">venv/bin/python - &lt;&lt;'PY'
+from database.postgres import PostgresAdapter
+from database.users import UserRepository
+from database.conversations import ConversationRepository
+from database.query_history import QueryHistoryRepository
+from database.predefined_queries import PredefinedQueryRepository
+
+db = PostgresAdapter()
+UserRepository(db).initialize()
+ConversationRepository(db).initialize()
+QueryHistoryRepository(db).initialize()
+PredefinedQueryRepository(db).initialize()
+PY
+</code></pre>
+<p>Para um banco existente ou de produção, revise o DDL e faça backup antes de
+aplicar mudanças. O usuário do banco interno precisa das permissões necessárias
+para criar ou alterar tabelas e índices. A migração <code>must_change_password</code> faz
+parte de <code>UserRepository.initialize()</code>; ela <strong>não é aplicada automaticamente
+no início da API</strong>.</p>
+<h3 id="4-inicie-os-serviços">4. Inicie os serviços</h3>
+<p>Em um terminal:</p>
+<pre><code class="language-bash">venv/bin/uvicorn api.app:create_app --factory --host 127.0.0.1 --port 8000 --reload
+</code></pre>
+<p>Em outro:</p>
+<pre><code class="language-bash">npm --prefix web run dev
+</code></pre>
+<p>Abra <a href="http://127.0.0.1:5173">http://127.0.0.1:5173</a>. O Vite encaminha <code>/api</code> para a API local na
+porta <code>8000</code>. A documentação interativa da API fica em
+<a href="http://127.0.0.1:8000/docs">http://127.0.0.1:8000/docs</a>.</p>
+<h3 id="5-crie-o-primeiro-administrador-e-configure-o-banco-consultado">5. Crie o primeiro administrador e configure o banco consultado</h3>
+<ol>
+<li>Cadastre uma conta e confirme o e-mail conforme a configuração do Supabase.</li>
+<li>
+<p>Com o banco interno preparado, execute uma única vez:</p>
+<pre><code>venv/bin/python bootstrap_admin.py email@empresa.com
+</code></pre>
+<p>O comando promove o perfil informado somente se ainda não existir um
+administrador. Em um banco compartilhado, a operação afeta esse ambiente.</p>
+</li>
+<li>
+<p>Entre na aplicação. Em <strong>Configurações</strong>, informe a connection string do
+   banco consultado e use <strong>Testar e salvar conexão</strong>. A API testa a conexão
+   antes de salvá-la.</p>
+</li>
+<li>
+<p>Sincronize o esquema quando necessário e faça uma pergunta ou execute uma
+   consulta compartilhada.</p>
+</li>
+</ol>
+<h2 id="configuração">Configuração</h2>
+<table>
+<thead>
+<tr>
+<th>Variável</th>
+<th>Finalidade</th>
+<th>Padrão / observação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WEB_ORIGIN</code></td>
+<td>Origem permitida do frontend.</td>
+<td>Obrigatória; deve corresponder à URL usada no navegador.</td>
+</tr>
+<tr>
+<td><code>SESSION_SECRET</code></td>
+<td>Assinatura dos cookies e derivação da chave que cifra a conexão consultada.</td>
+<td>Obrigatória; mantenha privada e estável.</td>
+</tr>
+<tr>
+<td><code>COOKIE_SECURE</code></td>
+<td>Ativa o atributo <code>Secure</code> do cookie.</td>
+<td><code>false</code> na API; use <code>true</code> em HTTPS.</td>
+</tr>
+<tr>
+<td><code>SESSION_MAX_AGE_SECONDS</code></td>
+<td>Validade da sessão.</td>
+<td><code>28800</code> segundos.</td>
+</tr>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>Conexão PostgreSQL interna.</td>
+<td>Pode ser substituída por <code>POSTGRES_HOST</code>, <code>POSTGRES_PORT</code>, <code>POSTGRES_USER</code>, <code>POSTGRES_PASSWORD</code> e <code>POSTGRES_DBNAME</code>.</td>
+</tr>
+<tr>
+<td><code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code></td>
+<td>Integração de autenticação.</td>
+<td>Necessárias para login e cadastro.</td>
+</tr>
+<tr>
+<td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+<td>Operação administrativa de reset de senha.</td>
+<td>Opcional para os demais fluxos; somente no backend.</td>
+</tr>
+<tr>
+<td><code>LLM_PROVIDER</code></td>
+<td>Escolhe o provedor.</td>
+<td><code>local</code>, <code>google</code> ou <code>openrouter</code>; padrão <code>local</code>.</td>
+</tr>
+<tr>
+<td><code>OLLAMA_HOST</code>, <code>OLLAMA_MODEL</code></td>
+<td>Endereço e modelo do Ollama.</td>
+<td>Modelo padrão: <code>qwen2.5-coder:7b</code>.</td>
+</tr>
+<tr>
+<td><code>GEMINI_API_KEY</code>, <code>GEMINI_MODEL</code></td>
+<td>Credencial e modelo Gemini.</td>
+<td>Chave necessária quando <code>LLM_PROVIDER=google</code>.</td>
+</tr>
+<tr>
+<td><code>OPENROUTER_API_KEY</code>, <code>OPENROUTER_MODEL</code></td>
+<td>Credencial e modelo OpenRouter.</td>
+<td>Chave necessária quando <code>LLM_PROVIDER=openrouter</code>.</td>
+</tr>
+<tr>
+<td><code>GEMINI_MAX_RETRIES</code>, <code>OPENROUTER_MAX_RETRIES</code></td>
+<td>Novas tentativas para falhas transitórias.</td>
+<td><code>2</code> para cada provedor.</td>
+</tr>
+<tr>
+<td><code>LLM_REQUEST_TIMEOUT_SECONDS</code></td>
+<td>Tempo máximo configurado para chamadas a Gemini e OpenRouter.</td>
+<td><code>180</code> segundos; não configura o timeout do cliente Ollama.</td>
+</tr>
+<tr>
+<td><code>RESULT_LIMIT</code>, <code>PROMPT_LIMIT</code></td>
+<td>Limites de linhas na resposta e tamanho do prompt.</td>
+<td><code>5000</code> e <code>2000</code>, respectivamente.</td>
+</tr>
+</tbody>
+</table>
+<p>Trocar <code>SESSION_SECRET</code> invalida os cookies existentes <strong>e impede a leitura da
+connection string cifrada com o segredo anterior</strong>. Planeje a rotação e a
+reconfiguração do banco consultado antes de alterar esse valor.</p>
+<h2 id="publicação-com-docker-e-dokploy">Publicação com Docker e Dokploy</h2>
+<p>O <a href="docker-compose.yml"><code>docker-compose.yml</code></a> constrói dois serviços: <code>api</code>
+(FastAPI) e <code>web</code> (build React servido por Nginx). O Nginx encaminha <code>/api</code>
+para a API na rede interna. Ambos expõem <code>/health</code> para verificações básicas.</p>
+<p>Para publicar no Dokploy:</p>
+<ol>
+<li>Configure uma aplicação Compose apontando para este repositório e use a raiz
+   como contexto de build.</li>
+<li>Configure as variáveis no ambiente do serviço, incluindo <code>WEB_ORIGIN</code> com a
+   URL HTTPS pública e <code>COOKIE_SECURE=true</code>. Mantenha segredos fora do Git.</li>
+<li>Prepare ou migre o banco interno <strong>antes</strong> de disponibilizar uma versão que
+   dependa de novas tabelas ou colunas.</li>
+<li>Aponte o domínio ao serviço <code>web</code>, porta <code>80</code>, e execute o deploy.</li>
+<li>Confirme o estado da aplicação, o login e a conexão consultada. Se usar um
+   modelo externo, valide a configuração e o tratamento de dados com o provedor.</li>
+</ol>
+<p>O endpoint <code>/health</code> confirma que a API está respondendo, mas não garante que
+Supabase, bancos e LLM estejam disponíveis. O deploy automático depende da
+configuração do provedor Git e do webhook no ambiente de hospedagem.</p>
+<h2 id="testes-e-avaliação">Testes e avaliação</h2>
+<pre><code class="language-bash"># Backend sem integração externa
+venv/bin/pytest -m &quot;not integration&quot; -q
+
+# Teste marcado de integração com Ollama
+venv/bin/pytest -m integration -q
+
+# Frontend: tipos, lint e testes unitários
+npm --prefix web run check
+
+# Build e testes de navegador
+npm --prefix web run build
+npm --prefix web run e2e
+</code></pre>
+<p>Os testes Python e do frontend usam mocks em grande parte dos fluxos. Os
+testes Playwright usam principalmente respostas HTTP simuladas; eles não
+substituem uma validação com bancos, Supabase e LLM reais. Testes de
+integração dependem dos serviços externos correspondentes.</p>
+<p>O módulo <a href="evaluation/query_benchmark.py"><code>evaluation/query_benchmark.py</code></a>
+agrega métricas a partir de resultados previamente registrados, como taxa de
+consultas executáveis, cobertura de colunas esperadas, resultados vazios e
+latência. Ele <strong>não executa consultas nem avalia automaticamente a correção
+semântica</strong>. Para o TCC, resultados e métricas devem ser coletados e relatados
+com metodologia e evidências próprias.</p>
+<h2 id="segurança-privacidade-e-limitações">Segurança, privacidade e limitações</h2>
+<ul>
+<li><strong>Acesso ao banco:</strong> use uma conta com os menores privilégios necessários,
+  preferencialmente somente leitura. Validação de SQL e transação somente
+  leitura são camadas de proteção, não uma substituição para permissões,
+  isolamento e controles no PostgreSQL.</li>
+<li><strong>Dados enviados ao modelo:</strong> o contexto pode incluir esquema, regras de
+  negócio e trechos da conversa. Para produzir o resumo, o resultado retornado
+  também é enviado ao provedor configurado. Com serviços externos, considere
+  políticas de privacidade, dados pessoais e requisitos da organização.</li>
+<li><strong>Resultados grandes:</strong> <code>RESULT_LIMIT</code> limita as linhas serializadas na
+  resposta, mas a consulta é carregada em um DataFrame antes desse corte. Isso
+  não impede, por si só, consumo elevado de memória.</li>
+<li><strong>Precisão:</strong> LLMs podem interpretar perguntas incorretamente, gerar SQL
+  inadequado ou produzir resumos imprecisos. Revise consultas e resultados.</li>
+<li><strong>Senha:</strong> o reset por administrador gera uma senha temporária para outro
+  usuário e exige a chave <code>SUPABASE_SERVICE_ROLE_KEY</code>. O administrador não
+  pode resetar a própria conta nesse fluxo. <strong>Sessões anteriores não são
+  invalidadas pelo reset</strong>; avalie esse risco antes de usar o recurso.</li>
+<li><strong>Operação:</strong> confirme migrações, permissões, backups e recuperação antes de
+  implantar. O projeto não oferece garantia de disponibilidade apenas pelo
+  fato de os testes isolados ou o health check passarem.</li>
+</ul>
+<h2 id="documentação-complementar">Documentação complementar</h2>
+<ul>
+<li><a href="docs/arquitetura_e_funcionamento.md">Arquitetura e funcionamento</a></li>
+<li><a href="docs/testes.md">Estratégia de testes</a></li>
+<li><a href="docs/avaliacao_consultas.md">Avaliação de consultas analíticas</a></li>
+<li><a href="docs/postgres-mcp.md">PostgreSQL MCP no VS Code</a></li>
+<li>Documentação interativa da API: <code>/docs</code>, com a API em execução.</li>
+</ul></main>
+</div>
+<footer>Ask SQL · Documentação técnica · Versão gerada a partir do README</footer>
+<script>
+document.querySelectorAll(".layer-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    const dialog = document.getElementById(button.dataset.dialog);
+    if (dialog instanceof HTMLDialogElement) dialog.showModal();
+  });
+});
+document.querySelectorAll(".layer-dialog").forEach((dialog) => {
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      dialog.close();
+    }
+  });
+});
+</script>
+</body>
+</html>
