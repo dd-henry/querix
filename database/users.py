@@ -1,3 +1,5 @@
+import pandas as pd
+
 from database.postgres import PostgresAdapter
 
 
@@ -75,6 +77,9 @@ class UserRepository:
         profiles = result.to_dict("records")
         for profile in profiles:
             profile["id"] = str(profile["id"])
+            for field in ("approved_at", "disabled_at"):
+                if pd.isna(profile[field]):
+                    profile[field] = None
         return profiles
 
     def set_status(self, target_id, status, admin_id):

@@ -89,6 +89,31 @@ def test_admin_can_list_profiles_and_change_status_and_role():
     )
 
 
+def test_admin_lists_profiles_with_mixed_nullable_datetimes():
+    database = Mock()
+    database.execute_query.return_value = pd.DataFrame(
+        [
+            {**_user(), "approved_at": CREATED_AT, "disabled_at": None},
+            {
+                **_user(),
+                "id": USER_ID,
+                "approved_at": None,
+                "disabled_at": CREATED_AT,
+            },
+        ]
+    )
+    client = _client(UserRepository(database))
+
+    response = client.get("/api/admin/users")
+
+    assert response.status_code == 200
+    profiles = response.json()["profiles"]
+    assert profiles[0]["approved_at"] is not None
+    assert profiles[0]["disabled_at"] is None
+    assert profiles[1]["approved_at"] is None
+    assert profiles[1]["disabled_at"] is not None
+
+
 @pytest.mark.parametrize(
     ("method", "path", "payload"),
     [

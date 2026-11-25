@@ -95,6 +95,25 @@ describe("UserAdminPanel", () => {
     expect(client.admin.listUsers).not.toHaveBeenCalled();
   });
 
+  it("shows a loading error without claiming that no users exist", async () => {
+    const listUsers = vi.fn().mockRejectedValue(
+      new ApiError("internal_error", "Internal server error.", 500),
+    );
+    render(<UserAdminPanel client={createClient({ listUsers })} role="admin" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Internal server error.",
+    );
+    expect(screen.queryByText("Nenhum usuário encontrado.")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state after a successful empty response", async () => {
+    const listUsers = vi.fn().mockResolvedValue({ profiles: [] });
+    render(<UserAdminPanel client={createClient({ listUsers })} role="admin" />);
+
+    expect(await screen.findByText("Nenhum usuário encontrado.")).toBeInTheDocument();
+  });
+
   it("updates status and role without replacing the loaded list", async () => {
     const client = createClient();
     render(<UserAdminPanel client={client} role="admin" />);

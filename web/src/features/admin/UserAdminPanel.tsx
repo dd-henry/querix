@@ -184,9 +184,9 @@ export function UserAdminPanel({ client, role }: UserAdminPanelProps) {
       {feedback ? <p role="status">{feedback}</p> : null}
       {loading ? (
         <p role="status">Carregando usuários...</p>
-      ) : profiles.length === 0 ? (
+      ) : profiles.length === 0 && !error ? (
         <p role="status">Nenhum usuário encontrado.</p>
-      ) : (
+      ) : profiles.length === 0 ? null : (
         <ul className="admin-panel__list">
           {profiles.map((profile) => {
             const draft = drafts[profile.id];
