@@ -182,33 +182,49 @@ function ChartView({
       ...row,
       [y]: chartNumber(row[y]),
     })),
-    width: 640,
-    height: 280,
+    width: 720,
+    height: 360,
+    margin: { top: 16, right: 24, bottom: 8, left: 8 },
+  };
+  const axisTick = { fill: "#d1dce9", fontSize: 12 };
+  const tooltipProps = {
+    contentStyle: {
+      backgroundColor: "#0f172a",
+      border: "1px solid #64748b",
+      borderRadius: "0.5rem",
+      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
+    },
+    labelStyle: { color: "#f8fafc", fontWeight: 600 },
+    itemStyle: { color: "#bfdbfe" },
+  };
+  const formatTick = (value: unknown) => {
+    const text = String(value ?? "");
+    return text.length > 18 ? `${text.slice(0, 17)}…` : text;
   };
   return (
     <figure className="chat-result__chart" aria-label={title}>
       <figcaption>{title}</figcaption>
-      {type === "bar" ? (
-        <div data-testid="bar-chart">
-          <BarChart {...chartProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={x} />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey={y} fill="#93c5fd" />
-          </BarChart>
+      <div className="chat-result__chart-scroll" tabIndex={0} role="region" aria-label="Gráfico rolável">
+        <div className="chat-result__chart-canvas" data-testid={`${type}-chart`}>
+          {type === "bar" ? (
+            <BarChart {...chartProps}>
+              <CartesianGrid stroke="#475569" strokeDasharray="3 4" vertical={false} />
+              <XAxis dataKey={x} tick={axisTick} tickLine={false} axisLine={{ stroke: "#64748b" }} angle={-30} textAnchor="end" height={90} tickFormatter={formatTick} />
+              <YAxis tick={axisTick} tickLine={false} axisLine={false} />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(148, 163, 184, 0.12)" }} />
+              <Bar dataKey={y} fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={52} />
+            </BarChart>
+          ) : (
+            <LineChart {...chartProps}>
+              <CartesianGrid stroke="#475569" strokeDasharray="3 4" vertical={false} />
+              <XAxis dataKey={x} tick={axisTick} tickLine={false} axisLine={{ stroke: "#64748b" }} angle={-30} textAnchor="end" height={90} tickFormatter={formatTick} />
+              <YAxis tick={axisTick} tickLine={false} axisLine={false} />
+              <Tooltip {...tooltipProps} cursor={{ stroke: "#94a3b8", strokeDasharray: "3 4" }} />
+              <Line type="monotone" dataKey={y} stroke="#60a5fa" strokeWidth={3} dot={{ fill: "#93c5fd", r: 4 }} activeDot={{ r: 6 }} />
+            </LineChart>
+          )}
         </div>
-      ) : (
-        <div data-testid="line-chart">
-          <LineChart {...chartProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={x} />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey={y} stroke="#93c5fd" />
-          </LineChart>
-        </div>
-      )}
+      </div>
     </figure>
   );
 }

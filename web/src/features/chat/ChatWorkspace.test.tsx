@@ -369,6 +369,21 @@ describe("ChatWorkspace", () => {
     },
   );
 
+  it.each(["bar", "line"] as const)(
+    "provides a keyboard-accessible scroll region for a %s chart",
+    (type) => {
+      renderWorkspace([{
+        ...executedMessage,
+        chart: { ...executedMessage.chart, tipo: type },
+      }]);
+      fireEvent.click(screen.getByRole("button", { name: "Gerar Gráfico" }));
+
+      const figure = screen.getByRole("figure", { name: "Vendas por mês" });
+      expect(within(figure).getByRole("region", { name: "Gráfico rolável" }))
+        .toHaveAttribute("tabindex", "0");
+    },
+  );
+
   it("offers a bar chart for category and numeric results without a suggestion", () => {
     renderWorkspace([{
       ...executedMessage,
