@@ -369,6 +369,67 @@ describe("ChatWorkspace", () => {
     },
   );
 
+  it("offers a bar chart for category and numeric results without a suggestion", () => {
+    renderWorkspace([{
+      ...executedMessage,
+      chart: undefined,
+      result: {
+        columns: ["nome", "total_vendido"],
+        rows: [
+          { nome: "Produto A", total_vendido: 16 },
+          { nome: "Produto B", total_vendido: 12 },
+        ],
+        row_count: 2,
+        truncated: false,
+      },
+    }]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar Gráfico" }));
+    expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
+    expect(screen.getByRole("figure", { name: "total_vendido por nome" })).toBeInTheDocument();
+  });
+
+  it("offers a chart for decimal values serialized as strings", () => {
+    renderWorkspace([{
+      ...executedMessage,
+      chart: undefined,
+      result: {
+        columns: ["regiao", "valor"],
+        rows: [{ regiao: "Sul", valor: "12.50" }, { regiao: "Norte", valor: "3.25" }],
+        row_count: 2,
+        truncated: false,
+      },
+    }]);
+    fireEvent.click(screen.getByRole("button", { name: "Gerar Gráfico" }));
+    expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
+  });
+
+  it.each([
+    { rows: [{ nome: "A", total: 1 }, { nome: "A", total: 2 }] },
+    { rows: [{ nome: "A", total: 1 }, { nome: "B", total: null }] },
+    { rows: [{ nome: "A", total: "abc" }, { nome: "B", total: "def" }] },
+  ])("does not infer an ambiguous or incomplete chart", ({ rows }) => {
+    renderWorkspace([{
+      ...executedMessage,
+      chart: undefined,
+      result: { columns: ["nome", "total"], rows, row_count: 2, truncated: false },
+    }]);
+    expect(screen.queryByRole("button", { name: "Gerar Gráfico" })).not.toBeInTheDocument();
+  });
+
+  it("shows a brief summary preview with access to the complete text", () => {
+    const summary = `${"Resultado importante para a análise. ".repeat(9)}Conclusão final.`;
+    renderWorkspace([{ ...executedMessage, summary }]);
+    const result = screen.getByRole("region", { name: "Resultados da consulta" });
+    const preview = result.querySelector(".chat-result__summary p");
+    expect(preview?.textContent?.length).toBeLessThanOrEqual(201);
+    expect(preview).toHaveTextContent(/…$/);
+    fireEvent.click(screen.getByRole("button", { name: "Ler resumo completo" }));
+    expect(preview).toHaveTextContent(summary);
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar menos" }));
+    expect(preview).toHaveTextContent(/…$/);
+  });
+
   it("resolves qualified chart columns against result aliases", () => {
     const message: ChatMessage = {
       ...executedMessage,

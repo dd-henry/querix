@@ -110,6 +110,12 @@ def test_summarize_result_returns_model_generated_summary(translator):
     assert "Não presuma que uma coluna representa receita" in (
         chat.call_args.kwargs["messages"][0]["content"]
     )
+    assert "no máximo duas frases curtas" in (
+        chat.call_args.kwargs["messages"][0]["content"]
+    )
+    assert "Não enumere todas as linhas" in (
+        chat.call_args.kwargs["messages"][0]["content"]
+    )
     assert '"region": "Sul"' in chat.call_args.kwargs["messages"][1]["content"]
 
 

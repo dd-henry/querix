@@ -29,6 +29,8 @@ interface ResultData {
   truncated: boolean;
 }
 
+const SUMMARY_PREVIEW_LENGTH = 200;
+
 export interface ChatWorkspaceProps {
   messages: ChatMessage[];
   error?: string | null;
@@ -100,17 +102,56 @@ function resolveChartColumn(
   return matches.length === 1 ? matches[0] : null;
 }
 
-function ChartView({
-  message,
-  result,
-}: {
-  message: ChatMessage;
-  result: ResultData;
-}) {
-  const spec = chartSpec(message);
-  if (!spec) {
+function chartNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (
+    typeof value !== "string" ||
+    !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim())
+  ) {
     return null;
   }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function inferredChart(result: ResultData): ChartSpec | null {
+  if (result.columns.length !== 2 || result.rows.length < 2) {
+    return null;
+  }
+  const numeric = result.columns.filter((column) =>
+    result.rows.every((row) => chartNumber(row[column]) !== null),
+  );
+  const labels = result.columns.filter((column) =>
+    result.rows.every(
+      (row) =>
+        typeof row[column] === "string" &&
+        row[column].trim() !== "" &&
+        chartNumber(row[column]) === null,
+    ),
+  );
+  if (numeric.length !== 1 || labels.length !== 1) {
+    return null;
+  }
+  if (new Set(result.rows.map((row) => row[labels[0]])).size !== result.rows.length) {
+    return null;
+  }
+  return {
+    tipo: "bar",
+    eixo_x: labels[0],
+    eixo_y: numeric[0],
+    titulo: `${numeric[0]} por ${labels[0]}`,
+  };
+}
+
+function ChartView({
+  spec,
+  result,
+}: {
+  spec: ChartSpec;
+  result: ResultData;
+}) {
   const type = spec.tipo;
   const x = resolveChartColumn(spec.eixo_x, result.columns);
   const y = resolveChartColumn(spec.eixo_y, result.columns);
@@ -137,7 +178,10 @@ function ChartView({
       ? spec.titulo
       : "Visualização de dados";
   const chartProps = {
-    data: result.rows,
+    data: result.rows.map((row) => ({
+      ...row,
+      [y]: chartNumber(row[y]),
+    })),
     width: 640,
     height: 280,
   };
@@ -169,6 +213,24 @@ function ChartView({
   );
 }
 
+function SummaryView({ summary }: { summary: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (summary.length <= SUMMARY_PREVIEW_LENGTH) {
+    return <p className="chat-result__summary">{summary}</p>;
+  }
+  const prefix = summary.slice(0, SUMMARY_PREVIEW_LENGTH);
+  const boundary = prefix.lastIndexOf(" ");
+  const preview = (boundary > 0 ? prefix.slice(0, boundary) : prefix).trimEnd();
+  return (
+    <div className="chat-result__summary">
+      <p>{expanded ? summary : `${preview}…`}</p>
+      <button type="button" onClick={() => setExpanded((current) => !current)}>
+        {expanded ? "Mostrar menos" : "Ler resumo completo"}
+      </button>
+    </div>
+  );
+}
+
 function ResultView({ message }: { message: ChatMessage }) {
   if (!message.result) {
     return null;
@@ -181,7 +243,7 @@ function ResultView({ message }: { message: ChatMessage }) {
         <span>{result.row_count} linha(s)</span>
       </div>
       {message.summary ? (
-        <p className="chat-result__summary">{message.summary}</p>
+        <SummaryView summary={message.summary} />
       ) : null}
       {message.sql ? (
         <details className="chat-result__sql">
@@ -498,6 +560,9 @@ export function ChatWorkspace({
             message.status !== "pending" &&
             message.status !== "error";
           const showReview = message.reviewState === "open" && message.sql;
+          const spec = message.result
+            ? chartSpec(message) ?? inferredChart(message.result)
+            : null;
 
           return (
             <>
@@ -549,7 +614,7 @@ export function ChatWorkspace({
                   {message.diagnostics ? (
                     <DiagnosticsView diagnostics={message.diagnostics} />
                   ) : null}
-                  {message.chart && message.result ? (
+                  {spec && message.result ? (
                     <>
                       <button
                         type="button"
@@ -561,7 +626,7 @@ export function ChatWorkspace({
                       </button>
                       {visibleCharts.has(message.requestId) ? (
                         <ChartView
-                          message={message}
+                          spec={spec}
                           result={message.result}
                         />
                       ) : null}

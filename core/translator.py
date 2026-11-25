@@ -240,8 +240,9 @@ class Translator:
             "Explique os valores e padrões relevantes sem inventar dados. "
             "Não presuma que uma coluna representa receita, vendas, produtos "
             "ou qualquer outro conceito de negócio; deduza o significado "
-            "somente do contexto recebido. Se houver várias linhas, escolha "
-            "uma síntese adequada à pergunta. Retorne somente um objeto JSON "
+            "somente do contexto recebido. Seja breve: use no máximo duas "
+            "frases curtas, destacando apenas o principal resultado ou padrão. "
+            "Não enumere todas as linhas nem repita a tabela. Retorne somente um objeto JSON "
             'válido no formato {"summary":"texto"}; não inclua markdown ou '
             "texto adicional."
         )
