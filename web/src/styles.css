@@ -298,6 +298,8 @@ textarea {
 .predefined-panel__header button,
 .predefined-panel__search button,
 .predefined-card__actions button,
+.predefined-parameters button,
+.predefined-panel__item > div[role="group"] button,
 .predefined-editor button,
 .admin-panel__header button,
 .admin-panel__control button,
@@ -309,6 +311,35 @@ textarea {
   color: #e5e7eb;
   background: #374151;
   cursor: pointer;
+}
+
+.predefined-card__actions button:hover:not(:disabled),
+.predefined-parameters button:hover:not(:disabled),
+.predefined-panel__item > div[role="group"] button:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #4b5563;
+}
+
+.predefined-panel__item button.predefined-card__primary {
+  border-color: #2563eb;
+  color: #fff;
+  background: #1d4ed8;
+}
+
+.predefined-panel__item button.predefined-card__primary:hover:not(:disabled) {
+  border-color: #60a5fa;
+  background: #2563eb;
+}
+
+.predefined-panel__item button.predefined-card__danger {
+  border-color: #7f1d1d;
+  color: #fecaca;
+  background: #450a0a;
+}
+
+.predefined-panel__item button.predefined-card__danger:hover:not(:disabled) {
+  border-color: #ef4444;
+  background: #7f1d1d;
 }
 
 .predefined-panel__search,
@@ -352,7 +383,7 @@ textarea {
 .predefined-editor input,
 .predefined-editor textarea,
 .predefined-editor select,
-.predefined-card input,
+.predefined-parameters input,
 .admin-panel__control select {
   width: 100%;
   padding: 0.65rem 0.75rem;
@@ -368,7 +399,7 @@ textarea {
 }
 
 .predefined-editor h3,
-.predefined-card h3,
+.predefined-panel__item h3,
 .admin-panel__item h3 {
   margin: 0;
   color: #f9fafb;
@@ -384,8 +415,7 @@ textarea {
 
 .predefined-card__tags,
 .predefined-card__actions,
-.predefined-card__parameters,
-.predefined-panel__item > button,
+.predefined-parameters,
 .predefined-panel__item > div[role="group"],
 .predefined-editor__actions,
 .admin-panel__control {
@@ -395,12 +425,12 @@ textarea {
   align-items: end;
 }
 
-.predefined-card__parameters {
+.predefined-parameters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
-.predefined-card__parameters label {
+.predefined-parameters label {
   display: grid;
   gap: 0.35rem;
   color: #cbd5e1;
@@ -409,6 +439,16 @@ textarea {
 
 .predefined-card__actions {
   align-items: center;
+}
+
+.predefined-parameters h4 {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #f9fafb;
+}
+
+.predefined-parameters button {
+  justify-self: start;
 }
 
 .predefined-panel__item pre {

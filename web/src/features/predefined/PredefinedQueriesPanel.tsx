@@ -327,38 +327,42 @@ export function PredefinedQueriesPanel({
                 <p>{query.description}</p>
                 <pre>{query.sql}</pre>
                 <p>{query.tags.join(", ")}</p>
-                <button
-                  type="button"
-                  disabled={actionPending}
-                  onClick={() => void handleFavorite(query)}
-                >
-                  {query.is_favorite ? "Desfavoritar" : "Favoritar"}
-                </button>
-                {canManage ? (
-                  <>
-                    <button type="button" onClick={() => setEditor(editorFromQuery(query))}>
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={actionPending}
-                      onClick={() => setDeleteQueryId(query.id)}
-                    >
-                      Excluir
-                    </button>
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  disabled={actionPending}
-                  onClick={() =>
-                    hasParameters
-                      ? openParameters(query)
-                      : void handleExecute(query)
-                  }
-                >
-                  Executar
-                </button>
+                <div className="predefined-card__actions">
+                  <button
+                    type="button"
+                    disabled={actionPending}
+                    onClick={() => void handleFavorite(query)}
+                  >
+                    {query.is_favorite ? "Desfavoritar" : "Favoritar"}
+                  </button>
+                  {canManage ? (
+                    <>
+                      <button type="button" onClick={() => setEditor(editorFromQuery(query))}>
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="predefined-card__danger"
+                        disabled={actionPending}
+                        onClick={() => setDeleteQueryId(query.id)}
+                      >
+                        Excluir
+                      </button>
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="predefined-card__primary"
+                    disabled={actionPending}
+                    onClick={() =>
+                      hasParameters
+                        ? openParameters(query)
+                        : void handleExecute(query)
+                    }
+                  >
+                    Executar
+                  </button>
+                </div>
                 {parameterQueryId === query.id ? (
                   <div className="predefined-parameters">
                     <h4>Parâmetros</h4>
@@ -381,6 +385,7 @@ export function PredefinedQueriesPanel({
                     {parameterError ? <p role="alert">{parameterError}</p> : null}
                     <button
                       type="button"
+                      className="predefined-card__primary"
                       disabled={actionPending}
                       onClick={() => void handleExecute(query)}
                     >
@@ -396,6 +401,7 @@ export function PredefinedQueriesPanel({
                     <span>Excluir esta consulta?</span>
                     <button
                       type="button"
+                      className="predefined-card__danger"
                       disabled={actionPending}
                       onClick={() => void handleDelete(query.id)}
                     >
