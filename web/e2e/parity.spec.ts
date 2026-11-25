@@ -297,6 +297,32 @@ async function mockUserFailureApi(page: Page) {
   });
 }
 
+test("keeps the active navigation item highlighted without hover", async ({ page }) => {
+  await mockAdminApi(page);
+  await page.route("**/api/settings/database", (route) =>
+    route.fulfill({ json: { configured: false, updated_at: null } }),
+  );
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Seções" });
+  const sections = ["Conversa", "Histórico", "Consultas compartilhadas", "Administração", "Configurações"];
+  for (const section of sections) {
+    const button = nav.getByRole("button", { name: section, exact: true });
+    await button.click();
+    await page.mouse.move(0, 0);
+    await expect(button).toHaveAttribute("aria-current", "page");
+    await expect(button).toHaveCSS("background-color", "rgb(30, 58, 95)");
+    await expect(nav.locator('button[aria-current="page"]')).toHaveCount(1);
+  }
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.getByRole("button", { name: "Abrir navegação" }).click();
+  await nav.getByRole("button", { name: "Histórico", exact: true }).click();
+  await page.getByRole("button", { name: "Abrir navegação" }).click();
+  await page.mouse.move(0, 0);
+  const active = nav.getByRole("button", { name: "Histórico", exact: true });
+  await expect(active).toHaveAttribute("aria-current", "page");
+  await expect(active).toHaveCSS("background-color", "rgb(30, 58, 95)");
+});
+
 test("covers conversation resume, parity panels, sync, and mobile navigation", async ({
   page,
 }) => {

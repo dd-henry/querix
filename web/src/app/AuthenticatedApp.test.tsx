@@ -166,6 +166,10 @@ describe("AuthenticatedApp", () => {
       level: 1,
       name: "Converse com seus dados",
     });
+    expect(screen.getByRole("button", { name: "Conversa" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Histórico" }));
 
     await waitFor(() =>
@@ -186,13 +190,23 @@ describe("AuthenticatedApp", () => {
       level: 1,
       name: "Consultas compartilhadas",
     });
+    expect(screen.getByRole("button", { name: "Consultas compartilhadas" }))
+      .toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Histórico" }))
+      .not.toHaveAttribute("aria-current");
     fireEvent.click(screen.getByRole("button", { name: "Administração" }));
     await screen.findByRole("heading", {
       level: 1,
       name: "Administração de usuários",
     });
+    expect(screen.getByRole("button", { name: "Administração" }))
+      .toHaveAttribute("aria-current", "page");
     fireEvent.click(screen.getByRole("button", { name: "Configurações" }));
     await screen.findByRole("heading", { level: 1, name: "Configurações" });
+    expect(screen.getByRole("button", { name: "Configurações" }))
+      .toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Administração" }))
+      .not.toHaveAttribute("aria-current");
     expect(
       screen.getByRole("button", { name: "Sincronizar Banco" }),
     ).toBeInTheDocument();
