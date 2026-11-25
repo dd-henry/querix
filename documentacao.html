@@ -99,7 +99,7 @@ footer{border-top:1px solid var(--line);padding:2rem 1.5rem;text-align:center;co
 <div class="chips"><span>React</span><span>TypeScript</span><span>FastAPI</span><span>PostgreSQL</span><span>Supabase Auth</span><span>LLM</span></div>
 </header>
 <div class="layout">
-<aside class="sidebar"><p class="sidebar-title">Nesta página</p><nav aria-label="Navegação da documentação"><a href="#visão-geral">Visão geral</a><a href="#funcionalidades">Funcionalidades</a><a href="#como-funciona">Como funciona</a><a href="#arquitetura">Arquitetura</a><a href="#decisões-arquiteturais">Decisões arquiteturais</a><a href="#estrutura-do-projeto">Estrutura do projeto</a><a href="#executando-localmente">Executando localmente</a><a href="#configuração">Configuração</a><a href="#publicação-com-docker-e-dokploy">Publicação com Docker e Dokploy</a><a href="#testes-e-avaliação">Testes e avaliação</a><a href="#segurança-privacidade-e-limitações">Segurança, privacidade e limitações</a><a href="#documentação-complementar">Documentação complementar</a></nav><a class="source" href="README.md">Ver README original ↗</a></aside>
+<aside class="sidebar"><p class="sidebar-title">Nesta página</p><nav aria-label="Navegação da documentação"><a href="#visão-geral">Visão geral</a><a href="#funcionalidades">Funcionalidades</a><a href="#como-funciona">Como funciona</a><a href="#arquitetura">Arquitetura</a><a href="#decisões-arquiteturais">Decisões arquiteturais</a><a href="#estrutura-do-projeto">Estrutura do projeto</a><a href="#executando-localmente">Executando localmente</a><a href="#configuração">Configuração</a><a href="#publicação-com-docker-e-dokploy">Publicação com Docker e Dokploy</a><a href="#testes-e-avaliação">Testes e avaliação</a><a href="#segurança-privacidade-e-limitações">Segurança, privacidade e limitações</a><a href="#documentação-complementar">Documentação complementar</a></nav><a class="source" href="https://github.com/dd-henry/querix/blob/main/README.md">Ver README original ↗</a></aside>
 <main id="conteudo"><h2 id="visão-geral">Visão geral</h2>
 <p>Consultar dados em um banco relacional costuma exigir conhecimento de SQL, da
 estrutura das tabelas e das regras de negócio. O Ask SQL procura reduzir essa
@@ -271,7 +271,7 @@ reexecutar a consulta para obter os dados atuais.</p>
 <div class="layer-dialog__header"><h3 id="layer-interface-title">Interface · apresentação do resultado</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
 <div class="layer-dialog__body">
 <p>A interface React apresenta a quantidade de linhas, o resumo e o SQL retornados para a conversa.</p>
-<p class="source-path">Fonte: <a href="web/src/features/chat/ChatWorkspace.tsx">web/src/features/chat/ChatWorkspace.tsx</a> · trecho de <code>ResultView</code></p>
+<p class="source-path">Fonte: <a href="https://github.com/dd-henry/querix/blob/main/web/src/features/chat/ChatWorkspace.tsx">web/src/features/chat/ChatWorkspace.tsx</a> · trecho de <code>ResultView</code></p>
 <pre><code>      &lt;div className="chat-result__header"&gt;
         &lt;h3&gt;Resultados&lt;/h3&gt;
         &lt;span&gt;{result.row_count} linha(s)&lt;/span&gt;
@@ -290,7 +290,7 @@ reexecutar a consulta para obter os dados atuais.</p>
 <div class="layer-dialog__header"><h3 id="layer-api-title">API · tradução da pergunta</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
 <div class="layer-dialog__body">
 <p>A rota recebe a pergunta, exige um usuário aprovado e encaminha a solicitação ao serviço de chat.</p>
-<p class="source-path">Fonte: <a href="api/routes/chat_translate.py">api/routes/chat_translate.py</a> · trecho de <code>translate_chat</code></p>
+<p class="source-path">Fonte: <a href="https://github.com/dd-henry/querix/blob/main/api/routes/chat_translate.py">api/routes/chat_translate.py</a> · trecho de <code>translate_chat</code></p>
 <pre><code>@router.post("/translate", response_model=ChatResponse)
 def translate_chat(
     payload: ChatTranslateRequest,
@@ -316,7 +316,7 @@ def translate_chat(
 <div class="layer-dialog__header"><h3 id="layer-core-title">Núcleo · contexto para o modelo</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
 <div class="layer-dialog__body">
 <p>O gerador de prompts acrescenta o esquema atual, DDLs e regras de negócio quando disponíveis, para orientar o modelo.</p>
-<p class="source-path">Fonte: <a href="core/prompter.py">core/prompter.py</a> · trecho de <code>build_system_prompt</code></p>
+<p class="source-path">Fonte: <a href="https://github.com/dd-henry/querix/blob/main/core/prompter.py">core/prompter.py</a> · trecho de <code>build_system_prompt</code></p>
 <pre><code>        if live_schema:
             system_prompt += "=== CONTEXTO: ESQUEMA ATUAL DO BANCO DE DADOS ===\n"
             system_prompt += f"{live_schema}\n"
@@ -335,7 +335,7 @@ def translate_chat(
 <div class="layer-dialog__header"><h3 id="layer-persistence-title">Persistência · consulta somente leitura</h3><form method="dialog"><button class="layer-dialog__close" type="submit" autofocus>Fechar</button></form></div>
 <div class="layer-dialog__body">
 <p>O adaptador PostgreSQL executa consultas nesse caminho dentro de uma transação somente leitura e devolve um DataFrame.</p>
-<p class="source-path">Fonte: <a href="database/postgres.py">database/postgres.py</a> · trecho de <code>execute_read_only_query</code></p>
+<p class="source-path">Fonte: <a href="https://github.com/dd-henry/querix/blob/main/database/postgres.py">database/postgres.py</a> · trecho de <code>execute_read_only_query</code></p>
 <pre><code>    def execute_read_only_query(self, sql: str, params=None) -&gt; pd.DataFrame:
         """Executa uma consulta dentro de uma transação PostgreSQL somente leitura."""
         self.connect()
@@ -350,7 +350,7 @@ def translate_chat(
 <div class="layer-dialog__body">
 <h4>Autenticação com Supabase</h4>
 <p>O serviço encaminha as credenciais ao Supabase e transforma falhas em erros próprios da aplicação.</p>
-<p class="source-path">Fonte: <a href="api/auth/service.py">api/auth/service.py</a> · trecho de <code>sign_in</code></p>
+<p class="source-path">Fonte: <a href="https://github.com/dd-henry/querix/blob/main/api/auth/service.py">api/auth/service.py</a> · trecho de <code>sign_in</code></p>
 <pre><code>    def sign_in(self, email: str, password: str) -&gt; AuthUser:
         client = self._new_client()
         try:
@@ -364,7 +364,7 @@ def translate_chat(
             ) from exc</code></pre>
 <h4>Configuração do provedor de linguagem</h4>
 <p>O projeto valida a seleção entre Ollama local, Gemini e OpenRouter antes de configurar a integração.</p>
-<p class="source-path">Fonte: <a href="core/llm.py">core/llm.py</a> · trecho de <code>LLMConfig.from_env</code></p>
+<p class="source-path">Fonte: <a href="https://github.com/dd-henry/querix/blob/main/core/llm.py">core/llm.py</a> · trecho de <code>LLMConfig.from_env</code></p>
 <pre><code>        provider = environ.get("LLM_PROVIDER", "local").strip().lower()
         if provider not in {"local", "google", "openrouter"}:
             raise LLMConfigurationError(
@@ -623,7 +623,7 @@ administrador. Em um banco compartilhado, a operação afeta esse ambiente.</p>
 connection string cifrada com o segredo anterior</strong>. Planeje a rotação e a
 reconfiguração do banco consultado antes de alterar esse valor.</p>
 <h2 id="publicação-com-docker-e-dokploy">Publicação com Docker e Dokploy</h2>
-<p>O <a href="docker-compose.yml"><code>docker-compose.yml</code></a> constrói dois serviços: <code>api</code>
+<p>O <a href="https://github.com/dd-henry/querix/blob/main/docker-compose.yml"><code>docker-compose.yml</code></a> constrói dois serviços: <code>api</code>
 (FastAPI) e <code>web</code> (build React servido por Nginx). O Nginx encaminha <code>/api</code>
 para a API na rede interna. Ambos expõem <code>/health</code> para verificações básicas.</p>
 <p>Para publicar no Dokploy:</p>
@@ -659,7 +659,7 @@ npm --prefix web run e2e
 testes Playwright usam principalmente respostas HTTP simuladas; eles não
 substituem uma validação com bancos, Supabase e LLM reais. Testes de
 integração dependem dos serviços externos correspondentes.</p>
-<p>O módulo <a href="evaluation/query_benchmark.py"><code>evaluation/query_benchmark.py</code></a>
+<p>O módulo <a href="https://github.com/dd-henry/querix/blob/main/evaluation/query_benchmark.py"><code>evaluation/query_benchmark.py</code></a>
 agrega métricas a partir de resultados previamente registrados, como taxa de
 consultas executáveis, cobertura de colunas esperadas, resultados vazios e
 latência. Ele <strong>não executa consultas nem avalia automaticamente a correção
@@ -690,10 +690,10 @@ com metodologia e evidências próprias.</p>
 </ul>
 <h2 id="documentação-complementar">Documentação complementar</h2>
 <ul>
-<li><a href="docs/arquitetura_e_funcionamento.md">Arquitetura e funcionamento</a></li>
-<li><a href="docs/testes.md">Estratégia de testes</a></li>
-<li><a href="docs/avaliacao_consultas.md">Avaliação de consultas analíticas</a></li>
-<li><a href="docs/postgres-mcp.md">PostgreSQL MCP no VS Code</a></li>
+<li><a href="https://github.com/dd-henry/querix/blob/main/docs/arquitetura_e_funcionamento.md">Arquitetura e funcionamento</a></li>
+<li><a href="https://github.com/dd-henry/querix/blob/main/docs/testes.md">Estratégia de testes</a></li>
+<li><a href="https://github.com/dd-henry/querix/blob/main/docs/avaliacao_consultas.md">Avaliação de consultas analíticas</a></li>
+<li><a href="https://github.com/dd-henry/querix/blob/main/docs/postgres-mcp.md">PostgreSQL MCP no VS Code</a></li>
 <li>Documentação interativa da API: <code>/docs</code>, com a API em execução.</li>
 </ul></main>
 </div>

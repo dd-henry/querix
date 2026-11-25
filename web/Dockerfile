@@ -12,6 +12,6 @@ FROM nginx:1.27-alpine
 
 COPY web/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY documentacao.html /usr/share/nginx/html/documentacao.html
 
 EXPOSE 80
-

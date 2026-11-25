@@ -374,6 +374,9 @@ reconfiguração do banco consultado antes de alterar esse valor.
 O [`docker-compose.yml`](docker-compose.yml) constrói dois serviços: `api`
 (FastAPI) e `web` (build React servido por Nginx). O Nginx encaminha `/api`
 para a API na rede interna. Ambos expõem `/health` para verificações básicas.
+O frontend também disponibiliza a página pública `/documentacao.html`. Essa
+página é uma captura estática do README e dos exemplos de código, mantida
+separadamente; seus links de fonte apontam para o repositório no GitHub.
 
 Para publicar no Dokploy:
 
