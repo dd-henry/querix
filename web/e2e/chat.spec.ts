@@ -39,6 +39,16 @@ async function mockAuthenticatedPage(page: Page) {
       body: JSON.stringify({ groups: [], expired_count: 0 }),
     });
   });
+  await page.route("**/api/chat/status", (route) =>
+    route.fulfill({
+      json: {
+        status: "running",
+        phase: "executing",
+        message: "A consulta está em andamento.",
+        elapsed_seconds: 0,
+      },
+    }),
+  );
 }
 
 async function openChat(page: Page) {
@@ -175,7 +185,7 @@ test("keeps one user and assistant message during a double-clicked send", async 
   await expect(page.locator("[data-message-id$=':assistant']")).toHaveCount(1);
   await expect(page.locator("textarea")).toHaveCount(1);
   await expect(page.locator(".chat-message__pending")).toHaveCount(1);
-  expect(translateCalls).toBe(1);
+  await expect.poll(() => translateCalls).toBe(1);
 
   releaseTranslation();
   await expect(
@@ -249,7 +259,7 @@ test("executes reviewed SQL once, keeps controls stable, and exposes chart and C
   await expect(page.getByLabel("Pergunte sobre seus dados")).toBeDisabled();
   await expect(page.locator("[data-message-id$=':user']")).toHaveCount(1);
   await expect(page.locator("[data-message-id$=':assistant']")).toHaveCount(1);
-  expect(executeCalls).toBe(1);
+  await expect.poll(() => executeCalls).toBe(1);
 
   releaseExecution();
   await expect(

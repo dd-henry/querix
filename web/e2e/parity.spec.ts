@@ -44,6 +44,9 @@ async function mockAdminApi(
   title = conversation.title,
   profile = adminProfile,
 ) {
+  await page.route(/^https?:\/\/[^/]+\/api\//, (route) => {
+    throw new Error(`Unexpected API request: ${route.request().method()} ${route.request().url()}`);
+  });
   await page.route("**/api/auth/me", async (route) => {
     await route.fulfill({
       status: 200,
@@ -99,6 +102,19 @@ async function mockAdminApi(
       }),
     });
   });
+  await page.route("**/api/chat/status", (route) =>
+    route.fulfill({
+      json: {
+        status: "running",
+        phase: "executing",
+        message: "A consulta está em andamento.",
+        elapsed_seconds: 0,
+      },
+    }),
+  );
+  await page.route("**/api/settings/database", (route) =>
+    route.fulfill({ json: { configured: false, updated_at: null } }),
+  );
   await page.route("**/api/chat/execute", async (route) => {
     expect(route.request().postDataJSON()).toEqual({
       conversation_id: "conversation-1",
@@ -153,23 +169,6 @@ async function mockAdminApi(
     });
   });
   await page.route("**/api/predefined-queries*", async (route) => {
-    const url = route.request().url();
-    if (url.endsWith("/execute")) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          query_id: 7,
-          result: {
-            columns: ["total"],
-            rows: [{ total: 12 }],
-            row_count: 1,
-            truncated: false,
-          },
-        }),
-      });
-      return;
-    }
     if (route.request().method() === "PATCH") {
       await route.fulfill({
         status: 200,
@@ -185,11 +184,19 @@ async function mockAdminApi(
     });
   });
   await page.route("**/api/predefined-queries/7/execute", async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      parameters: {},
+      conversation_id: "conversation-1",
+    });
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         query_id: 7,
+        conversation_id: "conversation-1",
+        request_id: "request-predefined",
+        name: predefinedQuery.name,
+        sql: predefinedQuery.sql,
         result: {
           columns: ["total"],
           rows: [{ total: 12 }],
@@ -299,9 +306,6 @@ async function mockUserFailureApi(page: Page) {
 
 test("keeps the active navigation item highlighted without hover", async ({ page }) => {
   await mockAdminApi(page);
-  await page.route("**/api/settings/database", (route) =>
-    route.fulfill({ json: { configured: false, updated_at: null } }),
-  );
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Seções" });
   const sections = ["Conversa", "Histórico", "Consultas compartilhadas", "Administração", "Configurações"];
@@ -370,7 +374,7 @@ test("covers conversation resume, parity panels, sync, and mobile navigation", a
 
   await page.getByRole("button", { name: "Configurações" }).click();
   await page.getByRole("button", { name: "Sincronizar Banco" }).click();
-  await expect(page.getByRole("status")).toContainText(
+  await expect(page.locator(".sync-panel").getByRole("status")).toContainText(
     "Banco sincronizado com sucesso.",
   );
 

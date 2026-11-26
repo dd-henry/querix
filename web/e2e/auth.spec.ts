@@ -40,11 +40,14 @@ test("keeps one auth form while login is pending and shows one shell after succe
       body: JSON.stringify(approvedProfile),
     });
   });
+  await page.route("**/api/conversations*", (route) =>
+    route.fulfill({ json: { groups: [], expired_count: 0 } }),
+  );
 
   await page.goto("/");
   await expect(page.getByRole("tab", { name: "Entrar" })).toBeVisible();
   await page.getByLabel("Email").fill("user@example.com");
-  await page.getByLabel("Senha").fill("password");
+  await page.getByLabel("Senha", { exact: true }).fill("password");
 
   const preSubmitInputCount = await page.locator("form input").count();
   const loginButton = page
@@ -89,7 +92,7 @@ test("keeps one form and clears only the password after an invalid login", async
 
   await page.goto("/");
   await page.getByLabel("Email").fill("user@example.com");
-  await page.getByLabel("Senha").fill("wrong-password");
+  await page.getByLabel("Senha", { exact: true }).fill("wrong-password");
   await page
     .locator("form")
     .getByRole("button", { name: "Entrar", exact: true })
@@ -101,7 +104,7 @@ test("keeps one form and clears only the password after an invalid login", async
   await expect(page.locator("form")).toHaveCount(1);
   await expect(page.locator("input")).toHaveCount(2);
   await expect(page.getByLabel("Email")).toHaveValue("user@example.com");
-  await expect(page.getByLabel("Senha")).toHaveValue("");
+  await expect(page.getByLabel("Senha", { exact: true })).toHaveValue("");
 });
 
 test("blocks invalid signup data before making an API request", async ({
@@ -128,7 +131,7 @@ test("blocks invalid signup data before making an API request", async ({
   await page.getByLabel("Nome completo").fill("New User");
   await page.getByLabel("Email").fill("new@example.com");
   await page.getByLabel("Senha", { exact: true }).fill("short");
-  await page.getByLabel("Confirmar senha").fill("short");
+  await page.getByLabel("Confirmar senha", { exact: true }).fill("short");
   await page.getByRole("button", { name: "Solicitar acesso" }).click();
 
   await expect(page.getByRole("alert")).toHaveText(

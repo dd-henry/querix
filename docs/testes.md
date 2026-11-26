@@ -1,86 +1,216 @@
-# Ask SQL - Estratégia de Testes
+# Testes do projeto Querix
 
-Este documento descreve como a qualidade do código da aplicação **Ask SQL** é mantida. O ecossistema de testes do projeto baseia-se no framework **pytest** e faz uso intensivo de *mocks* e *fixtures* para garantir estabilidade, confiabilidade, e viabilizar testes independentes em módulos complexos.
+Este documento apresenta os testes existentes no projeto, seus objetivos,
+como executá-los e o que seus resultados permitem concluir. O código dos testes
+é a fonte de referência para os cenários e as regras efetivamente verificadas.
 
-## Fluxos Cobertos e Divisão dos Testes
+## Visão geral
 
-O projeto adota uma abordagem mista de testes, dividindo as baterias entre **Testes Unitários** (isolados e de execução rápida) e **Testes de Integração** (lentos, envolvendo agentes externos). Além disso, há módulos auxiliares de validação manual.
+| Grupo | Ferramentas | Objetivo | Dependências externas |
+|---|---|---|---|
+| Backend e API | pytest, mocks e fixtures | Verificar regras, serviços, repositórios e contratos HTTP | Em geral simuladas nos testes sem marcação de integração |
+| Frontend | Vitest, Testing Library e jsdom | Verificar componentes React, estado, interações e cliente HTTP | API simulada |
+| Navegador (E2E) | Playwright e Chromium | Verificar fluxos de interface em um navegador, inclusive em tamanhos de tela diferentes | As respostas da API são simuladas nos cenários; o frontend é servido pelo Vite |
+| Integração com LLM | pytest e Ollama | Verificar uma tradução usando um modelo real | Serviço Ollama e modelo local |
+| Avaliação de consultas | pytest e módulo de benchmark | Verificar o cálculo de métricas sobre resultados fornecidos | O benchmark não chama banco nem modelo |
 
-### 1. Testes Unitários
+Os testes usam *assertions* para comparar o comportamento observado com o
+esperado. *Mocks* substituem serviços por respostas controladas; *fixtures*
+preparam dados e recursos para cada teste. Isso torna os cenários reproduzíveis,
+mas não substitui a verificação de serviços reais.
 
-Estes testes validam lógicas internas sem envolver dependências externas, como bancos de dados em execução ou servidores locais de IA.
+## 1. Backend: regras, persistência e modelo de linguagem
 
-#### Regressões de conversas e UX
+Os arquivos `test_*.py` na raiz cobrem componentes internos:
 
-Os fluxos de conversa usam serviços externos simulados para que os testes validem estado e comportamento sem conectar a um PostgreSQL ou Ollama real:
+| Arquivo | Exemplos do que é verificado |
+|---|---|
+| [`test_prompter.py`](../test_prompter.py) | Construção de prompts com esquema, DDLs e regras de negócio; contratos das etapas de planejamento e geração de SQL. |
+| [`test_translator.py`](../test_translator.py) | Extração de JSON das respostas do modelo, tratamento de respostas inválidas, contexto das conversas, geração de SQL e resumos. |
+| [`test_llm.py`](../test_llm.py) | Configuração de provedores e adaptação de mensagens e respostas, incluindo erros e novas tentativas com serviços simulados. |
+| [`test_analytical_queries.py`](../test_analytical_queries.py) | Planejamento de perguntas por um fluxo genérico orientado ao esquema, sem regras SQL específicas de domínio inseridas no código. |
+| [`test_temporal.py`](../test_temporal.py) | Interpretação de períodos e limites de datas, inclusive casos que atravessam anos. |
+| [`test_postgres.py`](../test_postgres.py) | Configuração do adaptador, leituras com DataFrames simulados, transações somente de leitura e tratamento de falhas de conexão. |
+| [`test_database_connections.py`](../test_database_connections.py) | Armazenamento criptografado da conexão do banco de destino e ausência da string de conexão no status retornado. |
+| [`test_conversations.py`](../test_conversations.py) | Persistência e recuperação de conversas e mensagens, isolamento por usuário, idempotência e limite de contexto. |
+| [`test_query_history.py`](../test_query_history.py) | Histórico vinculado ao usuário e à conversa, deduplicação, fixação e exclusão. |
+| [`test_predefined_queries.py`](../test_predefined_queries.py) | Validação de SQL somente de leitura no catálogo, parâmetros, consultas e favoritos. |
+| [`test_users.py`](../test_users.py) | Perfis, papéis e proteção contra remoção do último administrador. |
 
-- **`test_conversations.py`:** verifica escopo por proprietário, gravação idempotente e ordenada, falhas de persistência, favoritos, expiração, exclusão e o limite de seis turnos, incluindo a exclusão do turno em retry do contexto.
-- **`test_query_history.py`:** verifica o vínculo anulável da conversa, exclusão em cascata, deduplicação dentro de cada sessão e compatibilidade com registros legados sem sessão.
-- **`api/tests/test_history_routes.py` e `api/tests/test_chat_service.py`:** incluem verificações das rotas e do serviço usando o repositório de histórico concreto, com o adaptador de banco simulado, para detectar incompatibilidades entre as interfaces.
-- **`test_translator.py` e `test_llm.py`:** verificam contexto em ordem, limite de seis turnos, comportamento com contexto ausente ou vazio, seleção do provedor, adaptação dos payloads do Gemini e do streaming SSE do OpenRouter, além dos erros do LLM.
-- **`test_postgres.py`:** verifica o uso de transações somente de leitura no retry e o retorno da contagem de linhas dos comandos.
+Esses testes utilizam, conforme o caso, `MagicMock`, `patch`, `monkeypatch`,
+diretórios temporários e DataFrames sintéticos. Uma verificação com banco
+simulado não demonstra que o PostgreSQL real está acessível ou que executará
+todas as consultas corretamente.
 
-Para executar os testes focados nesses fluxos:
+## 2. API: rotas e serviços
+
+Os testes em [`api/tests/`](../api/tests/) verificam a aplicação HTTP e suas
+colaborações, em geral com dependências externas substituídas por objetos
+simulados:
+
+| Área | Arquivos | Exemplos do que é verificado |
+|---|---|---|
+| Aplicação e configuração | `test_app.py`, `test_config.py`, `test_dependencies.py` | Inicialização, health check, erros, origens permitidas, configurações e dependências autenticadas. |
+| Autenticação e sessão | `test_auth_routes.py`, `test_service.py`, `test_session.py` | Cadastro, login, logout, perfis, cookies, sessões e tratamento de erros sem expor tokens. |
+| Administração | `test_admin_routes.py` | Permissões, listagem de usuários, alteração de papel ou status e redefinição de senha. |
+| Conexão e sincronização | `test_database_settings.py`, `test_sync_routes.py` | Permissões de configuração, teste antes de salvar a conexão, falhas e sincronização de esquema. |
+| Chat | `test_chat_translate_routes.py`, `test_chat_execute_routes.py`, `test_chat_service.py` | Tradução, execução, modo de revisão, erros, cancelamento, progresso e isolamento das solicitações. |
+| Conversas | `test_conversation_routes.py`, `test_conversation_item_routes.py`, `test_conversation_schemas.py` | Criação, listagem, restauração, favoritos, exclusão, autorização e formato das respostas. |
+| Histórico e consultas compartilhadas | `test_history_routes.py`, `test_predefined_routes.py` | Escopo por usuário, parâmetros, execução, favoritos e operações de histórico. |
+| Qualidade e segurança da consulta | `test_query_validation.py`, `test_schema_profile.py`, `test_result_quality.py`, `test_result_serializer.py` | Validação de identificadores e SQL, perfil do esquema, diagnósticos e serialização limitada dos resultados. |
+
+Alguns testes combinam rotas ou serviços com repositórios concretos e adaptador
+de banco simulado. Eles verificam o contrato entre camadas, não uma integração
+com uma instância PostgreSQL real.
+
+## 3. Frontend: componentes e estado
+
+O Vitest executa os testes `*.test.ts` e `*.test.tsx` em
+[`web/src/`](../web/src/), utilizando `jsdom` e Testing Library:
+
+- **Aplicação e autenticação:** `App.test.tsx`, `AppShell.test.tsx`,
+  `AuthProvider.test.tsx` e `AuthPage.test.tsx` verificam renderização, sessão,
+  login, cadastro, erros e navegação acessível.
+- **Cliente HTTP:** `api/client.test.ts` verifica requisições com credenciais,
+  respostas, erros e comunicação com endpoints.
+- **Chat:** `ChatWorkspace.test.tsx`, `MessageList.test.tsx` e
+  `useChat.test.tsx` cobrem envio, progresso, cancelamento, mensagens,
+  retomada, resultados, gráficos, exportação e cache em memória ao trocar de
+  conversa.
+- **Navegação e funcionalidades:** `AuthenticatedApp.test.tsx`,
+  `ConversationSidebar.test.tsx`, `HistoryPanel.test.tsx` e
+  `PredefinedQueriesPanel.test.tsx` verificam troca de painéis, conversas,
+  histórico e consultas compartilhadas.
+- **Administração e configurações:** `UserAdminPanel.test.tsx`,
+  `DatabaseConnectionSettings.test.tsx` e `SyncDatabaseButton.test.tsx`
+  verificam permissões, operações, mensagens de erro e prevenção de
+  solicitações duplicadas.
+
+Esses testes simulam a interface no `jsdom`: são úteis para comportamento e
+acessibilidade, mas não reproduzem completamente a renderização visual de um
+navegador.
+
+## 4. Fluxos no navegador
+
+Os testes em [`web/e2e/`](../web/e2e/) usam Playwright com Chromium:
+
+- `auth.spec.ts`: login, cadastro, conta bloqueada e logout.
+- `chat.spec.ts`: envio, revisão, repetição, gráfico, CSV e estabilidade da
+  largura do chat com SQL extenso em diferentes tamanhos de tela.
+- `parity.spec.ts`: navegação entre painéis, destaque da seção ativa,
+  restauração e isolamento de conversas, sincronização e fluxos em celular.
+- `smoke.spec.ts`: carregamento inicial da tela de autenticação.
+
+O Playwright inicia o servidor Vite ou reutiliza um servidor existente em
+`http://127.0.0.1:5173`, fora do CI, conforme
+[`playwright.config.ts`](../web/playwright.config.ts). As respostas de API dos
+cenários são interceptadas e simuladas: esses testes exercitam o navegador e a
+interface, mas não comprovam a integração completa com backend, Supabase,
+PostgreSQL ou LLM reais. Apesar de verificarem tamanhos de tela de celular,
+utilizam o projeto Chromium configurado, não um dispositivo físico.
+
+## 5. Integração real com Ollama
+
+[`test_integration_ollama.py`](../test_integration_ollama.py) envia uma pergunta
+ao Ollama usando o modelo `qwen2.5-coder:7b`. O teste verifica se a resposta é
+um dicionário com SQL que contém `SELECT` e referência a `usuarios`. Ele usa
+um esquema fornecido no próprio teste; não executa o SQL em um banco nem avalia
+sua correção semântica completa.
+
+O cenário possui a marca `integration` em [`pytest.ini`](../pytest.ini). É
+necessário ter o Ollama acessível e o modelo disponível; por depender de um
+modelo real, o resultado pode variar e a execução pode demorar. Configure o
+provedor local quando necessário.
+
+## 6. Avaliação de consultas e medições
+
+[`evaluation/query_benchmark.py`](../evaluation/query_benchmark.py) agrega
+resultados registrados pelo chamador: taxa de consultas executáveis, cobertura
+de colunas esperadas, taxa de resultados vazios, latência média e atendimento
+de limites de linhas. Os testes em
+[`evaluation/test_query_benchmark.py`](../evaluation/test_query_benchmark.py)
+verificam os cálculos com dados sintéticos e a validação de entradas.
+
+O benchmark **não executa as perguntas, não mede a latência por conta própria
+e não determina se os resultados respondem corretamente à pergunta**. Colunas
+esperadas ou SQL executável não são prova de acurácia semântica. Para produzir
+evidências empíricas, é necessário executar casos reais, registrar tempos com
+um procedimento definido e comparar os resultados com referências corretas.
+Os exemplos sintéticos não devem ser apresentados como medições reais.
+Consulte [Avaliação de consultas analíticas](avaliacao_consultas.md) para o
+contrato e as fórmulas.
+
+## 7. Como executar
+
+Execute os comandos na raiz do repositório, com as dependências do projeto
+instaladas. Para Python, use o ambiente virtual com `pytest` instalado; para
+frontend, são necessários Node.js e as dependências de `web/`. O Playwright
+também precisa do navegador Chromium instalado (`npx playwright install
+chromium`, executado em `web/`, quando necessário).
 
 ```bash
-python -m pytest test_conversations.py test_query_history.py test_translator.py test_llm.py test_postgres.py -q
+# Backend e API sem testes marcados como integração
+venv/bin/python -m pytest -m "not integration" -q
+
+# Teste de integração: requer Ollama e o modelo disponível
+venv/bin/python -m pytest -m integration -q
+
+# Todos os testes Python, incluindo integração
+venv/bin/python -m pytest -q
+
+# Apenas o contrato do benchmark
+venv/bin/python -m pytest evaluation/test_query_benchmark.py -q
+
+# Frontend: execução única
+npm --prefix web test -- --run
+
+# Navegador
+npm --prefix web run e2e
 ```
 
-#### Testes do Prompter (`test_prompter.py`)
-Foca em garantir que o montador de prompts está anexando de forma correta as regras e informações dinâmicas do ambiente. 
-- **Estratégias:** É utilizada a fixture nativa `tmp_path` do pytest para gerar árvores de pastas temporárias em memória, simulando diretórios de DDLs e de Regras de Negócio, avaliando se a injeção do texto desses arquivos de texto no corpo do "System Prompt" ocorre de modo seguro e completo. 
-
-#### Testes do Extrator JSON / Translator (`test_translator.py`)
-Garante que a classe capaz de decodificar as repostas do LLM é flexível o suficiente.  
-- **Estratégias:** Uso de _Fixtures_ para recriar o tradutor.
-- **Fluxos:**
-  - Extração limpa, com o modelo retornando o JSON exato e estrito.
-  - Isolamento de "sujeira", certificando-se de que se o LLM "tagarelar" usando blocos de código Markdown (```json) o sistema não corrompa a resposta, ignorando tudo o que estiver fora do bloco estruturado.
-  - Retorno de erro (`pytest.raises`) ao tentar ler uma string sem um JSON formatado validamente.
-
-#### Testes de Banco de Dados (`test_postgres.py`)
-Garante que a biblioteca do banco se comporta como esperado ao receber credenciais e instanciar o SQLAlchemy.
-- **Estratégias de Mocking:** O objetivo vital aqui é não usar um banco real para testes rápidos. O pacote utiliza `unittest.mock` (via `patch` e `MagicMock`) e a fixture de ambiente `monkeypatch` do pytest.
-- **Fluxos:**
-  - `monkeypatch` sobrecarrega a chamada do pacote `python-dotenv` garantindo que as credenciais provêm estritamente das simulações da suíte de teste e não do seu `.env` local.
-  - A camada de conexão e a camada do *pandas* (`pd.read_sql`) foram completamente "mockadas" (*patched*). Em vez de bater no banco, o teste injeta um DataFrame sintético que confirma se o adaptador devolve a estrutura desejada sem executar instruções SQL reais.
-  - Fazer os "caminhos infelizes" falharem graciosamente (simulando falha do mock no `test_connection()` para garantir que retorne booleano `False` sem interromper a API).
-
-### 2. Testes de Integração e do LLM
-
-O grande desafio de aplicações que envolvem IA Generativa é o seu não-determinismo. As strings devolvidas por modelos mudam sempre, impossibilitando verificações idênticas (`assert result == "..."`).
-
-#### O Teste do Ollama (`test_integration_ollama.py`)
-Este não é um teste mockado, ele realmente inicia a conexão com a API local do servidor **Ollama** chamando o modelo configurado em `OLLAMA_MODEL` (por padrão, `qwen2.5-coder:7b`). Os testes unitários do Gemini usam a API simulada e não enviam a chave para serviços externos.
-
-- **Marcação e Isolamento:** Este teste é marcado intencionalmente com um decorador `@pytest.mark.integration`. Como a requisição para o LLM real pode demorar muitos segundos, ela pode ser ignorada no CI regular e disparada unicamente em *pipelines* específicas.
-- **A Estratégia de Asserção Comportamental:** Ao invés de avaliar se a *string* produzida é idêntica a um template predefinido, o teste avalia *comportamentos*. 
-  - A requisição pede uma consulta sobre "usuários". 
-  - O teste confere se o JSON tem de fato as estruturas mapeadas (a chave `'sql'`).
-  - O teste faz uma checagem elástica observando se a palavra `SELECT` e o alvo correto (`USUARIOS`) foram inferidos no campo de sql gerado dentro do dicionário.
-
-## Executando os Testes
-
-Para executar a suíte de testes, utilizamos o framework `pytest` a partir da raiz do projeto. Graças às configurações no arquivo `pytest.ini`, podemos separar a execução entre testes rápidos e lentos:
-
-- **Regressão recomendada (fora de integração):** `python -m pytest -m "not integration" -q`
-- **Rodar todos os testes, incluindo integrações:** `python -m pytest -q`
-- **Rodar apenas testes de integração com Ollama:** `python -m pytest -m integration -q`
-
-O gate completo de regressão também verifica a sintaxe Python antes dos testes:
+Para executar um teste específico, por exemplo:
 
 ```bash
-python -m compileall -q api core database test_*.py
-python -m pytest -m "not integration" -q
+venv/bin/python -m pytest -v test_translator.py::test_clean_sql_response_json_perfeito
+npm --prefix web test -- --run src/app/AuthenticatedApp.test.tsx
+npm --prefix web run e2e -- --grep "active navigation item"
 ```
 
-## Debugando os Testes
+O comando `npm --prefix web run check` reúne verificação de tipos, lint e
+testes Vitest; `npm --prefix web run build` também verifica tipos e produz o
+build. Eles complementam os testes, mas não executam o Playwright. Para ver
+mensagens impressas pelo pytest, acrescente `-s`.
 
-Como não é trivial prever 100% da saída de um LLM, o debug costuma ser parte frequente da manutenção:
-- **Usando `print()`:** Por padrão, o `pytest` "engole" saídas de print. Para visualizar no terminal (por exemplo, visualizar o DDL em texto puro sendo enviado à IA), adicione a flag `-s` na execução: `pytest -s`.
-- **Modo Interativo (PDB):** Adicione a função nativa `breakpoint()` em qualquer lugar do arquivo de teste. A execução será congelada naquele ponto, permitindo que você inspecione as variáveis (`resultado`, `prompt`, etc) em tempo real pelo terminal.
+## 8. Verificações manuais
 
-### 3. Validações Manuais ("Scripts de Fumaça")
+[`teste_db.py`](../teste_db.py) tenta conectar ao banco configurado e
+[`teste_ollama.py`](../teste_ollama.py) envia uma solicitação ao Ollama com o
+modelo `qwen2.5-coder:7b`. São verificações manuais de infraestrutura, não
+testes automatizados com asserções; dependem dos serviços reais e de sua
+configuração local. Seus logs devem ser inspecionados para determinar o
+resultado.
 
-O projeto inclui pequenos scripts isolados — `teste_db.py` e `teste_ollama.py`. 
-Eles não utilizam asserções do pytest. Servem como scripts *CLI* rápidos para testar a infraestrutura local se algo falhar na subida da API (ex: "As credenciais do `.env` e o banco Postgres local estão atrelados de fato?" ou "A rede do Ollama está rodando e consegue devolver um SQL simples no terminal?").
+## 9. Registro de execução
+
+Em 25/11/2026, no ambiente local:
+
+| Execução | Resultado |
+|---|---|
+| pytest sem integração | 322 passaram; 1 teste de integração foi excluído. |
+| Vitest | 121 passaram em 15 arquivos. |
+| Playwright | 10 passaram e 6 falharam em 16 cenários. |
+
+Entre as falhas do Playwright observadas, três cenários de autenticação
+encontraram seletores de senha ambíguos; dois cenários de chat não encontraram
+as mensagens esperadas e um cenário de navegação não encontrou o resultado
+esperado. O teste de integração com Ollama não foi executado nessa
+verificação.
+
+Na execução enviada posteriormente, os 323 testes Python passaram, incluindo a
+integração com Ollama, e os 121 testes Vitest passaram. As mesmas seis falhas
+de navegador foram observadas.
+
+Após corrigir seletores e simulações de API dos cenários de navegador, os 16
+testes Playwright passaram em uma nova execução local. Esses resultados são
+retratos de execuções específicas, não garantias para outros ambientes ou
+serviços externos.
